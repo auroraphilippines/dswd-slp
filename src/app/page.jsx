@@ -68,7 +68,7 @@ export default function LandingPage() {
                 transition={{ delay: 0.5, duration: 0.8 }}
                 className="text-2xl font-bold text-white"
               >
-                DSWD SWCF
+                DSWD SLP-TIS
               </motion.h1>
               <motion.p
                 initial={{ opacity: 0 }}
@@ -76,7 +76,7 @@ export default function LandingPage() {
                 transition={{ delay: 1, duration: 0.8 }}
                 className="text-white mt-2"
               >
-                Social Welfare Capital Fund
+                Sustainable Livelihood Program - Tracking Inventory System
               </motion.p>
             </motion.div>
           </motion.div>
@@ -106,8 +106,10 @@ export default function LandingPage() {
                     />
                   </div>
                   <div>
-                    <h1 className="text-xl font-bold">DSWD SWCF</h1>
-                    <p className="text-xs">Social Welfare Capital Fund</p>
+                    <h1 className="text-xl font-bold">DSWD SLP-TIS</h1>
+                    <p className="text-xs">
+                      Sustainable Livelihood Program - Tracking Inventory System
+                    </p>
                   </div>
                 </div>
                 <nav className="hidden md:flex space-x-6">
@@ -154,7 +156,8 @@ export default function LandingPage() {
                   transition={{ duration: 0.8 }}
                   className="text-3xl md:text-5xl font-bold mb-6"
                 >
-                  Welcome to DSWD Social Welfare Capital Fund
+                  Welcome to DSWD Sustainable Livelihood Program - Tracking
+                  Inventory System
                 </motion.h2>
                 <motion.p
                   initial={{ opacity: 0, y: 20 }}
@@ -170,7 +173,7 @@ export default function LandingPage() {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.4, duration: 0.5 }}
                 >
-                  <Link href="/dashboard">
+                  <Link href="/login">
                     <button className="bg-[#FFC612] hover:bg-[#FFD54F] text-[#0F4C81] font-bold py-4 px-8 rounded-lg text-lg shadow-lg transform transition-transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-yellow-300">
                       Login to System
                     </button>
@@ -201,8 +204,9 @@ export default function LandingPage() {
                   </div>
                   <div className="bg-white rounded-lg shadow-md p-6 md:p-8">
                     <p className="text-gray-700 mb-6">
-                      The DSWD Social Welfare Capital Fund system serves various
-                      stakeholders involved in social welfare programs:
+                      The DSWD Sustanable Livelihood Program - Tracking
+                      Inventory System serves various stakeholders involved in
+                      social welfare programs:
                     </p>
 
                     <div className="grid md:grid-cols-3 gap-6">
@@ -279,8 +283,9 @@ export default function LandingPage() {
                   </div>
                   <div className="bg-white rounded-lg shadow-md p-6 md:p-8">
                     <p className="text-gray-700 mb-6">
-                      To access the DSWD Social Welfare Capital Fund system, you
-                      need to have an authorized account:
+                      To access the DSWD Sustanable Livelihood Program -
+                      Tracking Inventory System, you need to have an authorized
+                      account:
                     </p>
 
                     <div className="space-y-6">
@@ -358,7 +363,7 @@ export default function LandingPage() {
                               <strong>Important:</strong> Account creation is
                               strictly controlled for security purposes.
                               Self-registration is not available. All accounts
-                              must be authorized by the DSWD SWCF
+                              must be authorized by the DSWD SLP-TIS
                               administration.
                             </p>
                           </div>
@@ -378,8 +383,9 @@ export default function LandingPage() {
                   </div>
                   <div className="bg-white rounded-lg shadow-md p-6 md:p-8">
                     <p className="text-gray-700 mb-6">
-                      The DSWD Social Welfare Capital Fund system provides
-                      various services to support social welfare programs:
+                      The DSWD Sustainable Livelihood Program - Tracking
+                      Inventory System provides various services to support
+                      social welfare programs:
                     </p>
 
                     <div className="grid md:grid-cols-2 gap-6 mb-8">
@@ -491,7 +497,8 @@ export default function LandingPage() {
                       </h3>
                       <ol className="space-y-4 text-gray-700 list-decimal pl-5">
                         <li>
-                          Log in to the DSWD SWCF system using your credentials
+                          Log in to the DSWD SLP-TIS system using your
+                          credentials
                         </li>
                         <li>
                           Navigate to the appropriate module from the dashboard
@@ -501,7 +508,7 @@ export default function LandingPage() {
                           desired service
                         </li>
                         <li>
-                          For assistance, contact the DSWD SWCF support team
+                          For assistance, contact the DSWD SLP-TIS support team
                         </li>
                       </ol>
                     </div>
@@ -519,7 +526,8 @@ export default function LandingPage() {
                   <div className="bg-white rounded-lg shadow-md p-6 md:p-8">
                     <p className="text-gray-700 mb-6">
                       Various documents are required for different processes
-                      within the DSWD Social Welfare Capital Fund system:
+                      within the DSWD Sustainable Livelihood Program - Tracking
+                      Inventory System:
                     </p>
 
                     <div className="space-y-6">
@@ -660,12 +668,13 @@ export default function LandingPage() {
                     <div className="space-y-6">
                       <div className="border-b border-gray-200 pb-4">
                         <h3 className="font-bold text-lg mb-2 text-[#0F4C81]">
-                          How do I request an account for the DSWD SWCF system?
+                          How do I request an account for the DSWD SLP-TIS
+                          system?
                         </h3>
                         <p className="text-gray-700">
                           DSWD staff should submit a request through their
                           department head. Partner agencies need to send an
-                          official letter to the DSWD SWCF office.
+                          official letter to the DSWD SLP-TIS office.
                           Self-registration is not available for security
                           reasons.
                         </p>
@@ -688,7 +697,7 @@ export default function LandingPage() {
                           How do I report technical issues with the system?
                         </h3>
                         <p className="text-gray-700">
-                          For technical issues, contact the DSWD SWCF support
+                          For technical issues, contact the DSWD SLP-TIS support
                           team via email at support@dswdswcf.gov.ph or call the
                           helpdesk at (02) 8931-8101. Please provide detailed
                           information about the issue.
@@ -744,8 +753,9 @@ export default function LandingPage() {
                   Ready to Get Started?
                 </h2>
                 <p className="text-lg mb-8 max-w-2xl mx-auto">
-                  Access the DSWD Social Welfare Capital Fund system to manage
-                  inventory, process disbursements, and support beneficiaries.
+                  Access the DSWD Sustainable Livelihood Program - Tracking
+                  Inventory System to manage inventory, process disbursements,
+                  and support beneficiaries.
                 </p>
                 <Link href="/dashboard">
                   <button className="bg-[#FFC612] hover:bg-[#FFD54F] text-[#0F4C81] font-bold py-3 px-6 rounded-lg text-lg shadow-lg transform transition-transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-yellow-300">
@@ -769,16 +779,18 @@ export default function LandingPage() {
                         />
                       </div>
                       <div>
-                        <h3 className="text-lg font-bold">DSWD SWCF</h3>
+                        <h3 className="text-lg font-bold">DSWD SLP-TIS</h3>
                         <p className="text-xs text-gray-400">
-                          Social Welfare Capital Fund
+                          Sustainable Livelihood Program - Tracking Inventory
+                          System
                         </p>
                       </div>
                     </div>
                     <p className="text-gray-400">
-                      The DSWD Social Welfare Capital Fund system is designed
-                      The DSWD Social Welfare Capital Fund system is designed to
-                      efficiently manage inventory, track disbursements, and
+                      The DSWD Sustainable Livelihood Program - Tracking
+                      Inventory System is designed The DSWD Sustainable
+                      Livelihood Program - Tracking Inventory System is designed
+                      to efficiently manage inventory, track disbursements, and
                       support beneficiaries through integrated digital
                       solutions.
                     </p>
