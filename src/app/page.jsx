@@ -15,8 +15,11 @@ import {
   Phone,
   Mail,
 } from "react-feather";
+import { useRouter } from "next/navigation";
+
 export default function LandingPage() {
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -146,6 +149,8 @@ export default function LandingPage() {
                 </nav>
               </div>
             </header>
+
+            {/* Hero Section */}
             <section className="bg-gradient-to-b from-[#0F4C81] to-[#1A6BAD] text-white py-20 md:py-32">
               <div className="container mx-auto px-4 text-center">
                 <motion.h2
@@ -171,12 +176,11 @@ export default function LandingPage() {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.4, duration: 0.5 }}
                 >
-                  <button
-                    onClick={() => (window.location.href = "./login")}
-                    className="bg-[#FFC612] hover:bg-[#FFD54F] text-[#0F4C81] font-bold py-4 px-8 rounded-lg text-lg shadow-lg transform transition-transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-yellow-300"
-                  >
-                    Login to System
-                  </button>
+                  <div onClick={() => router.push("/login")}>
+                    <button className="bg-[#FFC612] hover:bg-[#FFD54F] text-[#0F4C81] font-bold py-4 px-8 rounded-lg text-lg shadow-lg transform transition-transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-yellow-300">
+                      Login to System
+                    </button>
+                  </div>
                 </motion.div>
                 <motion.div
                   initial={{ opacity: 0 }}
@@ -189,6 +193,7 @@ export default function LandingPage() {
                 </motion.div>
               </div>
             </section>
+
             {/* Information Sections */}
             <section className="py-16 bg-gray-50">
               <div className="container mx-auto px-4">
@@ -743,6 +748,7 @@ export default function LandingPage() {
                 </div>
               </div>
             </section>
+
             {/* Call to Action */}
             <section className="bg-[#0F4C81] text-white py-16">
               <div className="container mx-auto px-4 text-center">
@@ -761,6 +767,7 @@ export default function LandingPage() {
                 </Link>
               </div>
             </section>
+
             {/* Footer */}
             <footer className="bg-gray-900 text-white py-10">
               <div className="container mx-auto px-4">
