@@ -4,14 +4,33 @@ import { useState } from "react";
 import { Facebook, Linkedin, Twitter, Home } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { auth } from "@/lib/appwrite";
 
 export default function LoginPage() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+  });
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [cooldown, setCooldown] = useState(false);
   const router = useRouter();
+
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      email: "",
+      password: "",
+    });
+    setError("");
+  };
 
   const toggleForm = () => {
     setIsAnimating(true);
+    resetForm();
     setTimeout(() => {
       setIsSignUp(!isSignUp);
       setTimeout(() => {
@@ -20,8 +39,108 @@ export default function LoginPage() {
     }, 10);
   };
 
-  const goToHome = () => {
-    router.push("/");
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const startCooldown = () => {
+    setCooldown(true);
+    setTimeout(() => {
+      setCooldown(false);
+    }, 60000); // 60 seconds cooldown
+  };
+
+  const handleSignUp = async (e) => {
+    e.preventDefault();
+    
+    if (cooldown) {
+      setError("Please wait a minute before trying again.");
+      return;
+    }
+
+    if (isLoading) {
+      return;
+    }
+    
+    setError("");
+    setIsLoading(true);
+    
+    try {
+      // Validate password
+      if (formData.password.length < 8) {
+        setError("Password must be at least 8 characters long");
+        setIsLoading(false);
+        return;
+      }
+
+      // Register and create session
+      const session = await auth.register(
+        formData.email, 
+        formData.password, 
+        formData.name
+      );
+
+      if (session) {
+        router.push("/dashboard");
+      } else {
+        setError("Failed to create account. Please try again.");
+      }
+    } catch (error) {
+      console.error("Signup error:", error);
+      
+      if (error.code === 409) {
+        setError("An account with this email already exists. Please try logging in instead.");
+      } else if (error.code === 400) {
+        setError("Invalid email format. Please enter a valid email address.");
+      } else if (error.code === 429) {
+        startCooldown();
+        setError("Too many attempts. Please try again later.");
+      } else {
+        setError("Failed to create account. Please try again later.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSignIn = async (e) => {
+    e.preventDefault();
+    if (isLoading) return;
+    
+    setError("");
+    setIsLoading(true);
+    
+    try {
+      const session = await auth.login(formData.email, formData.password);
+      if (session) {
+        router.push("/dashboard");
+      } else {
+        setError("Login failed. Please check your credentials and try again.");
+      }
+    } catch (error) {
+      console.error("Login error:", error);
+      
+      if (error.code === 401) {
+        setError("Invalid email or password. Please try again.");
+      } else if (error.code === 429) {
+        setError("Too many login attempts. Please try again later.");
+      } else {
+        setError("Failed to sign in. Please try again later.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Get button text based on state
+  const getSubmitButtonText = () => {
+    if (isLoading) return isSignUp ? "Creating Account..." : "Signing In...";
+    if (cooldown) return "Please Wait...";
+    return isSignUp ? "SIGN UP" : "SIGN IN";
   };
 
   return (
@@ -389,7 +508,7 @@ export default function LoginPage() {
       `}</style>
 
       <div className="main">
-        <button className="home-button" onClick={goToHome}>
+        <button className="home-button" onClick={() => router.push("/")}>
           <Home size={20} />
           <span>Back Home</span>
         </button>
@@ -397,7 +516,7 @@ export default function LoginPage() {
           className={`container a-container ${isSignUp ? "is-txl" : ""}`}
           id="a-container"
         >
-          <form className="form" id="a-form">
+          <form className="form" id="a-form" onSubmit={handleSignUp}>
             <div className="form-logo">
               <Image
                 src="/images/SLP.png"
@@ -408,20 +527,47 @@ export default function LoginPage() {
               />
             </div>
             <h2 className="form_title title">Create Account</h2>
+            {error && <p style={{ color: "red", marginBottom: "10px" }}>{error}</p>}
             <div className="form__icons">
               <Facebook className="form__icon" size={24} />
               <Linkedin className="form__icon" size={24} />
               <Twitter className="form__icon" size={24} />
             </div>
             <span className="form__span">or use email for registration</span>
-            <input type="text" className="form__input" placeholder="Name" />
-            <input type="text" className="form__input" placeholder="Email" />
+            <input 
+              type="text" 
+              name="name"
+              className="form__input" 
+              placeholder="Name" 
+              value={formData.name}
+              onChange={handleInputChange}
+              required
+            />
+            <input 
+              type="email" 
+              name="email"
+              className="form__input" 
+              placeholder="Email" 
+              value={formData.email}
+              onChange={handleInputChange}
+              required
+            />
             <input
               type="password"
+              name="password"
               className="form__input"
               placeholder="Password"
+              value={formData.password}
+              onChange={handleInputChange}
+              required
             />
-            <button className="form__button button submit">SIGN UP</button>
+            <button 
+              type="submit" 
+              className="form__button button submit"
+              disabled={isLoading || cooldown}
+            >
+              {getSubmitButtonText()}
+            </button>
           </form>
         </div>
 
@@ -431,7 +577,7 @@ export default function LoginPage() {
           }`}
           id="b-container"
         >
-          <form className="form" id="b-form">
+          <form className="form" id="b-form" onSubmit={handleSignIn}>
             <div className="form-logo">
               <Image
                 src="/images/SLP.png"
@@ -442,20 +588,33 @@ export default function LoginPage() {
               />
             </div>
             <h2 className="form_title title">Sign in to Website</h2>
+            {error && <p style={{ color: "red", marginBottom: "10px" }}>{error}</p>}
             <div className="form__icons">
               <Facebook className="form__icon" size={24} />
               <Linkedin className="form__icon" size={24} />
               <Twitter className="form__icon" size={24} />
             </div>
             <span className="form__span">or use your email account</span>
-            <input type="text" className="form__input" placeholder="Email" />
+            <input 
+              type="email" 
+              name="email"
+              className="form__input" 
+              placeholder="Email" 
+              value={formData.email}
+              onChange={handleInputChange}
+              required
+            />
             <input
               type="password"
+              name="password"
               className="form__input"
               placeholder="Password"
+              value={formData.password}
+              onChange={handleInputChange}
+              required
             />
             <a className="form__link">Forgot your password?</a>
-            <button className="form__button button submit">SIGN IN</button>
+            <button type="submit" className="form__button button submit">SIGN IN</button>
           </form>
         </div>
 

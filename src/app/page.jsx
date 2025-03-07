@@ -15,8 +15,11 @@ import {
   Phone,
   Mail,
 } from "react-feather";
+import { useRouter } from "next/navigation";
+
 export default function LandingPage() {
   const [loading, setLoading] = useState(true);
+  const router = useRouter();
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -25,6 +28,10 @@ export default function LandingPage() {
 
     return () => clearTimeout(timer);
   }, []);
+
+  const handleNavigation = (path) => {
+    router.push(path);
+  };
 
   return (
     <div className="min-h-screen bg-lime-300">
@@ -173,10 +180,11 @@ export default function LandingPage() {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.4, duration: 0.5 }}
                 >
-                  <Link href="./login">
-                    <button className="bg-[#FFC612] hover:bg-[#FFD54F] text-[#0F4C81] font-bold py-4 px-8 rounded-lg text-lg shadow-lg transform transition-transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-yellow-300">
-                      Login to System
-                    </button>
+                  <Link 
+                    href="/login"
+                    className="inline-block bg-[#FFC612] hover:bg-[#FFD54F] text-[#0F4C81] font-bold py-4 px-8 rounded-lg text-lg shadow-lg transform transition-transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-yellow-300"
+                  >
+                    Login to System
                   </Link>
                 </motion.div>
                 <motion.div
@@ -757,10 +765,11 @@ export default function LandingPage() {
                   Inventory System to manage inventory, process disbursements,
                   and support beneficiaries.
                 </p>
-                <Link href="/dashboard">
-                  <button className="bg-[#FFC612] hover:bg-[#FFD54F] text-[#0F4C81] font-bold py-3 px-6 rounded-lg text-lg shadow-lg transform transition-transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-yellow-300">
-                    Login to System
-                  </button>
+                <Link
+                  href="/login"
+                  className="inline-block bg-[#FFC612] hover:bg-[#FFD54F] text-[#0F4C81] font-bold py-3 px-6 rounded-lg text-lg shadow-lg transform transition-transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-yellow-300"
+                >
+                  Login to System
                 </Link>
               </div>
             </section>
@@ -823,60 +832,60 @@ export default function LandingPage() {
                     <h3 className="text-lg font-bold mb-4">Quick Links</h3>
                     <ul className="space-y-2 text-gray-400">
                       <li>
-                        <a
-                          href="#platform-users"
+                        <button
+                          onClick={() => document.getElementById('platform-users').scrollIntoView({ behavior: 'smooth' })}
                           className="hover:text-[#FFC612] transition-colors"
                         >
                           Platform Users
-                        </a>
+                        </button>
                       </li>
                       <li>
-                        <a
-                          href="#account-creation"
+                        <button
+                          onClick={() => document.getElementById('account-creation').scrollIntoView({ behavior: 'smooth' })}
                           className="hover:text-[#FFC612] transition-colors"
                         >
                           Account Creation
-                        </a>
+                        </button>
                       </li>
                       <li>
-                        <a
-                          href="#service-access"
+                        <button
+                          onClick={() => document.getElementById('service-access').scrollIntoView({ behavior: 'smooth' })}
                           className="hover:text-[#FFC612] transition-colors"
                         >
                           Service Access Guide
-                        </a>
+                        </button>
                       </li>
                       <li>
-                        <a
-                          href="#required-documents"
+                        <button
+                          onClick={() => document.getElementById('required-documents').scrollIntoView({ behavior: 'smooth' })}
                           className="hover:text-[#FFC612] transition-colors"
                         >
                           Required Documents
-                        </a>
+                        </button>
                       </li>
                       <li>
-                        <a
-                          href="#faqs"
+                        <button
+                          onClick={() => document.getElementById('faqs').scrollIntoView({ behavior: 'smooth' })}
                           className="hover:text-[#FFC612] transition-colors"
                         >
                           FAQs
-                        </a>
+                        </button>
                       </li>
                       <li>
-                        <a
-                          href="https://www.dswd.gov.ph"
+                        <button
+                          onClick={() => window.open('https://www.dswd.gov.ph', '_blank')}
                           className="hover:text-[#FFC612] transition-colors"
                         >
                           DSWD Official Website
-                        </a>
+                        </button>
                       </li>
                       <li>
-                        <a
-                          href="https://www.dswd.gov.ph/sustainable-livelihood-program/"
+                        <button
+                          onClick={() => window.open('https://www.dswd.gov.ph/sustainable-livelihood-program/', '_blank')}
                           className="hover:text-[#FFC612] transition-colors"
                         >
                           Sustainable Livelihood Program
-                        </a>
+                        </button>
                       </li>
                     </ul>
                   </div>
