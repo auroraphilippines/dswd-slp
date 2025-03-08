@@ -807,8 +807,8 @@ export default function LandingPage() {
                       <li className="flex items-start">
                         <MapPin className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
                         <span>
-                          DSWD Central Office, IBP Road, Constitution Hills,
-                          Quezon City
+                          DSWD Provincial Extension Office - Aurora, Baler,
+                          Aurora
                         </span>
                       </li>
                       <li className="flex items-start">
