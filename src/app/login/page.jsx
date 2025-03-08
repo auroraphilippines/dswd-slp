@@ -4,14 +4,25 @@ import { useState } from "react";
 import { Facebook, Linkedin, Twitter, Home } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { registerUser, loginUser } from "@/service/auth";
 
 export default function LoginPage() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const toggleForm = () => {
     setIsAnimating(true);
+    setName("");
+    setEmail("");
+    setPassword("");
+    setError("");
+
     setTimeout(() => {
       setIsSignUp(!isSignUp);
       setTimeout(() => {
@@ -22,6 +33,46 @@ export default function LoginPage() {
 
   const goToHome = () => {
     router.push("/");
+  };
+
+  const handleSignUp = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      const result = await registerUser(name, email, password);
+      if (result.success) {
+        router.push("/dashboard");
+      } else {
+        setError(result.error);
+      }
+    } catch (error) {
+      console.error("Error during signup:", error);
+      setError("An unexpected error occurred.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSignIn = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      const result = await loginUser(email, password);
+      if (result.success) {
+        router.push("/dashboard");
+      } else {
+        setError(result.error);
+      }
+    } catch (error) {
+      console.error("Error during signin:", error);
+      setError("An unexpected error occurred.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -208,6 +259,12 @@ export default function LoginPage() {
           transform: translateY(-2px);
         }
 
+        .button:disabled {
+          background-color: #a5d6a7;
+          cursor: not-allowed;
+          transform: none;
+        }
+
         .a-container {
           z-index: 100;
           left: 50%;
@@ -332,6 +389,13 @@ export default function LoginPage() {
           animation: is-gx var(--transition);
         }
 
+        .error-message {
+          color: #d32f2f;
+          font-size: 14px;
+          margin-top: 10px;
+          text-align: center;
+        }
+
         @keyframes is-gx {
           0%,
           10%,
@@ -397,7 +461,7 @@ export default function LoginPage() {
           className={`container a-container ${isSignUp ? "is-txl" : ""}`}
           id="a-container"
         >
-          <form className="form" id="a-form">
+          <form className="form" id="a-form" onSubmit={handleSignUp}>
             <div className="form-logo">
               <Image
                 src="/images/SLP.png"
@@ -414,14 +478,38 @@ export default function LoginPage() {
               <Twitter className="form__icon" size={24} />
             </div>
             <span className="form__span">or use email for registration</span>
-            <input type="text" className="form__input" placeholder="Name" />
-            <input type="text" className="form__input" placeholder="Email" />
+            <input
+              type="text"
+              className="form__input"
+              placeholder="Name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+            <input
+              type="email"
+              className="form__input"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
             <input
               type="password"
               className="form__input"
               placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
             />
-            <button className="form__button button submit">SIGN UP</button>
+            {error && <div className="error-message">{error}</div>}
+            <button
+              className="form__button button submit"
+              type="submit"
+              disabled={loading}
+            >
+              {loading ? "SIGNING UP..." : "SIGN UP"}
+            </button>
           </form>
         </div>
 
@@ -431,7 +519,7 @@ export default function LoginPage() {
           }`}
           id="b-container"
         >
-          <form className="form" id="b-form">
+          <form className="form" id="b-form" onSubmit={handleSignIn}>
             <div className="form-logo">
               <Image
                 src="/images/SLP.png"
@@ -448,14 +536,31 @@ export default function LoginPage() {
               <Twitter className="form__icon" size={24} />
             </div>
             <span className="form__span">or use your email account</span>
-            <input type="text" className="form__input" placeholder="Email" />
+            <input
+              type="email"
+              className="form__input"
+              placeholder="Email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
             <input
               type="password"
               className="form__input"
               placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
             />
+            {error && <div className="error-message">{error}</div>}
             <a className="form__link">Forgot your password?</a>
-            <button className="form__button button submit">SIGN IN</button>
+            <button
+              className="form__button button submit"
+              type="submit"
+              disabled={loading}
+            >
+              {loading ? "SIGNING IN..." : "SIGN IN"}
+            </button>
           </form>
         </div>
 
@@ -489,6 +594,7 @@ export default function LoginPage() {
             <button
               className="switch__button button switch-btn"
               onClick={toggleForm}
+              type="button"
             >
               SIGN IN
             </button>
@@ -514,6 +620,7 @@ export default function LoginPage() {
             <button
               className="switch__button button switch-btn"
               onClick={toggleForm}
+              type="button"
             >
               SIGN UP
             </button>
