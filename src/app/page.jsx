@@ -767,8 +767,6 @@ export default function LandingPage() {
                 </Link>
               </div>
             </section>
-
-            {/* Footer */}
             <footer className="bg-gray-900 text-white py-10">
               <div className="container mx-auto px-4">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
