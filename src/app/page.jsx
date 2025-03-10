@@ -760,11 +760,11 @@ export default function LandingPage() {
                   Inventory System to manage inventory, process disbursements,
                   and support beneficiaries.
                 </p>
-                <Link href="/dashboard">
+                <div onClick={() => router.push("/login")}>
                   <button className="bg-[#FFC612] hover:bg-[#FFD54F] text-[#0F4C81] font-bold py-3 px-6 rounded-lg text-lg shadow-lg transform transition-transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-yellow-300">
                     Login to System
                   </button>
-                </Link>
+                </div>
               </div>
             </section>
             <footer className="bg-gray-900 text-white py-10">
