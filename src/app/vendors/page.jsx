@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Store, Plus, Search, Download, MoreHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,7 @@ import {
 import { VendorDetailView } from "./vendor-detail-view";
 
 export default function VendorsPage() {
+  const router = useRouter();
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -44,6 +46,10 @@ export default function VendorsPage() {
 
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
+  };
+
+  const handleAddVendor = () => {
+    router.push("./vendors/add");
   };
 
   // Filter vendors based on search query
@@ -69,7 +75,7 @@ export default function VendorsPage() {
               <Download className="mr-2 h-4 w-4" />
               Export
             </Button>
-            <Button>
+            <Button onClick={handleAddVendor}>
               <Plus className="mr-2 h-4 w-4" />
               Add Vendor
             </Button>
