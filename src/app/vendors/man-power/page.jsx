@@ -1,5 +1,7 @@
 "use client";
 
+import { CardFooter } from "@/components/ui/card";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -9,17 +11,26 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Minus, Plus, Trash2, Save, ArrowLeft, Users } from "lucide-react";
+import {
+  Minus,
+  Plus,
+  Trash2,
+  ArrowLeft,
+  ArrowRight,
+  Users,
+  AlertCircle,
+} from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function ManPowerPage() {
   const router = useRouter();
   const [formId] = useState("100002");
+  const MAX_WORKERS = 5;
   const [workers, setWorkers] = useState([
     {
       id: 1,
@@ -36,6 +47,10 @@ export default function ManPowerPage() {
   };
 
   const handleAddWorker = () => {
+    if (workers.length >= MAX_WORKERS) {
+      return; // Don't add more if limit reached
+    }
+
     setWorkers([
       ...workers,
       {
@@ -77,7 +92,7 @@ export default function ManPowerPage() {
 
   const handleNext = () => {
     console.log(workers);
-    router.push("/vendors");
+    router.push("/vendors/tools-equipment");
   };
 
   // Calculate total daily wages
@@ -198,15 +213,27 @@ export default function ManPowerPage() {
                 </div>
               ))}
 
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={handleAddWorker}
-              >
-                <Users className="h-4 w-4 mr-2" />
-                Add Another Worker
-              </Button>
+              {workers.length < MAX_WORKERS ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleAddWorker}
+                >
+                  <Users className="h-4 w-4 mr-2" />
+                  Add Another Worker
+                </Button>
+              ) : (
+                <Alert
+                  variant="warning"
+                  className="bg-amber-50 border-amber-200"
+                >
+                  <AlertCircle className="h-4 w-4 text-amber-600" />
+                  <AlertDescription>
+                    Maximum limit of {MAX_WORKERS} workers reached.
+                  </AlertDescription>
+                </Alert>
+              )}
 
               <Separator />
 
@@ -224,8 +251,8 @@ export default function ManPowerPage() {
               Previous
             </Button>
             <Button onClick={handleNext}>
-              <Save className="h-4 w-4 mr-2" />
-              Save and Continue
+              <ArrowRight className="h-4 w-4 mr-2" />
+              Next
             </Button>
           </CardFooter>
         </Card>

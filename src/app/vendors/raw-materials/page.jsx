@@ -9,17 +9,17 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
 import {
   Minus,
   Plus,
   Trash2,
-  Save,
   ArrowLeft,
   AlertCircle,
+  ArrowRight,
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
@@ -32,12 +32,39 @@ export default function RawMaterialsPage() {
   const [rawMaterials, setRawMaterials] = useState([
     {
       id: 1,
-      name: "",
-      quantity: "",
-      unit: "",
-      unitPrice: "",
-      frequency: "",
-      totalCost: "",
+      name: "Native Goat (Buck)",
+      quantity: 25,
+      unit: "Pcs",
+      unitPrice: 4000,
+      frequency: "Once",
+      totalCost: 100000,
+    },
+    {
+      id: 2,
+      name: "Native Goat (Doe)",
+      quantity: 50,
+      unit: "Pcs",
+      unitPrice: 3750,
+      frequency: "Once",
+      totalCost: 187500,
+    },
+    {
+      id: 3,
+      name: "Dewormer",
+      quantity: 2,
+      unit: "Liter",
+      unitPrice: 2500,
+      frequency: "Once",
+      totalCost: 5000,
+    },
+    {
+      id: 4,
+      name: "Multivitamins",
+      quantity: 2,
+      unit: "Liter",
+      unitPrice: 3750,
+      frequency: "Once",
+      totalCost: 7500,
     },
   ]);
 
@@ -120,7 +147,7 @@ export default function RawMaterialsPage() {
 
   const handleNext = () => {
     console.log(rawMaterials);
-    router.push("/vendors");
+    router.push("/vendors/man-power");
   };
 
   // Calculate total cost of all materials
@@ -347,8 +374,8 @@ export default function RawMaterialsPage() {
               Previous
             </Button>
             <Button onClick={handleNext}>
-              <Save className="h-4 w-4 mr-2" />
-              Save and Continue
+              <ArrowRight className="h-4 w-4 mr-2" />
+              Next
             </Button>
           </CardFooter>
         </Card>
