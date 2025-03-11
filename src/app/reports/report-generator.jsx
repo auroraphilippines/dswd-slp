@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { format, formatDate } from "date-fns";
 import { CalendarIcon, FileBarChart } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -32,7 +33,7 @@ export function ReportGenerator() {
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date());
   const [reportType, setReportType] = useState("inventory");
-  const [format, setFormat] = useState("pdf");
+  const [fileFormat, setFileFormat] = useState("pdf");
 
   return (
     <Card>
@@ -167,7 +168,7 @@ export function ReportGenerator() {
 
         <div className="space-y-2">
           <Label>Format</Label>
-          <Select defaultValue="pdf" onValueChange={setFormat}>
+          <Select defaultValue="pdf" onValueChange={setFileFormat}>
             <SelectTrigger>
               <SelectValue placeholder="Select format" />
             </SelectTrigger>
