@@ -30,11 +30,19 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { VendorDetailView } from "./vendor-detail-view";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
 export default function VendorsPage() {
   const router = useRouter();
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showExportDialog, setShowExportDialog] = useState(false);
 
   const handleViewDetails = (vendor) => {
     setSelectedVendor(vendor);
@@ -50,6 +58,74 @@ export default function VendorsPage() {
 
   const handleAddVendor = () => {
     router.push("./vendors/add");
+  };
+
+  const exportToGoogleSheets = () => {
+    // Convert vendor data to CSV format
+    const headers = ["ID", "Name", "Category", "Contact Person", "Status"];
+    const csvContent = [
+      headers,
+      ...filteredVendors.map((vendor) => [
+        vendor.id,
+        vendor.name,
+        vendor.category,
+        vendor.contactPerson,
+        vendor.status,
+      ]),
+    ]
+      .map((row) => row.join(","))
+      .join("\n");
+
+    // Create a Blob and URL
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+
+    // Open Google Sheets in a new tab
+    window.open("https://docs.google.com/spreadsheets/create", "_blank");
+
+    // Create a temporary link to download the CSV
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "vendors.csv";
+    link.click();
+
+    // Clean up
+    URL.revokeObjectURL(url);
+    setShowExportDialog(false);
+  };
+
+  const exportToExcelOnline = () => {
+    // Convert vendor data to CSV format
+    const headers = ["ID", "Name", "Category", "Contact Person", "Status"];
+    const csvContent = [
+      headers,
+      ...filteredVendors.map((vendor) => [
+        vendor.id,
+        vendor.name,
+        vendor.category,
+        vendor.contactPerson,
+        vendor.status,
+      ]),
+    ]
+      .map((row) => row.join(","))
+      .join("\n");
+
+    // Create a Blob and URL
+    const blob = new Blob([csvContent], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+
+    // Open Excel Online in a new tab
+    window.open("https://www.office.com/launch/excel", "_blank");
+
+    // Create a temporary link to download the CSV
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "vendors.xlsx";
+    link.click();
+
+    // Clean up
+    URL.revokeObjectURL(url);
+    setShowExportDialog(false);
   };
 
   // Filter vendors based on search query
@@ -71,7 +147,7 @@ export default function VendorsPage() {
             Vendor Management
           </h1>
           <div className="flex items-center space-x-2">
-            <Button variant="outline">
+            <Button variant="outline" onClick={() => setShowExportDialog(true)}>
               <Download className="mr-2 h-4 w-4" />
               Export
             </Button>
@@ -235,6 +311,39 @@ export default function VendorsPage() {
           </CardContent>
         </Card>
       </div>
+      <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Export Vendors Data</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col gap-4 py-4">
+            <Button
+              className="flex items-center justify-start gap-2"
+              variant="outline"
+              onClick={exportToGoogleSheets}
+            >
+              <img
+                src="https://www.google.com/images/about/sheets-icon.svg"
+                alt="Google Sheets"
+                className="w-5 h-5"
+              />
+              Export to Google Sheets
+            </Button>
+            <Button
+              className="flex items-center justify-start gap-2"
+              variant="outline"
+              onClick={exportToExcelOnline}
+            >
+              <img
+                src="https://img.icons8.com/color/48/000000/microsoft-excel-2019--v1.png"
+                alt="Microsoft Excel"
+                className="w-5 h-5"
+              />
+              Export to Microsoft Excel Online
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
