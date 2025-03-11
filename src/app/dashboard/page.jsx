@@ -104,19 +104,6 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        {/* Charts and Tables */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <Card className="col-span-1">
-            <CardHeader>
-              <CardTitle>Inventory Value by Category</CardTitle>
-              <CardDescription>
-                Distribution of inventory value across categories
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="pl-2">
-              <CategoryDistribution />
-            </CardContent>
-          </Card>
 
           <Card className="col-span-1">
             <CardHeader>
