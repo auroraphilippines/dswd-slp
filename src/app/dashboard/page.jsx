@@ -17,9 +17,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { InventoryChart } from "../inventory/inventory-chart";
 import { RecentActivities } from "./recent-activities";
-import { CategoryDistribution } from "../inventory/category-distribution";
 
 export default function DashboardPage() {
   return (
@@ -132,19 +130,6 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
         </div>
-
-        {/* Inventory Trends */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Inventory Value Trends</CardTitle>
-            <CardDescription>
-              Monthly inventory value trends for the past 30 days
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pl-2">
-            <InventoryChart />
-          </CardContent>
-        </Card>
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
