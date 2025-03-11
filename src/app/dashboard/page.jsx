@@ -104,74 +104,72 @@ export default function DashboardPage() {
           </Card>
         </div>
 
+        <Card className="col-span-1">
+          <CardHeader>
+            <CardTitle>Recent Activities</CardTitle>
+            <CardDescription>
+              Latest inventory and disbursement activities
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <RecentActivities />
+          </CardContent>
+        </Card>
+      </div>
 
-          <Card className="col-span-1">
-            <CardHeader>
-              <CardTitle>Recent Activities</CardTitle>
-              <CardDescription>
-                Latest inventory and disbursement activities
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <RecentActivities />
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">
-                Low Stock Alert
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-2">
-                47 items are running low on stock and need replenishment.
-              </p>
-              <Link href="/dashboard/inventory?filter=low-stock">
-                <Button variant="secondary" className="w-full">
-                  View Low Stock Items
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">
-                Pending Disbursements
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-2">
-                124 disbursements are waiting to be processed and delivered.
-              </p>
-              <Link href="/dashboard/disbursements?status=pending">
-                <Button variant="secondary" className="w-full">
-                  Process Disbursements
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">
-                Monthly Report
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-sm text-muted-foreground mb-2">
-                Generate and download the monthly inventory and fund report.
-              </p>
-              <Link href="/dashboard/reports/generate">
-                <Button variant="secondary" className="w-full">
-                  Generate Report
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        </div>
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">
+              Low Stock Alert
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-2">
+              47 items are running low on stock and need replenishment.
+            </p>
+            <Link href="/dashboard/inventory?filter=low-stock">
+              <Button variant="secondary" className="w-full">
+                View Low Stock Items
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">
+              Pending Disbursements
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-2">
+              124 disbursements are waiting to be processed and delivered.
+            </p>
+            <Link href="/dashboard/disbursements?status=pending">
+              <Button variant="secondary" className="w-full">
+                Process Disbursements
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">
+              Monthly Report
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-2">
+              Generate and download the monthly inventory and fund report.
+            </p>
+            <Link href="/dashboard/reports/generate">
+              <Button variant="secondary" className="w-full">
+                Generate Report
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
