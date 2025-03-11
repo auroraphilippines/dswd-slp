@@ -95,10 +95,9 @@ export default function VendorsPage() {
   };
 
   const exportToExcelOnline = () => {
-    // Convert vendor data to CSV format
-    const headers = ["ID", "Name", "Category", "Contact Person", "Status"];
-    const csvContent = [
-      headers,
+    // Convert vendor data to XLSX-friendly format
+    const workbookData = [
+      ["ID", "Name", "Category", "Contact Person", "Status"],
       ...filteredVendors.map((vendor) => [
         vendor.id,
         vendor.name,
@@ -106,22 +105,42 @@ export default function VendorsPage() {
         vendor.contactPerson,
         vendor.status,
       ]),
-    ]
-      .map((row) => row.join(","))
-      .join("\n");
+    ];
 
-    // Create a Blob and URL
-    const blob = new Blob([csvContent], { type: "text/csv" });
+    // Create a binary string
+    let csvContent = "";
+    workbookData.forEach((row) => {
+      // Properly escape and quote fields
+      const processedRow = row.map((field) => {
+        // Handle fields that contain commas or quotes
+        if (
+          field &&
+          (field.includes(",") || field.includes('"') || field.includes("\n"))
+        ) {
+          return `"${field.replace(/"/g, '""')}"`;
+        }
+        return field;
+      });
+      csvContent += processedRow.join(",") + "\r\n";
+    });
+
+    // Create Blob with UTF-8 BOM for Excel compatibility
+    const BOM = "\uFEFF";
+    const blob = new Blob([BOM + csvContent], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8",
+    });
     const url = URL.createObjectURL(blob);
 
-    // Open Excel Online in a new tab
-    window.open("https://www.office.com/launch/excel", "_blank");
-
-    // Create a temporary link to download the CSV
+    // Create a temporary link and trigger download
     const link = document.createElement("a");
     link.href = url;
     link.download = "vendors.xlsx";
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
+
+    // Open Excel Online
+    window.open("https://www.office.com/launch/excel?auth=2", "_blank");
 
     // Clean up
     URL.revokeObjectURL(url);
