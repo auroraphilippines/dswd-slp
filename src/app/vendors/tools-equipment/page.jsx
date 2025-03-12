@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,9 +25,12 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { saveToolsEquipment } from "@/service/vendor";
+import { getCurrentUser } from "@/service/auth";
 
 export default function ToolsEquipmentPage() {
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
   const [formId] = useState("100002");
   const MAX_TOOLS = 5;
   const [tools, setTools] = useState([
@@ -43,6 +46,18 @@ export default function ToolsEquipmentPage() {
       depreciationCost: 0,
     },
   ]);
+
+  // Check authentication on page load
+  useEffect(() => {
+    const checkAuth = async () => {
+      const user = await getCurrentUser();
+      if (!user) {
+        router.push('/login'); // Redirect to login if not authenticated
+        return;
+      }
+    };
+    checkAuth();
+  }, [router]);
 
   const handleInputChange = (index, field, value) => {
     const updatedTools = [...tools];
@@ -180,9 +195,43 @@ export default function ToolsEquipmentPage() {
     router.back();
   };
 
-  const handleNext = () => {
-    console.log(tools);
-    router.push("/man-power");
+  const handleNext = async () => {
+    setLoading(true);
+    try {
+      // Check authentication before saving
+      const user = await getCurrentUser();
+      if (!user) {
+        alert("Please login to continue");
+        router.push('/login');
+        return;
+      }
+
+      const vendorId = localStorage.getItem('currentVendorId');
+      if (!vendorId) {
+        alert("Vendor ID not found. Please start from the beginning.");
+        router.push("/vendors/add");
+        return;
+      }
+
+      const result = await saveToolsEquipment(vendorId, tools.map(tool => ({
+        ...tool,
+        userId: user.uid, // Add user ID to tool data
+      })));
+
+      if (result.success) {
+        // Clear the vendorId from localStorage since we're done with the flow
+        localStorage.removeItem('currentVendorId');
+        router.push("/vendors");
+      } else {
+        console.error("Failed to save tools data:", result.error);
+        alert("Failed to save tools data. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Calculate total costs

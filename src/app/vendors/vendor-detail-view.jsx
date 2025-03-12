@@ -12,326 +12,233 @@ import {
 import { Badge } from "@/components/ui/badge";
 
 export function VendorDetailView({ vendor }) {
-  if (!vendor) return null;
+  // Generate a unique vendor ID based on timestamp and random number
+  const vendorId = `VEN${Date.now().toString().slice(-8)}${Math.floor(Math.random() * 10000)}`;
+
+  // Calculate total manpower cost
+  const totalManpowerCost = vendor?.workers?.reduce((sum, worker) => sum + (worker.wage || 0), 0) || 0;
+  
+  // Calculate total raw materials cost
+  const totalMaterialsCost = vendor?.rawMaterials?.reduce((sum, material) => sum + (material.totalCost || 0), 0) || 0;
+
+  // Calculate total equipment cost
+  const totalEquipmentCost = vendor?.toolsAndEquipment?.reduce((sum, item) => {
+    const itemCost = Number(item.totalCost) || 0;
+    return sum + itemCost;
+  }, 0) || 0;
 
   return (
-    <Tabs defaultValue="basic">
-      <TabsList className="mb-4">
-        <TabsTrigger value="basic">Basic Info</TabsTrigger>
-        <TabsTrigger value="contact">Contact</TabsTrigger>
-        <TabsTrigger value="items">Supplied Items</TabsTrigger>
-        <TabsTrigger value="transactions">Transactions</TabsTrigger>
+    <Tabs defaultValue="basic-info" className="w-full">
+      <TabsList className="grid w-full grid-cols-4">
+        <TabsTrigger value="basic-info">Basic Info</TabsTrigger>
+        <TabsTrigger value="manpower">Man Power</TabsTrigger>
+        <TabsTrigger value="materials">Materials</TabsTrigger>
+        <TabsTrigger value="equipment">Equipment</TabsTrigger>
       </TabsList>
 
-      <TabsContent value="basic" className="space-y-4">
+      <TabsContent value="basic-info">
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              Basic Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
-              <div className="flex justify-between sm:block">
-                <dt className="text-sm font-medium text-muted-foreground">
-                  Vendor ID:
-                </dt>
-                <dd className="text-sm font-medium">{vendor.id}</dd>
+          <CardContent className="p-6 space-y-6">
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Basic Information</h3>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm text-muted-foreground">Vendor ID:</label>
+                  <p className="font-medium">{vendorId}</p>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">Name:</label>
+                  <p className="font-medium">{vendor?.name || "N/A"}</p>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">Project Code:</label>
+                  <p className="font-medium">{vendor?.projectCode || "N/A"}</p>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">Program Name:</label>
+                  <p className="font-medium">{vendor?.programName || "N/A"}</p>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">Email:</label>
+                  <p className="font-medium">{vendor?.email || "N/A"}</p>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">Registration Date:</label>
+                  <p className="font-medium">
+                    {vendor?.createdAt ? new Date(vendor.createdAt).toLocaleDateString() : "N/A"}
+                  </p>
+                </div>
               </div>
-              <div className="flex justify-between sm:block">
-                <dt className="text-sm font-medium text-muted-foreground">
-                  Name:
-                </dt>
-                <dd className="text-sm font-medium">{vendor.name}</dd>
-              </div>
-              <div className="flex justify-between sm:block">
-                <dt className="text-sm font-medium text-muted-foreground">
-                  Category:
-                </dt>
-                <dd className="text-sm font-medium">{vendor.category}</dd>
-              </div>
-              <div className="flex justify-between sm:block">
-                <dt className="text-sm font-medium text-muted-foreground">
-                  Status:
-                </dt>
-                <dd className="text-sm font-medium">
-                  <Badge
-                    variant={
-                      vendor.status === "Active" ? "outline" : "secondary"
-                    }
-                  >
-                    {vendor.status}
-                  </Badge>
-                </dd>
-              </div>
-              <div className="flex justify-between sm:block">
-                <dt className="text-sm font-medium text-muted-foreground">
-                  Registration Date:
-                </dt>
-                <dd className="text-sm font-medium">
-                  {vendor.registrationDate}
-                </dd>
-              </div>
-              <div className="flex justify-between sm:block">
-                <dt className="text-sm font-medium text-muted-foreground">
-                  Tax ID:
-                </dt>
-                <dd className="text-sm font-medium">{vendor.taxId || "N/A"}</dd>
-              </div>
-            </dl>
-          </CardContent>
-        </Card>
+            </div>
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Accreditation</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
-              <div className="flex justify-between sm:block">
-                <dt className="text-sm font-medium text-muted-foreground">
-                  Accreditation Date:
-                </dt>
-                <dd className="text-sm font-medium">
-                  {vendor.accreditationDate || "N/A"}
-                </dd>
+            <div className="space-y-4">
+              <h3 className="text-lg font-semibold">Project Costs Summary</h3>
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="text-sm text-muted-foreground">Total Manpower Cost:</label>
+                  <p className="font-medium">₱ {totalManpowerCost.toLocaleString()}</p>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">Total Materials Cost:</label>
+                  <p className="font-medium">₱ {totalMaterialsCost.toLocaleString()}</p>
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">Total Equipment Cost:</label>
+                  <p className="font-medium">₱ {totalEquipmentCost.toLocaleString()}</p>
+                </div>
               </div>
-              <div className="flex justify-between sm:block">
-                <dt className="text-sm font-medium text-muted-foreground">
-                  Expiry Date:
-                </dt>
-                <dd className="text-sm font-medium">
-                  {vendor.accreditationExpiry || "N/A"}
-                </dd>
-              </div>
-              <div className="flex justify-between sm:block">
-                <dt className="text-sm font-medium text-muted-foreground">
-                  Accreditation Level:
-                </dt>
-                <dd className="text-sm font-medium">
-                  {vendor.accreditationLevel || "N/A"}
-                </dd>
-              </div>
-              <div className="flex justify-between sm:block">
-                <dt className="text-sm font-medium text-muted-foreground">
-                  Accreditation Number:
-                </dt>
-                <dd className="text-sm font-medium">
-                  {vendor.accreditationNumber || "N/A"}
-                </dd>
-              </div>
-            </dl>
+            </div>
           </CardContent>
         </Card>
       </TabsContent>
 
-      <TabsContent value="contact" className="space-y-4">
+      <TabsContent value="manpower">
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              Contact Information
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
-              <div className="flex justify-between sm:block">
-                <dt className="text-sm font-medium text-muted-foreground">
-                  Contact Person:
-                </dt>
-                <dd className="text-sm font-medium">{vendor.contactPerson}</dd>
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold">Man Power Details</h3>
+                <Badge variant="outline">Total: ₱ {totalManpowerCost.toLocaleString()}</Badge>
               </div>
-              <div className="flex justify-between sm:block">
-                <dt className="text-sm font-medium text-muted-foreground">
-                  Position:
-                </dt>
-                <dd className="text-sm font-medium">
-                  {vendor.position || "N/A"}
-                </dd>
-              </div>
-              <div className="flex justify-between sm:block">
-                <dt className="text-sm font-medium text-muted-foreground">
-                  Phone:
-                </dt>
-                <dd className="text-sm font-medium">{vendor.phone}</dd>
-              </div>
-              <div className="flex justify-between sm:block">
-                <dt className="text-sm font-medium text-muted-foreground">
-                  Email:
-                </dt>
-                <dd className="text-sm font-medium">{vendor.email}</dd>
-              </div>
-              <div className="col-span-1 sm:col-span-2">
-                <dt className="text-sm font-medium text-muted-foreground">
-                  Address:
-                </dt>
-                <dd className="text-sm">{vendor.address}</dd>
-              </div>
-            </dl>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              Additional Contacts
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {vendor.additionalContacts &&
-            vendor.additionalContacts.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Position</TableHead>
-                    <TableHead>Phone</TableHead>
-                    <TableHead>Email</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {vendor.additionalContacts.map((contact, index) => (
-                    <TableRow key={index}>
-                      <TableCell>{contact.name}</TableCell>
-                      <TableCell>{contact.position}</TableCell>
-                      <TableCell>{contact.phone}</TableCell>
-                      <TableCell>{contact.email}</TableCell>
-                    </TableRow>
+              
+              {vendor?.workers && vendor.workers.length > 0 ? (
+                <div className="space-y-4">
+                  {vendor.workers.map((worker, index) => (
+                    <div key={index} className="border p-4 rounded-lg">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm text-muted-foreground">Worker Name:</label>
+                          <p className="font-medium">{worker.name}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm text-muted-foreground">Task:</label>
+                          <p className="font-medium">{worker.task}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm text-muted-foreground">Daily Wage:</label>
+                          <p className="font-medium">₱ {worker.wage?.toLocaleString()}</p>
+                        </div>
+                      </div>
+                    </div>
                   ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                No additional contacts available
-              </p>
-            )}
+                </div>
+              ) : (
+                <p className="text-muted-foreground">No manpower details added yet.</p>
+              )}
+            </div>
           </CardContent>
         </Card>
       </TabsContent>
 
-      <TabsContent value="items" className="space-y-4">
+      <TabsContent value="materials">
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              Supplied Items
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {vendor.suppliedItems && vendor.suppliedItems.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Item ID</TableHead>
-                    <TableHead>Item Name</TableHead>
-                    <TableHead>Category</TableHead>
-                    <TableHead className="text-right">
-                      Last Supply Date
-                    </TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {vendor.suppliedItems.map((item, index) => (
-                    <TableRow key={index}>
-                      <TableCell>{item.id}</TableCell>
-                      <TableCell>{item.name}</TableCell>
-                      <TableCell>{item.category}</TableCell>
-                      <TableCell className="text-right">
-                        {item.lastSupplyDate}
-                      </TableCell>
-                    </TableRow>
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold">Raw Materials</h3>
+                <Badge variant="outline">Total: ₱ {totalMaterialsCost.toLocaleString()}</Badge>
+              </div>
+              
+              {vendor?.rawMaterials && vendor.rawMaterials.length > 0 ? (
+                <div className="space-y-4">
+                  {vendor.rawMaterials.map((material, index) => (
+                    <div key={index} className="border p-4 rounded-lg">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-sm text-muted-foreground">Material Name:</label>
+                          <p className="font-medium">{material.name}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm text-muted-foreground">Quantity:</label>
+                          <p className="font-medium">{material.quantity} {material.unit}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm text-muted-foreground">Unit Price:</label>
+                          <p className="font-medium">₱ {material.unitPrice?.toLocaleString()}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm text-muted-foreground">Total Cost:</label>
+                          <p className="font-medium">₱ {material.totalCost?.toLocaleString()}</p>
+                        </div>
+                        <div>
+                          <label className="text-sm text-muted-foreground">Frequency:</label>
+                          <p className="font-medium">{material.frequency}</p>
+                        </div>
+                      </div>
+                    </div>
                   ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                No items supplied by this vendor
-              </p>
-            )}
+                </div>
+              ) : (
+                <p className="text-muted-foreground">No raw materials added yet.</p>
+              )}
+            </div>
           </CardContent>
         </Card>
       </TabsContent>
 
-      <TabsContent value="transactions" className="space-y-4">
+      <TabsContent value="equipment">
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              Purchase Orders
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {vendor.purchaseOrders && vendor.purchaseOrders.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>PO Number</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead className="text-right">Amount (₱)</TableHead>
-                    <TableHead>Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {vendor.purchaseOrders.map((po, index) => (
-                    <TableRow key={index}>
-                      <TableCell>{po.poNumber}</TableCell>
-                      <TableCell>{po.date}</TableCell>
-                      <TableCell className="text-right">
-                        {po.amount.toLocaleString()}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            po.status === "Completed" ? "outline" : "secondary"
-                          }
-                        >
-                          {po.status}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                No purchase orders available
-              </p>
-            )}
-          </CardContent>
-        </Card>
+          <CardContent className="p-6">
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-semibold">Tools and Equipment</h3>
+                <Badge variant="outline">Total: ₱ {totalEquipmentCost.toLocaleString()}</Badge>
+              </div>
+              
+              {vendor?.toolsAndEquipment && vendor.toolsAndEquipment.length > 0 ? (
+                <div className="space-y-4">
+                  {vendor.toolsAndEquipment.map((item, index) => {
+                    // Ensure numeric values
+                    const quantity = Number(item.quantity) || 0;
+                    const unitCost = Number(item.unitCost) || 0;
+                    const totalCost = Number(item.totalCost) || (quantity * unitCost);
+                    const depreciationCost = Number(item.depreciationCost) || 0;
 
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              Payment History
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {vendor.paymentHistory && vendor.paymentHistory.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Reference</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead className="text-right">Amount (₱)</TableHead>
-                    <TableHead>Method</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {vendor.paymentHistory.map((payment, index) => (
-                    <TableRow key={index}>
-                      <TableCell>{payment.reference}</TableCell>
-                      <TableCell>{payment.date}</TableCell>
-                      <TableCell className="text-right">
-                        {payment.amount.toLocaleString()}
-                      </TableCell>
-                      <TableCell>{payment.method}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                No payment history available
-              </p>
-            )}
+                    return (
+                      <div key={index} className="border p-4 rounded-lg">
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-sm text-muted-foreground">Item Name:</label>
+                            <p className="font-medium">{item.name || "N/A"}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm text-muted-foreground">Quantity:</label>
+                            <p className="font-medium">{quantity} {item.unit || ""}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm text-muted-foreground">Unit:</label>
+                            <p className="font-medium">{item.unit || "N/A"}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm text-muted-foreground">Unit Cost:</label>
+                            <p className="font-medium">₱ {unitCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm text-muted-foreground">Life Span (Years):</label>
+                            <p className="font-medium">{Number(item.lifeSpan) || "N/A"}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm text-muted-foreground">Production Cycle (Months):</label>
+                            <p className="font-medium">{Number(item.productionCycle) || "N/A"}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm text-muted-foreground">Total Cost:</label>
+                            <p className="font-medium">₱ {totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                          </div>
+                          <div>
+                            <label className="text-sm text-muted-foreground">Depreciation Cost:</label>
+                            <p className="font-medium">₱ {depreciationCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-muted-foreground">No tools and equipment added yet.</p>
+              )}
+            </div>
           </CardContent>
         </Card>
       </TabsContent>

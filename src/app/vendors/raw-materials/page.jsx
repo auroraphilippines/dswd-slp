@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,11 +19,13 @@ import {
   Trash2,
   ArrowLeft,
   AlertCircle,
-  ArrowRight,
+  ArrowRight,   
 } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { saveVendorDetails } from "@/service/vendor";
+import { getCurrentUser } from "@/service/auth";
 
 export default function RawMaterialsPage() {
   const router = useRouter();
@@ -40,6 +42,7 @@ export default function RawMaterialsPage() {
       totalCost: "",
     },
   ]);
+  const [loading, setLoading] = useState(false);
 
   const handleInputChange = (index, field, value) => {
     const updatedMaterials = [...rawMaterials];
@@ -118,9 +121,53 @@ export default function RawMaterialsPage() {
     router.back();
   };
 
-  const handleNext = () => {
-    console.log(rawMaterials);
-    router.push("/vendors/man-power");
+  const handleNext = async () => {
+    setLoading(true);
+    try {
+      const user = await getCurrentUser();
+      if (!user) {
+        alert("Please login to continue");
+        router.push('/login');
+        return;
+      }
+
+      // Get the temporary vendor data from localStorage
+      const tempVendorData = JSON.parse(localStorage.getItem('tempVendorData'));
+      if (!tempVendorData) {
+        alert("Vendor data not found. Please start from the beginning.");
+        router.push('/vendors/add');
+        return;
+      }
+
+      // Save vendor data along with raw materials
+      const result = await saveVendorDetails({
+        ...tempVendorData,
+        rawMaterials: rawMaterials.map(material => ({
+          name: material.name,
+          quantity: material.quantity,
+          unit: material.unit,
+          unitPrice: material.unitPrice,
+          frequency: material.frequency,
+          totalCost: material.totalCost
+        }))
+      });
+
+      if (result.success) {
+        // Clear temporary data
+        localStorage.removeItem('tempVendorData');
+        // Store the vendor ID for the next step
+        localStorage.setItem('currentVendorId', result.vendorId);
+        router.push("/vendors/man-power");
+      } else {
+        console.error("Failed to save vendor details:", result.error);
+        alert("Failed to save vendor details. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error saving vendor data:", error);
+      alert("An error occurred while saving. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Calculate total cost of all materials
@@ -342,13 +389,22 @@ export default function RawMaterialsPage() {
             </div>
           </CardContent>
           <CardFooter className="flex justify-between border-t p-6 bg-card">
-            <Button variant="outline" onClick={handlePrev}>
+            <Button variant="outline" onClick={handlePrev} disabled={loading}>
               <ArrowLeft className="h-4 w-4 mr-2" />
               Previous
             </Button>
-            <Button onClick={handleNext}>
-              <ArrowRight className="h-4 w-4 mr-2" />
-              Next
+            <Button onClick={handleNext} disabled={loading}>
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <ArrowRight className="h-4 w-4 mr-2" />
+                  Next
+                </>
+              )}
             </Button>
           </CardFooter>
         </Card>

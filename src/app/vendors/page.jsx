@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Store, Plus, Search, Download, MoreHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -37,12 +37,44 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { subscribeToVendors } from "@/service/vendor";
+import { getCurrentUser } from "@/service/auth";
 
 export default function VendorsPage() {
   const router = useRouter();
   const [selectedVendor, setSelectedVendor] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showExportDialog, setShowExportDialog] = useState(false);
+  const [vendors, setVendors] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let unsubscribe = () => {};
+
+    const setupVendorsSubscription = async () => {
+      try {
+        const user = await getCurrentUser();
+        if (!user) {
+          router.push('/login');
+          return;
+        }
+
+        unsubscribe = subscribeToVendors(user.uid, (fetchedVendors) => {
+          setVendors(fetchedVendors);
+          setLoading(false);
+        });
+      } catch (error) {
+        console.error("Error setting up vendors subscription:", error);
+        setLoading(false);
+      }
+    };
+
+    setupVendorsSubscription();
+
+    return () => {
+      unsubscribe();
+    };
+  }, [router]);
 
   const handleViewDetails = (vendor) => {
     setSelectedVendor(vendor);
@@ -61,17 +93,48 @@ export default function VendorsPage() {
   };
 
   const exportToGoogleSheets = () => {
-    // Convert vendor data to CSV format
-    const headers = ["ID", "Name", "Category", "Contact Person", "Status"];
+    const headers = [
+      "Project Code",
+      "Program Name",
+      "Name",
+      "Email",
+      "Created At",
+      // Manpower Headers
+      "Total Manpower Cost",
+      "Number of Workers",
+      // Materials Headers
+      "Total Materials Cost",
+      "Number of Materials",
+      // Equipment Headers
+      "Total Equipment Cost",
+      "Number of Equipment",
+      "Total Depreciation Cost"
+    ];
+
     const csvContent = [
       headers,
-      ...filteredVendors.map((vendor) => [
-        vendor.id,
-        vendor.name,
-        vendor.category,
-        vendor.contactPerson,
-        vendor.status,
-      ]),
+      ...vendors.map((vendor) => {
+        // Calculate totals
+        const totalManpowerCost = vendor.workers?.reduce((sum, worker) => sum + (Number(worker.wage) || 0), 0) || 0;
+        const totalMaterialsCost = vendor.rawMaterials?.reduce((sum, material) => sum + (Number(material.totalCost) || 0), 0) || 0;
+        const totalEquipmentCost = vendor.toolsAndEquipment?.reduce((sum, item) => sum + (Number(item.totalCost) || 0), 0) || 0;
+        const totalDepreciationCost = vendor.toolsAndEquipment?.reduce((sum, item) => sum + (Number(item.depreciationCost) || 0), 0) || 0;
+
+        return [
+          vendor.projectCode || "",
+          vendor.programName || "",
+          vendor.name || "",
+          vendor.email || "",
+          vendor.createdAt?.toDate().toLocaleDateString() || "",
+          totalManpowerCost.toFixed(2),
+          vendor.workers?.length || 0,
+          totalMaterialsCost.toFixed(2),
+          vendor.rawMaterials?.length || 0,
+          totalEquipmentCost.toFixed(2),
+          vendor.toolsAndEquipment?.length || 0,
+          totalDepreciationCost.toFixed(2)
+        ];
+      }),
     ]
       .map((row) => row.join(","))
       .join("\n");
@@ -80,13 +143,10 @@ export default function VendorsPage() {
     const blob = new Blob([csvContent], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
 
-    // Open Google Sheets in a new tab
-    window.open("https://docs.google.com/spreadsheets/create", "_blank");
-
     // Create a temporary link to download the CSV
     const link = document.createElement("a");
     link.href = url;
-    link.download = "vendors.csv";
+    link.download = "vendors_detailed.csv";
     link.click();
 
     // Clean up
@@ -95,33 +155,124 @@ export default function VendorsPage() {
   };
 
   const exportToExcelOnline = () => {
-    // Convert vendor data to XLSX-friendly format
-    const workbookData = [
-      ["ID", "Name", "Category", "Contact Person", "Status"],
-      ...filteredVendors.map((vendor) => [
-        vendor.id,
-        vendor.name,
-        vendor.category,
-        vendor.contactPerson,
-        vendor.status,
-      ]),
+    // Create workbook data with multiple sheets
+    let csvContent = "";
+
+    // Main Vendors Sheet
+    const mainHeaders = [
+      "Project Code",
+      "Program Name",
+      "Name",
+      "Email",
+      "Created At",
+      "Total Manpower Cost",
+      "Total Materials Cost",
+      "Total Equipment Cost",
+      "Total Depreciation Cost"
     ];
 
-    // Create a binary string
-    let csvContent = "";
-    workbookData.forEach((row) => {
-      // Properly escape and quote fields
-      const processedRow = row.map((field) => {
-        // Handle fields that contain commas or quotes
-        if (
-          field &&
-          (field.includes(",") || field.includes('"') || field.includes("\n"))
-        ) {
-          return `"${field.replace(/"/g, '""')}"`;
-        }
-        return field;
-      });
-      csvContent += processedRow.join(",") + "\r\n";
+    csvContent += "Vendors Summary\n";
+    csvContent += mainHeaders.join(",") + "\n";
+
+    vendors.forEach((vendor) => {
+      const totalManpowerCost = vendor.workers?.reduce((sum, worker) => sum + (Number(worker.wage) || 0), 0) || 0;
+      const totalMaterialsCost = vendor.rawMaterials?.reduce((sum, material) => sum + (Number(material.totalCost) || 0), 0) || 0;
+      const totalEquipmentCost = vendor.toolsAndEquipment?.reduce((sum, item) => sum + (Number(item.totalCost) || 0), 0) || 0;
+      const totalDepreciationCost = vendor.toolsAndEquipment?.reduce((sum, item) => sum + (Number(item.depreciationCost) || 0), 0) || 0;
+
+      const row = [
+        vendor.projectCode || "",
+        vendor.programName || "",
+        vendor.name || "",
+        vendor.email || "",
+        vendor.createdAt?.toDate().toLocaleDateString() || "",
+        totalManpowerCost.toFixed(2),
+        totalMaterialsCost.toFixed(2),
+        totalEquipmentCost.toFixed(2),
+        totalDepreciationCost.toFixed(2)
+      ];
+      csvContent += row.join(",") + "\n";
+    });
+
+    // Add a blank line between sheets
+    csvContent += "\n\nManpower Details\n";
+    
+    // Manpower Sheet
+    const manpowerHeaders = ["Project Code", "Program Name", "Worker Name", "Task", "Daily Wage"];
+    csvContent += manpowerHeaders.join(",") + "\n";
+
+    vendors.forEach((vendor) => {
+      if (vendor.workers && vendor.workers.length > 0) {
+        vendor.workers.forEach((worker) => {
+          const row = [
+            vendor.projectCode || "",
+            vendor.programName || "",
+            worker.name || "",
+            worker.task || "",
+            (worker.wage || 0).toFixed(2)
+          ];
+          csvContent += row.join(",") + "\n";
+        });
+      }
+    });
+
+    // Materials Sheet
+    csvContent += "\n\nRaw Materials Details\n";
+    const materialsHeaders = ["Project Code", "Program Name", "Material Name", "Quantity", "Unit", "Unit Price", "Total Cost", "Frequency"];
+    csvContent += materialsHeaders.join(",") + "\n";
+
+    vendors.forEach((vendor) => {
+      if (vendor.rawMaterials && vendor.rawMaterials.length > 0) {
+        vendor.rawMaterials.forEach((material) => {
+          const row = [
+            vendor.projectCode || "",
+            vendor.programName || "",
+            material.name || "",
+            material.quantity || "0",
+            material.unit || "",
+            (material.unitPrice || 0).toFixed(2),
+            (material.totalCost || 0).toFixed(2),
+            material.frequency || ""
+          ];
+          csvContent += row.join(",") + "\n";
+        });
+      }
+    });
+
+    // Equipment Sheet
+    csvContent += "\n\nTools and Equipment Details\n";
+    const equipmentHeaders = [
+      "Project Code",
+      "Program Name",
+      "Item Name",
+      "Quantity",
+      "Unit",
+      "Unit Cost",
+      "Life Span (Years)",
+      "Production Cycle (Months)",
+      "Total Cost",
+      "Depreciation Cost"
+    ];
+    csvContent += equipmentHeaders.join(",") + "\n";
+
+    vendors.forEach((vendor) => {
+      if (vendor.toolsAndEquipment && vendor.toolsAndEquipment.length > 0) {
+        vendor.toolsAndEquipment.forEach((item) => {
+          const row = [
+            vendor.projectCode || "",
+            vendor.programName || "",
+            item.name || "",
+            item.quantity || "0",
+            item.unit || "",
+            (item.unitCost || 0).toFixed(2),
+            item.lifeSpan || "0",
+            item.productionCycle || "0",
+            (item.totalCost || 0).toFixed(2),
+            (item.depreciationCost || 0).toFixed(2)
+          ];
+          csvContent += row.join(",") + "\n";
+        });
+      }
     });
 
     // Create Blob with UTF-8 BOM for Excel compatibility
@@ -134,29 +285,112 @@ export default function VendorsPage() {
     // Create a temporary link and trigger download
     const link = document.createElement("a");
     link.href = url;
-    link.download = "vendors.xlsx";
+    link.download = "vendors_detailed.xlsx";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-
-    // Open Excel Online
-    window.open("https://www.office.com/launch/excel?auth=2", "_blank");
 
     // Clean up
     URL.revokeObjectURL(url);
     setShowExportDialog(false);
   };
 
+  const exportVendorToExcel = (vendor) => {
+    let csvContent = "";
+
+    // Vendor Basic Information
+    csvContent += "Basic Information\n";
+    csvContent += "Vendor ID," + (vendor.vendorId || "") + "\n";
+    csvContent += "Project Code," + (vendor.projectCode || "") + "\n";
+    csvContent += "Program Name," + (vendor.programName || "") + "\n";
+    csvContent += "Name," + (vendor.name || "") + "\n";
+    csvContent += "Email," + (vendor.email || "") + "\n";
+    csvContent += "Registration Date," + (vendor.createdAt?.toDate().toLocaleDateString() || "") + "\n\n";
+
+    // Manpower Details
+    csvContent += "\nManpower Details\n";
+    csvContent += "Worker Name,Task,Daily Wage\n";
+    if (vendor.workers && vendor.workers.length > 0) {
+      vendor.workers.forEach(worker => {
+        csvContent += `${worker.name || ""},${worker.task || ""},${(worker.wage || 0).toFixed(2)}\n`;
+      });
+    }
+    const totalManpowerCost = vendor.workers?.reduce((sum, worker) => sum + (Number(worker.wage) || 0), 0) || 0;
+    csvContent += `Total Manpower Cost,${totalManpowerCost.toFixed(2)}\n\n`;
+
+    // Raw Materials Details
+    csvContent += "\nRaw Materials Details\n";
+    csvContent += "Material Name,Quantity,Unit,Unit Price,Total Cost,Frequency\n";
+    if (vendor.rawMaterials && vendor.rawMaterials.length > 0) {
+      vendor.rawMaterials.forEach(material => {
+        csvContent += `${material.name || ""},${material.quantity || "0"},${material.unit || ""},${(material.unitPrice || 0).toFixed(2)},${(material.totalCost || 0).toFixed(2)},${material.frequency || ""}\n`;
+      });
+    }
+    const totalMaterialsCost = vendor.rawMaterials?.reduce((sum, material) => sum + (Number(material.totalCost) || 0), 0) || 0;
+    csvContent += `Total Materials Cost,${totalMaterialsCost.toFixed(2)}\n\n`;
+
+    // Tools and Equipment Details
+    csvContent += "\nTools and Equipment Details\n";
+    csvContent += "Item Name,Quantity,Unit,Unit Cost,Life Span (Years),Production Cycle (Months),Total Cost,Depreciation Cost\n";
+    if (vendor.toolsAndEquipment && vendor.toolsAndEquipment.length > 0) {
+      vendor.toolsAndEquipment.forEach(item => {
+        csvContent += `${item.name || ""},${item.quantity || "0"},${item.unit || ""},${(item.unitCost || 0).toFixed(2)},${item.lifeSpan || "0"},${item.productionCycle || "0"},${(item.totalCost || 0).toFixed(2)},${(item.depreciationCost || 0).toFixed(2)}\n`;
+      });
+    }
+    const totalEquipmentCost = vendor.toolsAndEquipment?.reduce((sum, item) => sum + (Number(item.totalCost) || 0), 0) || 0;
+    const totalDepreciationCost = vendor.toolsAndEquipment?.reduce((sum, item) => sum + (Number(item.depreciationCost) || 0), 0) || 0;
+    csvContent += `Total Equipment Cost,${totalEquipmentCost.toFixed(2)}\n`;
+    csvContent += `Total Depreciation Cost,${totalDepreciationCost.toFixed(2)}\n\n`;
+
+    // Summary of Costs
+    csvContent += "\nTotal Costs Summary\n";
+    csvContent += `Total Manpower Cost,${totalManpowerCost.toFixed(2)}\n`;
+    csvContent += `Total Materials Cost,${totalMaterialsCost.toFixed(2)}\n`;
+    csvContent += `Total Equipment Cost,${totalEquipmentCost.toFixed(2)}\n`;
+    csvContent += `Total Depreciation Cost,${totalDepreciationCost.toFixed(2)}\n`;
+    csvContent += `Grand Total,${(totalManpowerCost + totalMaterialsCost + totalEquipmentCost).toFixed(2)}\n`;
+
+    // Create Blob with UTF-8 BOM for Excel compatibility
+    const BOM = "\uFEFF";
+    const blob = new Blob([BOM + csvContent], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8",
+    });
+    const url = URL.createObjectURL(blob);
+
+    // Create a temporary link and trigger download
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `vendor_${vendor.vendorId || vendor.id}_details.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    // Clean up
+    URL.revokeObjectURL(url);
+  };
+
   // Filter vendors based on search query
-  const filteredVendors = vendorData.filter((vendor) => {
+  const filteredVendors = vendors.filter((vendor) => {
+    const searchLower = searchQuery.toLowerCase();
     return (
       searchQuery === "" ||
-      vendor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      vendor.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      vendor.category.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      vendor.contactPerson.toLowerCase().includes(searchQuery.toLowerCase())
+      (vendor.projectCode && vendor.projectCode.toLowerCase().includes(searchLower)) ||
+      (vendor.programName && vendor.programName.toLowerCase().includes(searchLower)) ||
+      (vendor.name && vendor.name.toLowerCase().includes(searchLower)) ||
+      (vendor.email && vendor.email.toLowerCase().includes(searchLower))
     );
   });
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-8 flex justify-center items-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+          <p className="mt-4">Loading vendors...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -208,11 +442,11 @@ export default function VendorsPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[80px]">ID</TableHead>
-                      <TableHead>Vendor Name</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Contact Person</TableHead>
-                      <TableHead>Status</TableHead>
+                      <TableHead className="w-[100px]">Project Code</TableHead>
+                      <TableHead>Program Name</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Created At</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -227,28 +461,33 @@ export default function VendorsPage() {
                           onClick={() => handleViewDetails(vendor)}
                         >
                           <TableCell className="font-medium">
-                            {vendor.id}
+                            <div className="flex items-center gap-2">
+                              <span>{vendor.projectCode}</span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 w-6 p-0"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  exportVendorToExcel(vendor);
+                                }}
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </TableCell>
                           <TableCell>
                             <div className="flex items-center space-x-2">
                               <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center">
                                 <Store className="h-5 w-5 text-muted-foreground" />
                               </div>
-                              <div className="font-medium">{vendor.name}</div>
+                              <div className="font-medium">{vendor.programName}</div>
                             </div>
                           </TableCell>
-                          <TableCell>{vendor.category}</TableCell>
-                          <TableCell>{vendor.contactPerson}</TableCell>
+                          <TableCell>{vendor.name || "-"}</TableCell>
+                          <TableCell>{vendor.email || "-"}</TableCell>
                           <TableCell>
-                            <Badge
-                              variant={
-                                vendor.status === "Active"
-                                  ? "outline"
-                                  : "secondary"
-                              }
-                            >
-                              {vendor.status}
-                            </Badge>
+                            {vendor.createdAt?.toDate().toLocaleDateString()}
                           </TableCell>
                           <TableCell className="text-right">
                             <DropdownMenu>
@@ -276,19 +515,12 @@ export default function VendorsPage() {
                                 >
                                   Edit Vendor
                                 </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  View Supplied Items
-                                </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem
                                   className="text-destructive"
                                   onClick={(e) => e.stopPropagation()}
                                 >
-                                  {vendor.status === "Active"
-                                    ? "Deactivate Vendor"
-                                    : "Activate Vendor"}
+                                  Delete Vendor
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -298,7 +530,9 @@ export default function VendorsPage() {
                     ) : (
                       <TableRow>
                         <TableCell colSpan={6} className="text-center py-4">
-                          No vendors found. Try adjusting your search.
+                          {searchQuery
+                            ? "No vendors found. Try adjusting your search."
+                            : "No vendors added yet. Click 'Add Vendor' to get started."}
                         </TableCell>
                       </TableRow>
                     )}
@@ -313,10 +547,7 @@ export default function VendorsPage() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleCloseDetails();
-                      }}
+                      onClick={handleCloseDetails}
                     >
                       <X className="h-4 w-4 mr-1" />
                       Close
@@ -330,6 +561,7 @@ export default function VendorsPage() {
           </CardContent>
         </Card>
       </div>
+
       <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -366,86 +598,3 @@ export default function VendorsPage() {
     </div>
   );
 }
-
-const vendorData = [
-  {
-    id: "V-1001",
-    name: "National Food Authority",
-    category: "Food Items",
-    contactPerson: "Juan Dela Cruz",
-    position: "Supply Officer",
-    phone: "09123456789",
-    email: "nfa@example.com",
-    address: "123 NFA Road, Quezon City",
-    status: "Active",
-    registrationDate: "Jan 15, 2022",
-    taxId: "123-456-789-000",
-    accreditationDate: "Jan 20, 2022",
-    accreditationExpiry: "Jan 20, 2025",
-    accreditationLevel: "Level A",
-    accreditationNumber: "ACC-2022-001",
-    additionalContacts: [
-      {
-        name: "Maria Santos",
-        position: "Accounting Officer",
-        phone: "09123456788",
-        email: "maria@nfa.example.com",
-      },
-    ],
-    suppliedItems: [
-      {
-        id: "FD-1001",
-        name: "Rice",
-        category: "Food Items",
-        lastSupplyDate: "Jun 10, 2023",
-      },
-      {
-        id: "FD-1003",
-        name: "Canned Sardines",
-        category: "Food Items",
-        lastSupplyDate: "May 22, 2023",
-      },
-    ],
-    purchaseOrders: [
-      {
-        poNumber: "PO-2023-0610",
-        date: "Jun 10, 2023",
-        amount: 25000,
-        status: "Completed",
-      },
-      {
-        poNumber: "PO-2023-0420",
-        date: "Apr 20, 2023",
-        amount: 49000,
-        status: "Completed",
-      },
-      {
-        poNumber: "PO-2023-0205",
-        date: "Feb 05, 2023",
-        amount: 36000,
-        status: "Completed",
-      },
-    ],
-    paymentHistory: [
-      {
-        reference: "PAY-2023-0615",
-        date: "Jun 15, 2023",
-        amount: 25000,
-        method: "Bank Transfer",
-      },
-      {
-        reference: "PAY-2023-0425",
-        date: "Apr 25, 2023",
-        amount: 49000,
-        method: "Bank Transfer",
-      },
-      {
-        reference: "PAY-2023-0210",
-        date: "Feb 10, 2023",
-        amount: 36000,
-        method: "Bank Transfer",
-      },
-    ],
-  },
-  // Additional vendor data would be listed here
-];

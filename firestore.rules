@@ -1,0 +1,41 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // User collection rules
+    match /users/{userId} {
+      allow read: if request.auth != null;
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && request.auth.uid == userId;
+      allow delete: if false;
+    }
+
+    // Vendors collection rules - only allow access to vendors created by the authenticated user
+    match /vendors/{vendorId} {
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow update: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow delete: if false;
+      
+      // Manpower subcollection - only allow access if parent vendor belongs to the user
+      match /manpower/{workerId} {
+        allow read: if request.auth != null && get(/databases/$(database)/documents/vendors/$(vendorId)).data.userId == request.auth.uid;
+        allow create: if request.auth != null && get(/databases/$(database)/documents/vendors/$(vendorId)).data.userId == request.auth.uid;
+        allow update: if request.auth != null && get(/databases/$(database)/documents/vendors/$(vendorId)).data.userId == request.auth.uid;
+        allow delete: if false;
+      }
+      
+      // Tools subcollection - only allow access if parent vendor belongs to the user
+      match /tools/{toolId} {
+        allow read: if request.auth != null && get(/databases/$(database)/documents/vendors/$(vendorId)).data.userId == request.auth.uid;
+        allow create: if request.auth != null && get(/databases/$(database)/documents/vendors/$(vendorId)).data.userId == request.auth.uid;
+        allow update: if request.auth != null && get(/databases/$(database)/documents/vendors/$(vendorId)).data.userId == request.auth.uid;
+        allow delete: if false;
+      }
+    }
+    
+    // Default rule - deny all other access
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+} 

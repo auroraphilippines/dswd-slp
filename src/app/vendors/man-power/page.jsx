@@ -2,7 +2,7 @@
 
 import { CardFooter } from "@/components/ui/card";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,9 +26,12 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { saveManPower } from "@/service/vendor";
+import { getCurrentUser } from "@/service/auth";
 
 export default function ManPowerPage() {
   const router = useRouter();
+  const [loading, setLoading] = useState(false);
   const [formId] = useState("100002");
   const MAX_WORKERS = 5;
   const [workers, setWorkers] = useState([
@@ -39,6 +42,18 @@ export default function ManPowerPage() {
       wage: 0,
     },
   ]);
+
+  // Check authentication on page load
+  useEffect(() => {
+    const checkAuth = async () => {
+      const user = await getCurrentUser();
+      if (!user) {
+        router.push('/login'); // Redirect to login if not authenticated
+        return;
+      }
+    };
+    checkAuth();
+  }, [router]);
 
   const handleInputChange = (index, field, value) => {
     const updatedWorkers = [...workers];
@@ -90,9 +105,41 @@ export default function ManPowerPage() {
     router.back();
   };
 
-  const handleNext = () => {
-    console.log(workers);
-    router.push("/vendors/tools-equipment");
+  const handleNext = async () => {
+    setLoading(true);
+    try {
+      // Check authentication before saving
+      const user = await getCurrentUser();
+      if (!user) {
+        alert("Please login to continue");
+        router.push('/login');
+        return;
+      }
+
+      const vendorId = localStorage.getItem('currentVendorId');
+      if (!vendorId) {
+        alert("Vendor ID not found. Please start from the beginning.");
+        router.push("/vendors/add");
+        return;
+      }
+
+      const result = await saveManPower(vendorId, workers.map(worker => ({
+        ...worker,
+        userId: user.uid, // Add user ID to worker data
+      })));
+
+      if (result.success) {
+        router.push("/vendors/tools-equipment");
+      } else {
+        console.error("Failed to save manpower data:", result.error);
+        alert("Failed to save manpower data. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Calculate total daily wages
