@@ -1,8 +1,24 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
-import { Store, Plus, Search, Download, MoreHorizontal, X } from "lucide-react";
+import Link from "next/link";
+import { useRouter, usePathname } from "next/navigation";
+import {
+  LayoutDashboard,
+  FileBarChart,
+  Settings,
+  ShoppingCart,
+  Users,
+  Menu,
+  X,
+  Bell,
+  Search,
+  Building2,
+  Store,
+  Plus,
+  Download,
+  MoreHorizontal,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -37,6 +53,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { subscribeToVendors } from "@/service/vendor";
 import { getCurrentUser } from "@/service/auth";
 
@@ -47,6 +64,13 @@ export default function VendorsPage() {
   const [showExportDialog, setShowExportDialog] = useState(false);
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const pathname = usePathname();
+
+  // Close mobile menu when path changes
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     let unsubscribe = () => {};
@@ -55,7 +79,7 @@ export default function VendorsPage() {
       try {
         const user = await getCurrentUser();
         if (!user) {
-          router.push('/login');
+          router.push("/login");
           return;
         }
 
@@ -75,6 +99,21 @@ export default function VendorsPage() {
       unsubscribe();
     };
   }, [router]);
+
+  const navigation = [
+    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { name: "Vendors", href: "/vendors", icon: Store },
+    { name: "Beneficiaries", href: "/beneficiaries", icon: Users },
+    { name: "Programs", href: "/programs", icon: Building2 },
+    {
+      name: "Disbursements",
+      href: "./disbursements",
+      icon: ShoppingCart,
+    },
+    { name: "Reports", href: "./reports", icon: FileBarChart },
+    { name: "Analytics", href: "./analytics", icon: FileBarChart },
+    { name: "Settings", href: "./settings", icon: Settings },
+  ];
 
   const handleViewDetails = (vendor) => {
     setSelectedVendor(vendor);
@@ -108,17 +147,33 @@ export default function VendorsPage() {
       // Equipment Headers
       "Total Equipment Cost",
       "Number of Equipment",
-      "Total Depreciation Cost"
+      "Total Depreciation Cost",
     ];
 
     const csvContent = [
       headers,
       ...vendors.map((vendor) => {
         // Calculate totals
-        const totalManpowerCost = vendor.workers?.reduce((sum, worker) => sum + (Number(worker.wage) || 0), 0) || 0;
-        const totalMaterialsCost = vendor.rawMaterials?.reduce((sum, material) => sum + (Number(material.totalCost) || 0), 0) || 0;
-        const totalEquipmentCost = vendor.toolsAndEquipment?.reduce((sum, item) => sum + (Number(item.totalCost) || 0), 0) || 0;
-        const totalDepreciationCost = vendor.toolsAndEquipment?.reduce((sum, item) => sum + (Number(item.depreciationCost) || 0), 0) || 0;
+        const totalManpowerCost =
+          vendor.workers?.reduce(
+            (sum, worker) => sum + (Number(worker.wage) || 0),
+            0
+          ) || 0;
+        const totalMaterialsCost =
+          vendor.rawMaterials?.reduce(
+            (sum, material) => sum + (Number(material.totalCost) || 0),
+            0
+          ) || 0;
+        const totalEquipmentCost =
+          vendor.toolsAndEquipment?.reduce(
+            (sum, item) => sum + (Number(item.totalCost) || 0),
+            0
+          ) || 0;
+        const totalDepreciationCost =
+          vendor.toolsAndEquipment?.reduce(
+            (sum, item) => sum + (Number(item.depreciationCost) || 0),
+            0
+          ) || 0;
 
         return [
           vendor.projectCode || "",
@@ -132,7 +187,7 @@ export default function VendorsPage() {
           vendor.rawMaterials?.length || 0,
           totalEquipmentCost.toFixed(2),
           vendor.toolsAndEquipment?.length || 0,
-          totalDepreciationCost.toFixed(2)
+          totalDepreciationCost.toFixed(2),
         ];
       }),
     ]
@@ -168,17 +223,33 @@ export default function VendorsPage() {
       "Total Manpower Cost",
       "Total Materials Cost",
       "Total Equipment Cost",
-      "Total Depreciation Cost"
+      "Total Depreciation Cost",
     ];
 
     csvContent += "Vendors Summary\n";
     csvContent += mainHeaders.join(",") + "\n";
 
     vendors.forEach((vendor) => {
-      const totalManpowerCost = vendor.workers?.reduce((sum, worker) => sum + (Number(worker.wage) || 0), 0) || 0;
-      const totalMaterialsCost = vendor.rawMaterials?.reduce((sum, material) => sum + (Number(material.totalCost) || 0), 0) || 0;
-      const totalEquipmentCost = vendor.toolsAndEquipment?.reduce((sum, item) => sum + (Number(item.totalCost) || 0), 0) || 0;
-      const totalDepreciationCost = vendor.toolsAndEquipment?.reduce((sum, item) => sum + (Number(item.depreciationCost) || 0), 0) || 0;
+      const totalManpowerCost =
+        vendor.workers?.reduce(
+          (sum, worker) => sum + (Number(worker.wage) || 0),
+          0
+        ) || 0;
+      const totalMaterialsCost =
+        vendor.rawMaterials?.reduce(
+          (sum, material) => sum + (Number(material.totalCost) || 0),
+          0
+        ) || 0;
+      const totalEquipmentCost =
+        vendor.toolsAndEquipment?.reduce(
+          (sum, item) => sum + (Number(item.totalCost) || 0),
+          0
+        ) || 0;
+      const totalDepreciationCost =
+        vendor.toolsAndEquipment?.reduce(
+          (sum, item) => sum + (Number(item.depreciationCost) || 0),
+          0
+        ) || 0;
 
       const row = [
         vendor.projectCode || "",
@@ -189,16 +260,22 @@ export default function VendorsPage() {
         totalManpowerCost.toFixed(2),
         totalMaterialsCost.toFixed(2),
         totalEquipmentCost.toFixed(2),
-        totalDepreciationCost.toFixed(2)
+        totalDepreciationCost.toFixed(2),
       ];
       csvContent += row.join(",") + "\n";
     });
 
     // Add a blank line between sheets
     csvContent += "\n\nManpower Details\n";
-    
+
     // Manpower Sheet
-    const manpowerHeaders = ["Project Code", "Program Name", "Worker Name", "Task", "Daily Wage"];
+    const manpowerHeaders = [
+      "Project Code",
+      "Program Name",
+      "Worker Name",
+      "Task",
+      "Daily Wage",
+    ];
     csvContent += manpowerHeaders.join(",") + "\n";
 
     vendors.forEach((vendor) => {
@@ -209,7 +286,7 @@ export default function VendorsPage() {
             vendor.programName || "",
             worker.name || "",
             worker.task || "",
-            (worker.wage || 0).toFixed(2)
+            (worker.wage || 0).toFixed(2),
           ];
           csvContent += row.join(",") + "\n";
         });
@@ -218,7 +295,16 @@ export default function VendorsPage() {
 
     // Materials Sheet
     csvContent += "\n\nRaw Materials Details\n";
-    const materialsHeaders = ["Project Code", "Program Name", "Material Name", "Quantity", "Unit", "Unit Price", "Total Cost", "Frequency"];
+    const materialsHeaders = [
+      "Project Code",
+      "Program Name",
+      "Material Name",
+      "Quantity",
+      "Unit",
+      "Unit Price",
+      "Total Cost",
+      "Frequency",
+    ];
     csvContent += materialsHeaders.join(",") + "\n";
 
     vendors.forEach((vendor) => {
@@ -232,7 +318,7 @@ export default function VendorsPage() {
             material.unit || "",
             (material.unitPrice || 0).toFixed(2),
             (material.totalCost || 0).toFixed(2),
-            material.frequency || ""
+            material.frequency || "",
           ];
           csvContent += row.join(",") + "\n";
         });
@@ -251,7 +337,7 @@ export default function VendorsPage() {
       "Life Span (Years)",
       "Production Cycle (Months)",
       "Total Cost",
-      "Depreciation Cost"
+      "Depreciation Cost",
     ];
     csvContent += equipmentHeaders.join(",") + "\n";
 
@@ -268,7 +354,7 @@ export default function VendorsPage() {
             item.lifeSpan || "0",
             item.productionCycle || "0",
             (item.totalCost || 0).toFixed(2),
-            (item.depreciationCost || 0).toFixed(2)
+            (item.depreciationCost || 0).toFixed(2),
           ];
           csvContent += row.join(",") + "\n";
         });
@@ -305,50 +391,91 @@ export default function VendorsPage() {
     csvContent += "Program Name," + (vendor.programName || "") + "\n";
     csvContent += "Name," + (vendor.name || "") + "\n";
     csvContent += "Email," + (vendor.email || "") + "\n";
-    csvContent += "Registration Date," + (vendor.createdAt?.toDate().toLocaleDateString() || "") + "\n\n";
+    csvContent +=
+      "Registration Date," +
+      (vendor.createdAt?.toDate().toLocaleDateString() || "") +
+      "\n\n";
 
     // Manpower Details
     csvContent += "\nManpower Details\n";
     csvContent += "Worker Name,Task,Daily Wage\n";
     if (vendor.workers && vendor.workers.length > 0) {
-      vendor.workers.forEach(worker => {
-        csvContent += `${worker.name || ""},${worker.task || ""},${(worker.wage || 0).toFixed(2)}\n`;
+      vendor.workers.forEach((worker) => {
+        csvContent += `${worker.name || ""},${worker.task || ""},${(
+          worker.wage || 0
+        ).toFixed(2)}\n`;
       });
     }
-    const totalManpowerCost = vendor.workers?.reduce((sum, worker) => sum + (Number(worker.wage) || 0), 0) || 0;
+    const totalManpowerCost =
+      vendor.workers?.reduce(
+        (sum, worker) => sum + (Number(worker.wage) || 0),
+        0
+      ) || 0;
     csvContent += `Total Manpower Cost,${totalManpowerCost.toFixed(2)}\n\n`;
 
     // Raw Materials Details
     csvContent += "\nRaw Materials Details\n";
-    csvContent += "Material Name,Quantity,Unit,Unit Price,Total Cost,Frequency\n";
+    csvContent +=
+      "Material Name,Quantity,Unit,Unit Price,Total Cost,Frequency\n";
     if (vendor.rawMaterials && vendor.rawMaterials.length > 0) {
-      vendor.rawMaterials.forEach(material => {
-        csvContent += `${material.name || ""},${material.quantity || "0"},${material.unit || ""},${(material.unitPrice || 0).toFixed(2)},${(material.totalCost || 0).toFixed(2)},${material.frequency || ""}\n`;
+      vendor.rawMaterials.forEach((material) => {
+        csvContent += `${material.name || ""},${material.quantity || "0"},${
+          material.unit || ""
+        },${(material.unitPrice || 0).toFixed(2)},${(
+          material.totalCost || 0
+        ).toFixed(2)},${material.frequency || ""}\n`;
       });
     }
-    const totalMaterialsCost = vendor.rawMaterials?.reduce((sum, material) => sum + (Number(material.totalCost) || 0), 0) || 0;
+    const totalMaterialsCost =
+      vendor.rawMaterials?.reduce(
+        (sum, material) => sum + (Number(material.totalCost) || 0),
+        0
+      ) || 0;
     csvContent += `Total Materials Cost,${totalMaterialsCost.toFixed(2)}\n\n`;
 
     // Tools and Equipment Details
     csvContent += "\nTools and Equipment Details\n";
-    csvContent += "Item Name,Quantity,Unit,Unit Cost,Life Span (Years),Production Cycle (Months),Total Cost,Depreciation Cost\n";
+    csvContent +=
+      "Item Name,Quantity,Unit,Unit Cost,Life Span (Years),Production Cycle (Months),Total Cost,Depreciation Cost\n";
     if (vendor.toolsAndEquipment && vendor.toolsAndEquipment.length > 0) {
-      vendor.toolsAndEquipment.forEach(item => {
-        csvContent += `${item.name || ""},${item.quantity || "0"},${item.unit || ""},${(item.unitCost || 0).toFixed(2)},${item.lifeSpan || "0"},${item.productionCycle || "0"},${(item.totalCost || 0).toFixed(2)},${(item.depreciationCost || 0).toFixed(2)}\n`;
+      vendor.toolsAndEquipment.forEach((item) => {
+        csvContent += `${item.name || ""},${item.quantity || "0"},${
+          item.unit || ""
+        },${(item.unitCost || 0).toFixed(2)},${item.lifeSpan || "0"},${
+          item.productionCycle || "0"
+        },${(item.totalCost || 0).toFixed(2)},${(
+          item.depreciationCost || 0
+        ).toFixed(2)}\n`;
       });
     }
-    const totalEquipmentCost = vendor.toolsAndEquipment?.reduce((sum, item) => sum + (Number(item.totalCost) || 0), 0) || 0;
-    const totalDepreciationCost = vendor.toolsAndEquipment?.reduce((sum, item) => sum + (Number(item.depreciationCost) || 0), 0) || 0;
+    const totalEquipmentCost =
+      vendor.toolsAndEquipment?.reduce(
+        (sum, item) => sum + (Number(item.totalCost) || 0),
+        0
+      ) || 0;
+    const totalDepreciationCost =
+      vendor.toolsAndEquipment?.reduce(
+        (sum, item) => sum + (Number(item.depreciationCost) || 0),
+        0
+      ) || 0;
     csvContent += `Total Equipment Cost,${totalEquipmentCost.toFixed(2)}\n`;
-    csvContent += `Total Depreciation Cost,${totalDepreciationCost.toFixed(2)}\n\n`;
+    csvContent += `Total Depreciation Cost,${totalDepreciationCost.toFixed(
+      2
+    )}\n\n`;
 
     // Summary of Costs
     csvContent += "\nTotal Costs Summary\n";
     csvContent += `Total Manpower Cost,${totalManpowerCost.toFixed(2)}\n`;
     csvContent += `Total Materials Cost,${totalMaterialsCost.toFixed(2)}\n`;
     csvContent += `Total Equipment Cost,${totalEquipmentCost.toFixed(2)}\n`;
-    csvContent += `Total Depreciation Cost,${totalDepreciationCost.toFixed(2)}\n`;
-    csvContent += `Grand Total,${(totalManpowerCost + totalMaterialsCost + totalEquipmentCost).toFixed(2)}\n`;
+    csvContent += `Total Depreciation Cost,${totalDepreciationCost.toFixed(
+      2
+    )}\n`;
+    csvContent += `Grand Total,${(
+      totalManpowerCost +
+      totalMaterialsCost +
+      totalEquipmentCost
+    ).toFixed(2)}\n`;
 
     // Create Blob with UTF-8 BOM for Excel compatibility
     const BOM = "\uFEFF";
@@ -374,8 +501,10 @@ export default function VendorsPage() {
     const searchLower = searchQuery.toLowerCase();
     return (
       searchQuery === "" ||
-      (vendor.projectCode && vendor.projectCode.toLowerCase().includes(searchLower)) ||
-      (vendor.programName && vendor.programName.toLowerCase().includes(searchLower)) ||
+      (vendor.projectCode &&
+        vendor.projectCode.toLowerCase().includes(searchLower)) ||
+      (vendor.programName &&
+        vendor.programName.toLowerCase().includes(searchLower)) ||
       (vendor.name && vendor.name.toLowerCase().includes(searchLower)) ||
       (vendor.email && vendor.email.toLowerCase().includes(searchLower))
     );
@@ -393,208 +522,443 @@ export default function VendorsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-      <div className="flex flex-col space-y-4">
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold tracking-tight">
-            Vendor Management
-          </h1>
-          <div className="flex items-center space-x-2">
-            <Button variant="outline" onClick={() => setShowExportDialog(true)}>
-              <Download className="mr-2 h-4 w-4" />
-              Export
-            </Button>
-            <Button onClick={handleAddVendor}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Vendor
-            </Button>
+    <div className="flex h-screen overflow-hidden bg-background">
+      {/* Sidebar for desktop */}
+      <div className="hidden md:flex md:w-64 md:flex-col">
+        <div className="flex flex-col flex-grow pt-5 overflow-y-auto border-r bg-card">
+          <div className="flex items-center flex-shrink-0 px-4">
+            <Link href="/dashboard" className="flex items-center">
+              <img src="./images/SLP.png" alt="Logo" className="h-8 w-8" />
+              <span className="ml-2 text-xl font-bold">DSWD SLP-TIS</span>
+            </Link>
+          </div>
+          <div className="mt-8 flex-1 flex flex-col">
+            <nav className="flex-1 px-2 space-y-1">
+              {navigation.map((item) => {
+                const isActive =
+                  pathname === item.href ||
+                  pathname.startsWith(`${item.href}/`);
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={`${
+                      isActive
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    } group flex items-center px-2 py-2 text-sm font-medium rounded-md`}
+                  >
+                    <item.icon
+                      className={`${
+                        isActive
+                          ? "text-primary"
+                          : "text-muted-foreground group-hover:text-foreground"
+                      } mr-3 flex-shrink-0 h-5 w-5`}
+                      aria-hidden="true"
+                    />
+                    {item.name}
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+          <div className="flex-shrink-0 flex border-t p-4">
+            <div className="flex items-center w-full justify-between">
+              <div className="flex items-center">
+                <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                  <span className="text-sm font-medium">AD</span>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm font-medium">Admin DSWD</p>
+                  <p className="text-xs text-muted-foreground">Administrator</p>
+                </div>
+              </div>
+              <ThemeToggle />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile menu */}
+      <div
+        className={`${
+          isMobileMenuOpen ? "fixed inset-0 z-40 flex" : "hidden"
+        } md:hidden`}
+        role="dialog"
+        aria-modal="true"
+      >
+        <div
+          className="fixed inset-0 bg-black/30"
+          aria-hidden="true"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+        <div className="relative flex-1 flex flex-col max-w-xs w-full bg-card">
+          <div className="absolute top-0 right-0 -mr-12 pt-2">
+            <button
+              type="button"
+              className="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
+              onClick={() => setIsMobileMenuOpen(false)}
+            >
+              <span className="sr-only">Close sidebar</span>
+              <X className="h-6 w-6 text-white" aria-hidden="true" />
+            </button>
+          </div>
+          <div className="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
+            <div className="flex-shrink-0 flex items-center px-4">
+              <Link href="/dashboard" className="flex items-center">
+                <img src="./images/SLP.png" alt="Logo" className="h-8 w-8" />
+                <span className="ml-2 text-xl font-bold">DSWD SLP-TIS</span>
+              </Link>
+            </div>
+            <nav className="mt-5 px-2 space-y-1">
+              {navigation.map((item) => {
+                const isActive =
+                  pathname === item.href ||
+                  pathname.startsWith(`${item.href}/`);
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={`${
+                      isActive
+                        ? "bg-primary/10 text-primary"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    } group flex items-center px-2 py-2 text-sm font-medium rounded-md`}
+                  >
+                    <item.icon
+                      className={`${
+                        isActive
+                          ? "text-primary"
+                          : "text-muted-foreground group-hover:text-foreground"
+                      } mr-3 flex-shrink-0 h-5 w-5`}
+                      aria-hidden="true"
+                    />
+                    {item.name}
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+          <div className="flex-shrink-0 flex border-t p-4">
+            <div className="flex items-center">
+              <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                <span className="text-sm font-medium">AD</span>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm font-medium">Admin DSWD</p>
+                <p className="text-xs text-muted-foreground">Administrator</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="flex-shrink-0 w-14" aria-hidden="true">
+          {/* Dummy element to force sidebar to shrink to fit close icon */}
+        </div>
+      </div>
+
+      {/* Main content */}
+      <div className="flex flex-col flex-1 overflow-hidden">
+        <div className="relative z-10 flex-shrink-0 flex h-16 bg-card shadow">
+          <button
+            type="button"
+            className="px-4 border-r border-gray-200 text-muted-foreground md:hidden"
+            onClick={() => setIsMobileMenuOpen(true)}
+          >
+            <span className="sr-only">Open sidebar</span>
+            <Menu className="h-6 w-6" aria-hidden="true" />
+          </button>
+          <div className="flex-1 px-4 flex justify-between">
+            <div className="flex-1 flex">
+              <div className="w-full flex md:ml-0">
+                <label htmlFor="search-field" className="sr-only">
+                  Search
+                </label>
+                <div className="relative w-full text-muted-foreground focus-within:text-gray-600">
+                  <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none">
+                    <Search className="h-5 w-5 ml-3" aria-hidden="true" />
+                  </div>
+                  <Input
+                    id="search-field"
+                    className="block w-full h-full pl-10 pr-3 py-2 border-transparent text-muted-foreground placeholder-muted-foreground focus:outline-none focus:placeholder-gray-400 focus:ring-0 focus:border-transparent sm:text-sm"
+                    placeholder="Search vendors..."
+                    type="search"
+                    value={searchQuery}
+                    onChange={handleSearchChange}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="ml-4 flex items-center md:ml-6">
+              <Button variant="ghost" size="icon" className="rounded-full">
+                <span className="sr-only">View notifications</span>
+                <Bell className="h-5 w-5" aria-hidden="true" />
+              </Button>
+
+              {/* Profile dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="ml-3 rounded-full"
+                  >
+                    <span className="sr-only">Open user menu</span>
+                    <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                      <span className="text-sm font-medium">AD</span>
+                    </div>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem>Profile</DropdownMenuItem>
+                  <DropdownMenuItem>Settings</DropdownMenuItem>
+                  <DropdownMenuItem>Support</DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem asChild>
+                    <Link href="/">Sign out</Link>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </div>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div>
-                <CardTitle>Vendors</CardTitle>
-                <CardDescription>
-                  Manage your suppliers and vendor details
-                </CardDescription>
-              </div>
-              <div className="relative w-full sm:w-auto">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  type="search"
-                  placeholder="Search vendors..."
-                  className="pl-8 w-full sm:w-[300px]"
-                  value={searchQuery}
-                  onChange={handleSearchChange}
-                />
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div
-              className={`grid ${
-                selectedVendor ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1"
-              } gap-0`}
-            >
-              <div className={`${selectedVendor ? "border-r" : ""}`}>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="w-[100px]">Project Code</TableHead>
-                      <TableHead>Program Name</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Created At</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredVendors.length > 0 ? (
-                      filteredVendors.map((vendor) => (
-                        <TableRow
-                          key={vendor.id}
-                          className={`cursor-pointer ${
-                            selectedVendor?.id === vendor.id ? "bg-muted" : ""
-                          }`}
-                          onClick={() => handleViewDetails(vendor)}
-                        >
-                          <TableCell className="font-medium">
-                            <div className="flex items-center gap-2">
-                              <span>{vendor.projectCode}</span>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 w-6 p-0"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  exportVendorToExcel(vendor);
-                                }}
-                              >
-                                <Download className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div className="flex items-center space-x-2">
-                              <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center">
-                                <Store className="h-5 w-5 text-muted-foreground" />
-                              </div>
-                              <div className="font-medium">{vendor.programName}</div>
-                            </div>
-                          </TableCell>
-                          <TableCell>{vendor.name || "-"}</TableCell>
-                          <TableCell>{vendor.email || "-"}</TableCell>
-                          <TableCell>
-                            {vendor.createdAt?.toDate().toLocaleDateString()}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger
-                                asChild
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <Button variant="ghost" size="icon">
-                                  <MoreHorizontal className="h-4 w-4" />
-                                  <span className="sr-only">Open menu</span>
-                                </Button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end">
-                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                <DropdownMenuItem
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleViewDetails(vendor);
-                                  }}
-                                >
-                                  View Details
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  Edit Vendor
-                                </DropdownMenuItem>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem
-                                  className="text-destructive"
-                                  onClick={(e) => e.stopPropagation()}
-                                >
-                                  Delete Vendor
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    ) : (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-4">
-                          {searchQuery
-                            ? "No vendors found. Try adjusting your search."
-                            : "No vendors added yet. Click 'Add Vendor' to get started."}
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-
-              {selectedVendor && (
-                <div className="p-4 overflow-auto max-h-[800px]">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-semibold">Vendor Details</h3>
+        <main className="flex-1 relative overflow-y-auto focus:outline-none">
+          <div className="py-6">
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex flex-col space-y-4">
+                <div className="flex items-center justify-between">
+                  <h1 className="text-2xl font-bold tracking-tight">
+                    Vendor Management
+                  </h1>
+                  <div className="flex items-center space-x-2">
                     <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleCloseDetails}
+                      variant="outline"
+                      onClick={() => setShowExportDialog(true)}
                     >
-                      <X className="h-4 w-4 mr-1" />
-                      Close
+                      <Download className="mr-2 h-4 w-4" />
+                      Export
+                    </Button>
+                    <Button onClick={handleAddVendor}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Add Vendor
                     </Button>
                   </div>
-
-                  <VendorDetailView vendor={selectedVendor} />
                 </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
-      <Dialog open={showExportDialog} onOpenChange={setShowExportDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Export Vendors Data</DialogTitle>
-          </DialogHeader>
-          <div className="flex flex-col gap-4 py-4">
-            <Button
-              className="flex items-center justify-start gap-2"
-              variant="outline"
-              onClick={exportToGoogleSheets}
-            >
-              <img
-                src="https://www.google.com/images/about/sheets-icon.svg"
-                alt="Google Sheets"
-                className="w-5 h-5"
-              />
-              Export to Google Sheets
-            </Button>
-            <Button
-              className="flex items-center justify-start gap-2"
-              variant="outline"
-              onClick={exportToExcelOnline}
-            >
-              <img
-                src="https://img.icons8.com/color/48/000000/microsoft-excel-2019--v1.png"
-                alt="Microsoft Excel"
-                className="w-5 h-5"
-              />
-              Export to Microsoft Excel Online
-            </Button>
+                <Card>
+                  <CardHeader className="pb-3">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div>
+                        <CardTitle>Vendors</CardTitle>
+                        <CardDescription>
+                          Manage your suppliers and vendor details
+                        </CardDescription>
+                      </div>
+                      <div className="relative w-full sm:w-auto">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          type="search"
+                          placeholder="Search vendors..."
+                          className="pl-8 w-full sm:w-[300px]"
+                          value={searchQuery}
+                          onChange={handleSearchChange}
+                        />
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    <div
+                      className={`grid ${
+                        selectedVendor
+                          ? "grid-cols-1 lg:grid-cols-2"
+                          : "grid-cols-1"
+                      } gap-0`}
+                    >
+                      <div className={`${selectedVendor ? "border-r" : ""}`}>
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead className="w-[100px]">
+                                Project Code
+                              </TableHead>
+                              <TableHead>Program Name</TableHead>
+                              <TableHead>Name</TableHead>
+                              <TableHead>Email</TableHead>
+                              <TableHead>Created At</TableHead>
+                              <TableHead className="text-right">
+                                Actions
+                              </TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {filteredVendors.length > 0 ? (
+                              filteredVendors.map((vendor) => (
+                                <TableRow
+                                  key={vendor.id}
+                                  className={`cursor-pointer ${
+                                    selectedVendor?.id === vendor.id
+                                      ? "bg-muted"
+                                      : ""
+                                  }`}
+                                  onClick={() => handleViewDetails(vendor)}
+                                >
+                                  <TableCell className="font-medium">
+                                    <div className="flex items-center gap-2">
+                                      <span>{vendor.projectCode}</span>
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-6 w-6 p-0"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          exportVendorToExcel(vendor);
+                                        }}
+                                      >
+                                        <Download className="h-4 w-4" />
+                                      </Button>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>
+                                    <div className="flex items-center space-x-2">
+                                      <div className="h-10 w-10 rounded-md bg-muted flex items-center justify-center">
+                                        <Store className="h-5 w-5 text-muted-foreground" />
+                                      </div>
+                                      <div className="font-medium">
+                                        {vendor.programName}
+                                      </div>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>{vendor.name || "-"}</TableCell>
+                                  <TableCell>{vendor.email || "-"}</TableCell>
+                                  <TableCell>
+                                    {vendor.createdAt
+                                      ?.toDate()
+                                      .toLocaleDateString()}
+                                  </TableCell>
+                                  <TableCell className="text-right">
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger
+                                        asChild
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <Button variant="ghost" size="icon">
+                                          <MoreHorizontal className="h-4 w-4" />
+                                          <span className="sr-only">
+                                            Open menu
+                                          </span>
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end">
+                                        <DropdownMenuLabel>
+                                          Actions
+                                        </DropdownMenuLabel>
+                                        <DropdownMenuItem
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleViewDetails(vendor);
+                                          }}
+                                        >
+                                          View Details
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                          onClick={(e) => e.stopPropagation()}
+                                        >
+                                          Edit Vendor
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator />
+                                        <DropdownMenuItem
+                                          className="text-destructive"
+                                          onClick={(e) => e.stopPropagation()}
+                                        >
+                                          Delete Vendor
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
+                                  </TableCell>
+                                </TableRow>
+                              ))
+                            ) : (
+                              <TableRow>
+                                <TableCell
+                                  colSpan={6}
+                                  className="text-center py-4"
+                                >
+                                  {searchQuery
+                                    ? "No vendors found. Try adjusting your search."
+                                    : "No vendors added yet. Click 'Add Vendor' to get started."}
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </TableBody>
+                        </Table>
+                      </div>
+
+                      {selectedVendor && (
+                        <div className="p-4 overflow-auto max-h-[800px]">
+                          <div className="flex justify-between items-center mb-4">
+                            <h3 className="text-lg font-semibold">
+                              Vendor Details
+                            </h3>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleCloseDetails}
+                            >
+                              <X className="h-4 w-4 mr-1" />
+                              Close
+                            </Button>
+                          </div>
+
+                          <VendorDetailView vendor={selectedVendor} />
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <Dialog
+                open={showExportDialog}
+                onOpenChange={setShowExportDialog}
+              >
+                <DialogContent className="sm:max-w-md">
+                  <DialogHeader>
+                    <DialogTitle>Export Vendors Data</DialogTitle>
+                  </DialogHeader>
+                  <div className="flex flex-col gap-4 py-4">
+                    <Button
+                      className="flex items-center justify-start gap-2"
+                      variant="outline"
+                      onClick={exportToGoogleSheets}
+                    >
+                      <img
+                        src="https://www.google.com/images/about/sheets-icon.svg"
+                        alt="Google Sheets"
+                        className="w-5 h-5"
+                      />
+                      Export to Google Sheets
+                    </Button>
+                    <Button
+                      className="flex items-center justify-start gap-2"
+                      variant="outline"
+                      onClick={exportToExcelOnline}
+                    >
+                      <img
+                        src="https://img.icons8.com/color/48/000000/microsoft-excel-2019--v1.png"
+                        alt="Microsoft Excel"
+                        className="w-5 h-5"
+                      />
+                      Export to Microsoft Excel Online
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </main>
+      </div>
     </div>
   );
 }

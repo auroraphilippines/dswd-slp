@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
 
-export default function DisbursementsLayout({ children }) {
+export default function SidebarLayout({ children }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
 
@@ -44,12 +44,12 @@ export default function DisbursementsLayout({ children }) {
     { name: "Programs", href: "/programs", icon: Building2 },
     {
       name: "Disbursements",
-      href: "./disbursements",
+      href: "/disbursements",
       icon: ShoppingCart,
     },
-    { name: "Reports", href: "./reports", icon: FileBarChart },
-    { name: "Analytics", href: "./analytics", icon: FileBarChart },
-    { name: "Settings", href: "./settings", icon: Settings },
+    { name: "Reports", href: "/reports", icon: FileBarChart },
+    { name: "Analytics", href: "/analytics", icon: FileBarChart },
+    { name: "Settings", href: "/settings", icon: Settings },
   ];
 
   return (
@@ -59,7 +59,7 @@ export default function DisbursementsLayout({ children }) {
         <div className="flex flex-col flex-grow pt-5 overflow-y-auto border-r bg-card">
           <div className="flex items-center flex-shrink-0 px-4">
             <Link href="/dashboard" className="flex items-center">
-              <img src="./images/SLP.png" alt="Logo" className="h-8 w-8" />
+              <img src="/logo.png" alt="Logo" className="h-8 w-8" />
               <span className="ml-2 text-xl font-bold">DSWD SLP-TIS</span>
             </Link>
           </div>
@@ -137,7 +137,7 @@ export default function DisbursementsLayout({ children }) {
           <div className="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
             <div className="flex-shrink-0 flex items-center px-4">
               <Link href="/dashboard" className="flex items-center">
-                <img src="./images/SLP.png" alt="Logo" className="h-8 w-8" />
+                <img src="/logo.png" alt="Logo" className="h-8 w-8" />
                 <span className="ml-2 text-xl font-bold">DSWD SLP-TIS</span>
               </Link>
             </div>
