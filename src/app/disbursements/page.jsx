@@ -51,12 +51,63 @@ import {
 } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { DisbursementDetailView } from "./disbursement-detail-view";
+import { auth, db } from "@/service/firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 export default function DisbursementsPage() {
   const [selectedDisbursement, setSelectedDisbursement] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
   const pathname = usePathname();
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const user = auth.currentUser;
+        if (user) {
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            const rawName = userData.name || "";
+            const displayName = rawName === "255" ? "Admin DSWD" : rawName;
+            
+            setCurrentUser({
+              ...userData,
+              uid: user.uid,
+              email: userData.email || "admin@dswd.gov.ph",
+              name: displayName,
+              role: userData.role || "Administrator"
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      }
+    };
+
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        fetchUserData();
+      } else {
+        setCurrentUser(null);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Get user initials from name
+  const getUserInitials = (name) => {
+    if (!name) return "AD";
+    if (name === "Admin DSWD") return "AD";
+    
+    const words = name.split(" ");
+    if (words.length >= 2) {
+      return (words[0][0] + words[1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
 
   // Close mobile menu when path changes
   useEffect(() => {
@@ -146,11 +197,11 @@ export default function DisbursementsPage() {
             <div className="flex items-center w-full justify-between">
               <div className="flex items-center">
                 <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                  <span className="text-sm font-medium">AD</span>
+                  <span className="text-sm font-medium">{getUserInitials(currentUser?.name)}</span>
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm font-medium">Admin DSWD</p>
-                  <p className="text-xs text-muted-foreground">Administrator</p>
+                  <p className="text-sm font-medium">{currentUser?.name || "Admin DSWD"}</p>
+                  <p className="text-xs text-muted-foreground">{currentUser?.role || "Administrator"}</p>
                 </div>
               </div>
               <ThemeToggle />
@@ -222,11 +273,11 @@ export default function DisbursementsPage() {
           <div className="flex-shrink-0 flex border-t p-4">
             <div className="flex items-center">
               <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                <span className="text-sm font-medium">AD</span>
+                <span className="text-sm font-medium">{getUserInitials(currentUser?.name)}</span>
               </div>
               <div className="ml-3">
-                <p className="text-sm font-medium">Admin DSWD</p>
-                <p className="text-xs text-muted-foreground">Administrator</p>
+                <p className="text-sm font-medium">{currentUser?.name || "Admin DSWD"}</p>
+                <p className="text-xs text-muted-foreground">{currentUser?.role || "Administrator"}</p>
               </div>
             </div>
           </div>
@@ -284,12 +335,19 @@ export default function DisbursementsPage() {
                   >
                     <span className="sr-only">Open user menu</span>
                     <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                      <span className="text-sm font-medium">AD</span>
+                      <span className="text-sm font-medium">{getUserInitials(currentUser?.name)}</span>
                     </div>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuLabel>
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{currentUser?.name || "Admin DSWD"}</p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {currentUser?.email || "admin@dswd.gov.ph"}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem>Profile</DropdownMenuItem>
                   <DropdownMenuItem>Settings</DropdownMenuItem>
