@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import {
   LayoutDashboard,
   FileBarChart,
@@ -52,12 +54,11 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { subscribeToVendors } from "@/service/vendor";
+import { subscribeToVendors, deleteVendor, updateVendorDetails } from "@/service/vendor";
 import { getCurrentUser } from "@/service/auth";
-import { auth, db } from "@/service/firebase";
-import { doc, getDoc } from "firebase/firestore";
 
 export default function VendorsPage() {
   const router = useRouter();
@@ -67,8 +68,12 @@ export default function VendorsPage() {
   const [vendors, setVendors] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
   const pathname = usePathname();
+  const [editingVendor, setEditingVendor] = useState(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [vendorToDelete, setVendorToDelete] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
 
   // Close mobile menu when path changes
   useEffect(() => {
@@ -86,6 +91,7 @@ export default function VendorsPage() {
           return;
         }
 
+        setCurrentUser(user);
         unsubscribe = subscribeToVendors(user.uid, (fetchedVendors) => {
           setVendors(fetchedVendors);
           setLoading(false);
@@ -102,54 +108,6 @@ export default function VendorsPage() {
       unsubscribe();
     };
   }, [router]);
-
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const user = auth.currentUser;
-        if (user) {
-          const userDoc = await getDoc(doc(db, "users", user.uid));
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            const rawName = userData.name || "";
-            const displayName = rawName === "255" ? "Admin DSWD" : rawName;
-            
-            setCurrentUser({
-              ...userData,
-              uid: user.uid,
-              email: userData.email || "admin@dswd.gov.ph",
-              name: displayName,
-              role: userData.role || "Administrator"
-            });
-          }
-        }
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-      }
-    };
-
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user) {
-        fetchUserData();
-      } else {
-        setCurrentUser(null);
-      }
-    });
-
-    return () => unsubscribe();
-  }, []);
-
-  // Get user initials from name
-  const getUserInitials = (name) => {
-    if (!name) return "AD";
-    if (name === "Admin DSWD") return "AD";
-    
-    const words = name.split(" ");
-    if (words.length >= 2) {
-      return (words[0][0] + words[1][0]).toUpperCase();
-    }
-    return name.substring(0, 2).toUpperCase();
-  };
 
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -547,6 +505,81 @@ export default function VendorsPage() {
     URL.revokeObjectURL(url);
   };
 
+  const handleEditVendor = (vendor) => {
+    setEditingVendor({
+      id: vendor.id,
+      projectCode: vendor.projectCode || "",
+      programName: vendor.programName || "",
+      name: vendor.name || "",
+      email: vendor.email || "",
+    });
+  };
+
+  const handleUpdateVendor = async (e) => {
+    e.preventDefault();
+    if (!currentUser) {
+      toast.error("You must be logged in to update vendors");
+      return;
+    }
+    
+    setIsSubmitting(true);
+    try {
+      const result = await updateVendorDetails(
+        editingVendor.id,
+        {
+          projectCode: editingVendor.projectCode,
+          programName: editingVendor.programName,
+          name: editingVendor.name,
+          email: editingVendor.email,
+        },
+        currentUser.uid
+      );
+
+      if (result.success) {
+        toast.success("Vendor updated successfully!");
+        setEditingVendor(null);
+      } else {
+        toast.error(result.error || "Failed to update vendor");
+      }
+    } catch (error) {
+      toast.error("An error occurred while updating the vendor");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDeleteClick = (vendor) => {
+    setVendorToDelete(vendor);
+    setShowDeleteDialog(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!vendorToDelete || !currentUser) {
+      toast.error("You must be logged in to delete vendors");
+      return;
+    }
+    
+    setIsSubmitting(true);
+    try {
+      const result = await deleteVendor(vendorToDelete.id, currentUser.uid);
+      
+      if (result.success) {
+        toast.success("Vendor deleted successfully!");
+        setShowDeleteDialog(false);
+        setVendorToDelete(null);
+        if (selectedVendor?.id === vendorToDelete.id) {
+          setSelectedVendor(null);
+        }
+      } else {
+        toast.error(result.error || "Failed to delete vendor");
+      }
+    } catch (error) {
+      toast.error("An error occurred while deleting the vendor");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // Filter vendors based on search query
   const filteredVendors = vendors.filter((vendor) => {
     const searchLower = searchQuery.toLowerCase();
@@ -574,6 +607,7 @@ export default function VendorsPage() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
+      <ToastContainer position="top-right" />
       {/* Sidebar for desktop */}
       <div className="hidden md:flex md:w-64 md:flex-col">
         <div className="flex flex-col flex-grow pt-5 overflow-y-auto border-r bg-card">
@@ -617,11 +651,11 @@ export default function VendorsPage() {
             <div className="flex items-center w-full justify-between">
               <div className="flex items-center">
                 <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                  <span className="text-sm font-medium">{getUserInitials(currentUser?.name)}</span>
+                  <span className="text-sm font-medium">AD</span>
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm font-medium">{currentUser?.name || "Admin DSWD"}</p>
-                  <p className="text-xs text-muted-foreground">{currentUser?.role || "Administrator"}</p>
+                  <p className="text-sm font-medium">Admin DSWD</p>
+                  <p className="text-xs text-muted-foreground">Administrator</p>
                 </div>
               </div>
               <ThemeToggle />
@@ -693,11 +727,11 @@ export default function VendorsPage() {
           <div className="flex-shrink-0 flex border-t p-4">
             <div className="flex items-center">
               <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                <span className="text-sm font-medium">{getUserInitials(currentUser?.name)}</span>
+                <span className="text-sm font-medium">AD</span>
               </div>
               <div className="ml-3">
-                <p className="text-sm font-medium">{currentUser?.name || "Admin DSWD"}</p>
-                <p className="text-xs text-muted-foreground">{currentUser?.role || "Administrator"}</p>
+                <p className="text-sm font-medium">Admin DSWD</p>
+                <p className="text-xs text-muted-foreground">Administrator</p>
               </div>
             </div>
           </div>
@@ -748,22 +782,19 @@ export default function VendorsPage() {
               {/* Profile dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="ml-3 rounded-full">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="ml-3 rounded-full"
+                  >
                     <span className="sr-only">Open user menu</span>
                     <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                      <span className="text-sm font-medium">{getUserInitials(currentUser?.name)}</span>
+                      <span className="text-sm font-medium">AD</span>
                     </div>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">{currentUser?.name || "Admin DSWD"}</p>
-                      <p className="text-xs leading-none text-muted-foreground">
-                        {currentUser?.email || "admin@dswd.gov.ph"}
-                      </p>
-                    </div>
-                  </DropdownMenuLabel>
+                  <DropdownMenuLabel>My Account</DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem>Profile</DropdownMenuItem>
                   <DropdownMenuItem>Settings</DropdownMenuItem>
@@ -917,14 +948,20 @@ export default function VendorsPage() {
                                           View Details
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
-                                          onClick={(e) => e.stopPropagation()}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleEditVendor(vendor);
+                                          }}
                                         >
                                           Edit Vendor
                                         </DropdownMenuItem>
                                         <DropdownMenuSeparator />
                                         <DropdownMenuItem
                                           className="text-destructive"
-                                          onClick={(e) => e.stopPropagation()}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteClick(vendor);
+                                          }}
                                         >
                                           Delete Vendor
                                         </DropdownMenuItem>
@@ -1007,6 +1044,127 @@ export default function VendorsPage() {
                       Export to Microsoft Excel Online
                     </Button>
                   </div>
+                </DialogContent>
+              </Dialog>
+
+              {/* Add Edit Dialog */}
+              <Dialog 
+                open={!!editingVendor} 
+                onOpenChange={(open) => {
+                  if (!open) setEditingVendor(null);
+                }}
+              >
+                <DialogContent className="sm:max-w-[425px]">
+                  <DialogHeader>
+                    <DialogTitle>Edit Vendor</DialogTitle>
+                  </DialogHeader>
+                  <form onSubmit={handleUpdateVendor}>
+                    <div className="grid gap-4 py-4">
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <label htmlFor="projectCode" className="text-right">
+                          Project Code
+                        </label>
+                        <Input
+                          id="projectCode"
+                          value={editingVendor?.projectCode ?? ""}
+                          onChange={(e) =>
+                            setEditingVendor({
+                              ...editingVendor,
+                              projectCode: e.target.value,
+                            })
+                          }
+                          className="col-span-3"
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <label htmlFor="programName" className="text-right">
+                          Program Name
+                        </label>
+                        <Input
+                          id="programName"
+                          value={editingVendor?.programName ?? ""}
+                          onChange={(e) =>
+                            setEditingVendor({
+                              ...editingVendor,
+                              programName: e.target.value,
+                            })
+                          }
+                          className="col-span-3"
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <label htmlFor="name" className="text-right">
+                          Name
+                        </label>
+                        <Input
+                          id="name"
+                          value={editingVendor?.name ?? ""}
+                          onChange={(e) =>
+                            setEditingVendor({ ...editingVendor, name: e.target.value })
+                          }
+                          className="col-span-3"
+                        />
+                      </div>
+                      <div className="grid grid-cols-4 items-center gap-4">
+                        <label htmlFor="email" className="text-right">
+                          Email
+                        </label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={editingVendor?.email ?? ""}
+                          onChange={(e) =>
+                            setEditingVendor({ ...editingVendor, email: e.target.value })
+                          }
+                          className="col-span-3"
+                        />
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setEditingVendor(null)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button type="submit" disabled={isSubmitting}>
+                        {isSubmitting ? "Saving..." : "Save changes"}
+                      </Button>
+                    </DialogFooter>
+                  </form>
+                </DialogContent>
+              </Dialog>
+
+              {/* Add Delete Confirmation Dialog */}
+              <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+                <DialogContent>
+                  <DialogHeader>
+                    <DialogTitle>Delete Vendor</DialogTitle>
+                  </DialogHeader>
+                  <div className="py-4">
+                    <p>
+                      Are you sure you want to delete vendor "{vendorToDelete?.name}"? This action
+                      cannot be undone.
+                    </p>
+                  </div>
+                  <DialogFooter>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setShowDeleteDialog(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      onClick={handleConfirmDelete}
+                      disabled={isSubmitting}
+                    >
+                      {isSubmitting ? "Deleting..." : "Delete"}
+                    </Button>
+                  </DialogFooter>
                 </DialogContent>
               </Dialog>
             </div>
