@@ -378,14 +378,14 @@ export default function VendorsPage() {
     // Create Blob with UTF-8 BOM for Excel compatibility
     const BOM = "\uFEFF";
     const blob = new Blob([BOM + csvContent], {
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8",
+      type: "text/csv;charset=UTF-8",
     });
     const url = URL.createObjectURL(blob);
 
     // Create a temporary link and trigger download
     const link = document.createElement("a");
     link.href = url;
-    link.download = "vendors_detailed.xlsx";
+    link.download = "vendors_detailed.csv";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -494,14 +494,14 @@ export default function VendorsPage() {
     // Create Blob with UTF-8 BOM for Excel compatibility
     const BOM = "\uFEFF";
     const blob = new Blob([BOM + csvContent], {
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8",
+      type: "text/csv;charset=UTF-8",
     });
     const url = URL.createObjectURL(blob);
 
     // Create a temporary link and trigger download
     const link = document.createElement("a");
     link.href = url;
-    link.download = `vendor_${vendor.vendorId || vendor.id}_details.xlsx`;
+    link.download = `vendor_${vendor.vendorId || vendor.id}_details.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
