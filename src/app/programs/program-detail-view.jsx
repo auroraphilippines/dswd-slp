@@ -25,7 +25,6 @@ export function ProgramDetailView({ program }) {
         <TabsTrigger value="basic">Basic Info</TabsTrigger>
         <TabsTrigger value="budget">Budget</TabsTrigger>
         <TabsTrigger value="beneficiaries">Beneficiaries</TabsTrigger>
-        <TabsTrigger value="disbursements">Disbursements</TabsTrigger>
       </TabsList>
 
       <TabsContent value="basic" className="space-y-4">
@@ -178,14 +177,6 @@ export function ProgramDetailView({ program }) {
               </div>
               <div className="flex justify-between sm:block">
                 <dt className="text-sm font-medium text-muted-foreground">
-                  Disbursed Amount:
-                </dt>
-                <dd className="text-sm font-medium">
-                  ₱{program.disbursed.toLocaleString()}
-                </dd>
-              </div>
-              <div className="flex justify-between sm:block">
-                <dt className="text-sm font-medium text-muted-foreground">
                   Remaining Budget:
                 </dt>
                 <dd className="text-sm font-medium">
@@ -290,83 +281,6 @@ export function ProgramDetailView({ program }) {
               Beneficiary distribution by location, age group, and other
               demographics would be displayed here.
             </p>
-          </CardContent>
-        </Card>
-      </TabsContent>
-
-      <TabsContent value="disbursements" className="space-y-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              Recent Disbursements
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {program.recentDisbursements &&
-            program.recentDisbursements.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Barangay</TableHead>
-                    <TableHead className="text-right">Beneficiaries</TableHead>
-                    <TableHead className="text-right">Amount (₱)</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {program.recentDisbursements.map((disbursement, index) => (
-                    <TableRow key={index}>
-                      <TableCell>{disbursement.date}</TableCell>
-                      <TableCell>{disbursement.barangay}</TableCell>
-                      <TableCell className="text-right">
-                        {disbursement.beneficiaries}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {disbursement.amount.toLocaleString()}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  <TableRow>
-                    <TableCell colSpan={2} className="font-medium">
-                      Total
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {program.recentDisbursements.reduce(
-                        (total, item) => total + item.beneficiaries,
-                        0
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      ₱
-                      {program.recentDisbursements
-                        .reduce((total, item) => total + item.amount, 0)
-                        .toLocaleString()}
-                    </TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            ) : (
-              <p className="text-sm text-muted-foreground">
-                No recent disbursements
-              </p>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              Schedule Disbursement
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Use the button below to schedule a new disbursement for this
-              program.
-            </p>
-            <Button className="mt-4" size="sm">
-              Schedule Disbursement
-            </Button>
           </CardContent>
         </Card>
       </TabsContent>

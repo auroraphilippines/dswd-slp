@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import LoadingPage from "../loading/page";
 import {
   LayoutDashboard,
   FileBarChart,
@@ -21,6 +22,7 @@ import {
   DollarSign,
   ArrowUpRight,
   ArrowDownRight,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -48,7 +50,13 @@ import { doc, getDoc } from "firebase/firestore";
 export default function DashboardPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const pathname = usePathname();
+
+  // Close mobile menu when path changes
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -58,40 +66,33 @@ export default function DashboardPage() {
           const userDoc = await getDoc(doc(db, "users", user.uid));
           if (userDoc.exists()) {
             const userData = userDoc.data();
-            // Format the display name based on the raw data
             const rawName = userData.name || "";
             const displayName = rawName === "255" ? "Admin DSWD" : rawName;
-            
+
             setCurrentUser({
               ...userData,
               uid: user.uid,
               email: userData.email || "admin@dswd.gov.ph",
               name: displayName,
-              role: userData.role || "Administrator"
+              role: userData.role || "Administrator",
             });
           }
         }
+        setLoading(false);
       } catch (error) {
         console.error("Error fetching user data:", error);
+        setLoading(false);
       }
     };
 
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user) {
-        fetchUserData();
-      } else {
-        setCurrentUser(null);
-      }
-    });
-
-    return () => unsubscribe();
+    fetchUserData();
   }, []);
 
   // Get user initials from name
   const getUserInitials = (name) => {
     if (!name) return "AD";
     if (name === "Admin DSWD") return "AD";
-    
+
     const words = name.split(" ");
     if (words.length >= 2) {
       return (words[0][0] + words[1][0]).toUpperCase();
@@ -99,21 +100,15 @@ export default function DashboardPage() {
     return name.substring(0, 2).toUpperCase();
   };
 
-  // Close mobile menu when path changes
-  useEffect(() => {
-    setIsMobileMenuOpen(false);
-  }, [pathname]);
+  if (loading) {
+    return <LoadingPage />;
+  }
 
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Vendors", href: "/vendors", icon: Store },
     { name: "Beneficiaries", href: "/beneficiaries", icon: Users },
     { name: "Programs", href: "/programs", icon: Building2 },
-    {
-      name: "Disbursements",
-      href: "./disbursements",
-      icon: ShoppingCart,
-    },
     { name: "Reports", href: "./reports", icon: FileBarChart },
     { name: "Analytics", href: "./analytics", icon: FileBarChart },
     { name: "Settings", href: "./settings", icon: Settings },
@@ -164,11 +159,17 @@ export default function DashboardPage() {
             <div className="flex items-center w-full justify-between">
               <div className="flex items-center">
                 <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                  <span className="text-sm font-medium">{getUserInitials(currentUser?.name)}</span>
+                  <span className="text-sm font-medium">
+                    {getUserInitials(currentUser?.name)}
+                  </span>
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm font-medium">{currentUser?.name || "Admin DSWD"}</p>
-                  <p className="text-xs text-muted-foreground">{currentUser?.role || "Administrator"}</p>
+                  <p className="text-sm font-medium">
+                    {currentUser?.name || "Admin DSWD"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {currentUser?.role || "Administrator"}
+                  </p>
                 </div>
               </div>
               <ThemeToggle />
@@ -240,11 +241,17 @@ export default function DashboardPage() {
           <div className="flex-shrink-0 flex border-t p-4">
             <div className="flex items-center">
               <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                <span className="text-sm font-medium">{getUserInitials(currentUser?.name)}</span>
+                <span className="text-sm font-medium">
+                  {getUserInitials(currentUser?.name)}
+                </span>
               </div>
               <div className="ml-3">
-                <p className="text-sm font-medium">{currentUser?.name || "Admin DSWD"}</p>
-                <p className="text-xs text-muted-foreground">{currentUser?.role || "Administrator"}</p>
+                <p className="text-sm font-medium">
+                  {currentUser?.name || "Admin DSWD"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {currentUser?.role || "Administrator"}
+                </p>
               </div>
             </div>
           </div>
@@ -300,25 +307,37 @@ export default function DashboardPage() {
                   >
                     <span className="sr-only">Open user menu</span>
                     <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                      <span className="text-sm font-medium">{getUserInitials(currentUser?.name)}</span>
+                      <span className="text-sm font-medium">
+                        {getUserInitials(currentUser?.name)}
+                      </span>
                     </div>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">{currentUser?.name || "Admin DSWD"}</p>
+                      <p className="text-sm font-medium leading-none">
+                        {currentUser?.name || "Admin DSWD"}
+                      </p>
                       <p className="text-xs leading-none text-muted-foreground">
                         {currentUser?.email || "admin@dswd.gov.ph"}
                       </p>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>Profile</DropdownMenuItem>
-                  <DropdownMenuItem>Settings</DropdownMenuItem>
-                  <DropdownMenuItem>Support</DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
+                  <DropdownMenuItem>
+                    <Link href="/profile" className="flex items-center">
+                      <User className="mr-2 h-4 w-4" />
+                      Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Link href="/settings" className="flex items-center">
+                      <Settings className="mr-2 h-4 w-4" />
+                      Settings
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
                     <Link href="/">Sign out</Link>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -363,22 +382,6 @@ export default function DashboardPage() {
                         +3.2% from last month
                       </p>
                       <Progress value={65} className="mt-2 h-1" />
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">
-                        Pending Disbursements
-                      </CardTitle>
-                      <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">124</div>
-                      <div className="flex items-center pt-1 text-xs text-green-500">
-                        <ArrowUpRight className="mr-1 h-3 w-3" />
-                        <span>+8% from last week</span>
-                      </div>
-                      <Progress value={45} className="mt-2 h-1" />
                     </CardContent>
                   </Card>
                   <Card>
@@ -443,24 +446,6 @@ export default function DashboardPage() {
                     <Link href="/dashboard/inventory?filter=low-stock">
                       <Button variant="secondary" className="w-full">
                         View Low Stock Items
-                      </Button>
-                    </Link>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium">
-                      Pending Disbursements
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      124 disbursements are waiting to be processed and
-                      delivered.
-                    </p>
-                    <Link href="/dashboard/disbursements?status=pending">
-                      <Button variant="secondary" className="w-full">
-                        Process Disbursements
                       </Button>
                     </Link>
                   </CardContent>

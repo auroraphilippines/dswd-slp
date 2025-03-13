@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import {
   LayoutDashboard,
   FileBarChart,
@@ -57,8 +57,13 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { subscribeToVendors, deleteVendor, updateVendorDetails } from "@/service/vendor";
+import {
+  subscribeToVendors,
+  deleteVendor,
+  updateVendorDetails,
+} from "@/service/vendor";
 import { getCurrentUser } from "@/service/auth";
+import LoadingPage from "../loading/page";
 
 export default function VendorsPage() {
   const router = useRouter();
@@ -521,7 +526,7 @@ export default function VendorsPage() {
       toast.error("You must be logged in to update vendors");
       return;
     }
-    
+
     setIsSubmitting(true);
     try {
       const result = await updateVendorDetails(
@@ -558,11 +563,11 @@ export default function VendorsPage() {
       toast.error("You must be logged in to delete vendors");
       return;
     }
-    
+
     setIsSubmitting(true);
     try {
       const result = await deleteVendor(vendorToDelete.id, currentUser.uid);
-      
+
       if (result.success) {
         toast.success("Vendor deleted successfully!");
         setShowDeleteDialog(false);
@@ -595,14 +600,7 @@ export default function VendorsPage() {
   });
 
   if (loading) {
-    return (
-      <div className="container mx-auto px-4 py-8 flex justify-center items-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
-          <p className="mt-4">Loading vendors...</p>
-        </div>
-      </div>
-    );
+    return <LoadingPage />;
   }
 
   return (
@@ -1048,8 +1046,8 @@ export default function VendorsPage() {
               </Dialog>
 
               {/* Add Edit Dialog */}
-              <Dialog 
-                open={!!editingVendor} 
+              <Dialog
+                open={!!editingVendor}
                 onOpenChange={(open) => {
                   if (!open) setEditingVendor(null);
                 }}
@@ -1100,7 +1098,10 @@ export default function VendorsPage() {
                           id="name"
                           value={editingVendor?.name ?? ""}
                           onChange={(e) =>
-                            setEditingVendor({ ...editingVendor, name: e.target.value })
+                            setEditingVendor({
+                              ...editingVendor,
+                              name: e.target.value,
+                            })
                           }
                           className="col-span-3"
                         />
@@ -1114,7 +1115,10 @@ export default function VendorsPage() {
                           type="email"
                           value={editingVendor?.email ?? ""}
                           onChange={(e) =>
-                            setEditingVendor({ ...editingVendor, email: e.target.value })
+                            setEditingVendor({
+                              ...editingVendor,
+                              email: e.target.value,
+                            })
                           }
                           className="col-span-3"
                         />
@@ -1137,15 +1141,18 @@ export default function VendorsPage() {
               </Dialog>
 
               {/* Add Delete Confirmation Dialog */}
-              <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+              <Dialog
+                open={showDeleteDialog}
+                onOpenChange={setShowDeleteDialog}
+              >
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Delete Vendor</DialogTitle>
                   </DialogHeader>
                   <div className="py-4">
                     <p>
-                      Are you sure you want to delete vendor "{vendorToDelete?.name}"? This action
-                      cannot be undone.
+                      Are you sure you want to delete vendor "
+                      {vendorToDelete?.name}"? This action cannot be undone.
                     </p>
                   </div>
                   <DialogFooter>

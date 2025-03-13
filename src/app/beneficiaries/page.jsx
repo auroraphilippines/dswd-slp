@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import LoadingPage from "../loading/page";
 import {
   LayoutDashboard,
   FileBarChart,
@@ -55,11 +56,17 @@ import { auth, db } from "@/service/firebase";
 import { doc, getDoc } from "firebase/firestore";
 
 export default function BeneficiariesPage() {
-  const [selectedBeneficiary, setSelectedBeneficiary] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [selectedBeneficiary, setSelectedBeneficiary] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const pathname = usePathname();
+
+  // Close mobile menu when path changes
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -69,53 +76,39 @@ export default function BeneficiariesPage() {
           const userDoc = await getDoc(doc(db, "users", user.uid));
           if (userDoc.exists()) {
             const userData = userDoc.data();
-            // Format the display name based on the raw data
             const rawName = userData.name || "";
             const displayName = rawName === "255" ? "Admin DSWD" : rawName;
-            
+
             setCurrentUser({
               ...userData,
               uid: user.uid,
               email: userData.email || "admin@dswd.gov.ph",
               name: displayName,
-              role: userData.role || "Administrator"
+              role: userData.role || "Administrator",
             });
           }
         }
+        setLoading(false);
       } catch (error) {
         console.error("Error fetching user data:", error);
+        setLoading(false);
       }
     };
 
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (user) {
-        fetchUserData();
-      } else {
-        setCurrentUser(null);
-      }
-    });
-
-    return () => unsubscribe();
+    fetchUserData();
   }, []);
-
-  
 
   // Get user initials from name
   const getUserInitials = (name) => {
     if (!name) return "AD";
     if (name === "Admin DSWD") return "AD";
-    
+
     const words = name.split(" ");
     if (words.length >= 2) {
       return (words[0][0] + words[1][0]).toUpperCase();
     }
     return name.substring(0, 2).toUpperCase();
   };
-
-  // Close mobile menu when path changes
-  useEffect(() => {
-    setIsMobileMenuOpen(false);
-  }, [pathname]);
 
   const handleViewDetails = (beneficiary) => {
     setSelectedBeneficiary(beneficiary);
@@ -129,16 +122,15 @@ export default function BeneficiariesPage() {
     setSearchQuery(e.target.value);
   };
 
+  if (loading) {
+    return <LoadingPage />;
+  }
+
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Vendors", href: "/vendors", icon: Store },
     { name: "Beneficiaries", href: "/beneficiaries", icon: Users },
     { name: "Programs", href: "/programs", icon: Building2 },
-    {
-      name: "Disbursements",
-      href: "./disbursements",
-      icon: ShoppingCart,
-    },
     { name: "Reports", href: "./reports", icon: FileBarChart },
     { name: "Analytics", href: "./analytics", icon: FileBarChart },
     { name: "Settings", href: "./settings", icon: Settings },
@@ -200,11 +192,15 @@ export default function BeneficiariesPage() {
             <div className="flex items-center w-full justify-between">
               <div className="flex items-center">
                 <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                  <span className="text-sm font-medium">{getUserInitials(currentUser?.name)}</span>
+                  <span className="text-sm font-medium">
+                    {getUserInitials(currentUser?.name)}
+                  </span>
                 </div>
                 <div className="ml-3">
                   <p className="text-sm font-medium">{currentUser?.name}</p>
-                  <p className="text-xs text-muted-foreground">{currentUser?.role}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {currentUser?.role}
+                  </p>
                 </div>
               </div>
               <ThemeToggle />
@@ -276,7 +272,9 @@ export default function BeneficiariesPage() {
           <div className="flex-shrink-0 flex border-t p-4">
             <div className="flex items-center">
               <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                <span className="text-sm font-medium">{getUserInitials(currentUser?.name)}</span>
+                <span className="text-sm font-medium">
+                  {getUserInitials(currentUser?.name)}
+                </span>
               </div>
               <div className="ml-3">
                 <p className="text-sm font-medium">{currentUser?.name}</p>
@@ -337,14 +335,18 @@ export default function BeneficiariesPage() {
                   >
                     <span className="sr-only">Open user menu</span>
                     <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                      <span className="text-sm font-medium">{getUserInitials(currentUser?.name)}</span>
+                      <span className="text-sm font-medium">
+                        {getUserInitials(currentUser?.name)}
+                      </span>
                     </div>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">{currentUser?.name}</p>
+                      <p className="text-sm font-medium leading-none">
+                        {currentUser?.name}
+                      </p>
                       <p className="text-xs leading-none text-muted-foreground">
                         {currentUser?.email}
                       </p>
@@ -352,12 +354,16 @@ export default function BeneficiariesPage() {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem>
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Profile</span>
+                    <Link href="/profile" className="flex items-center">
+                      <User className="mr-2 h-4 w-4" />
+                      Profile
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem>
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Settings</span>
+                    <Link href="/settings" className="flex items-center">
+                      <Settings className="mr-2 h-4 w-4" />
+                      Settings
+                    </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>

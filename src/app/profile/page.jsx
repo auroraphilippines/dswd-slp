@@ -16,14 +16,22 @@ import {
   Search,
   Building2,
   Store,
-  Building,
-  CreditCard,
-  Lock,
-  Layers,
   User,
+  Mail,
+  Phone,
+  MapPin,
+  Shield,
+  Calendar,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,17 +40,12 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { GeneralSettings } from "./general";
-import { UsersPermissionsSettings } from "./user-permission";
-import { NotificationsSettings } from "./notifications";
-import { SecuritySettings } from "./security";
+import { Separator } from "@/components/ui/separator";
 import { auth, db } from "@/service/firebase";
 import { doc, getDoc } from "firebase/firestore";
 
-export default function SettingsPage() {
+export default function ProfilePage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -70,6 +73,10 @@ export default function SettingsPage() {
               email: userData.email || "admin@dswd.gov.ph",
               name: displayName,
               role: userData.role || "Administrator",
+              phoneNumber: userData.phoneNumber || "+63 XXX XXX XXXX",
+              address: userData.address || "DSWD Office, Manila",
+              joinDate: userData.joinDate || "January 2023",
+              department: userData.department || "Administration",
             });
           }
         }
@@ -104,11 +111,6 @@ export default function SettingsPage() {
     { name: "Vendors", href: "/vendors", icon: Store },
     { name: "Beneficiaries", href: "/beneficiaries", icon: Users },
     { name: "Programs", href: "/programs", icon: Building2 },
-    {
-      name: "Disbursements",
-      href: "./disbursements",
-      icon: ShoppingCart,
-    },
     { name: "Reports", href: "./reports", icon: FileBarChart },
     { name: "Analytics", href: "./analytics", icon: FileBarChart },
     { name: "Settings", href: "./settings", icon: Settings },
@@ -285,7 +287,7 @@ export default function SettingsPage() {
                   <Input
                     id="search-field"
                     className="block w-full h-full pl-10 pr-3 py-2 border-transparent text-muted-foreground placeholder-muted-foreground focus:outline-none focus:placeholder-gray-400 focus:ring-0 focus:border-transparent sm:text-sm"
-                    placeholder="Search settings..."
+                    placeholder="Search..."
                     type="search"
                   />
                 </div>
@@ -338,8 +340,6 @@ export default function SettingsPage() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>Support</DropdownMenuItem>
-                  <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
                     <Link href="/">Sign out</Link>
                   </DropdownMenuItem>
@@ -354,107 +354,125 @@ export default function SettingsPage() {
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex flex-col space-y-4">
                 <div className="flex items-center justify-between">
-                  <h1 className="text-2xl font-bold tracking-tight">
-                    Settings
-                  </h1>
+                  <h1 className="text-2xl font-bold tracking-tight">Profile</h1>
+                  <Button>
+                    <Settings className="mr-2 h-4 w-4" />
+                    Edit Profile
+                  </Button>
                 </div>
 
-                <Tabs defaultValue="general" className="w-full">
-                  <div className="flex flex-col md:flex-row gap-4">
-                    <div className="md:w-1/4">
-                      <TabsList className="flex flex-col h-auto bg-transparent p-0 justify-start">
-                        <TabsTrigger
-                          value="general"
-                          className="justify-start w-full mb-1 data-[state=active]:bg-muted"
-                        >
-                          <Settings className="mr-2 h-4 w-4" />
-                          General
-                        </TabsTrigger>
-                        <TabsTrigger
-                          value="users"
-                          className="justify-start w-full mb-1 data-[state=active]:bg-muted"
-                        >
-                          <Users className="mr-2 h-4 w-4" />
-                          Users & Permissions
-                        </TabsTrigger>
-                        <TabsTrigger
-                          value="notifications"
-                          className="justify-start w-full mb-1 data-[state=active]:bg-muted"
-                        >
-                          <Bell className="mr-2 h-4 w-4" />
-                          Notifications
-                        </TabsTrigger>
-                        <TabsTrigger
-                          value="security"
-                          className="justify-start w-full mb-1 data-[state=active]:bg-muted"
-                        >
-                          <Lock className="mr-2 h-4 w-4" />
-                          Security
-                        </TabsTrigger>
-                      </TabsList>
-                    </div>
-
-                    <div className="md:w-3/4">
-                      <TabsContent value="general" className="mt-0">
-                        <div className="space-y-4">
-                          <div>
-                            <h2 className="text-lg font-medium">
-                              General Settings
-                            </h2>
-                            <p className="text-sm text-muted-foreground">
-                              Manage your general application preferences
-                            </p>
-                          </div>
-                          <Separator />
-                          <GeneralSettings />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Profile Overview */}
+                  <Card className="md:col-span-2">
+                    <CardHeader>
+                      <CardTitle>Profile Overview</CardTitle>
+                      <CardDescription>
+                        Your personal information and account details
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="flex items-center space-x-4">
+                        <div className="h-20 w-20 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-2xl font-bold">
+                          {getUserInitials(currentUser?.name)}
                         </div>
-                      </TabsContent>
-
-                      <TabsContent value="users" className="mt-0">
-                        <div className="space-y-4">
-                          <div>
-                            <h2 className="text-lg font-medium">
-                              Users & Permissions
-                            </h2>
-                            <p className="text-sm text-muted-foreground">
-                              Manage users, roles, and access permissions
-                            </p>
-                          </div>
-                          <Separator />
-                          <UsersPermissionsSettings />
+                        <div>
+                          <h3 className="text-lg font-medium">
+                            {currentUser?.name}
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            {currentUser?.role}
+                          </p>
                         </div>
-                      </TabsContent>
-
-                      <TabsContent value="notifications" className="mt-0">
-                        <div className="space-y-4">
-                          <div>
-                            <h2 className="text-lg font-medium">
-                              Notifications
-                            </h2>
-                            <p className="text-sm text-muted-foreground">
-                              Configure your notification preferences
-                            </p>
+                      </div>
+                      <Separator />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium text-muted-foreground">
+                            Email
+                          </p>
+                          <div className="flex items-center">
+                            <Mail className="mr-2 h-4 w-4 text-muted-foreground" />
+                            <p>{currentUser?.email}</p>
                           </div>
-                          <Separator />
-                          <NotificationsSettings />
                         </div>
-                      </TabsContent>
-
-                      <TabsContent value="security" className="mt-0">
-                        <div className="space-y-4">
-                          <div>
-                            <h2 className="text-lg font-medium">Security</h2>
-                            <p className="text-sm text-muted-foreground">
-                              Manage your security settings and preferences
-                            </p>
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium text-muted-foreground">
+                            Phone
+                          </p>
+                          <div className="flex items-center">
+                            <Phone className="mr-2 h-4 w-4 text-muted-foreground" />
+                            <p>{currentUser?.phoneNumber}</p>
                           </div>
-                          <Separator />
-                          <SecuritySettings />
                         </div>
-                      </TabsContent>
-                    </div>
-                  </div>
-                </Tabs>
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium text-muted-foreground">
+                            Department
+                          </p>
+                          <div className="flex items-center">
+                            <Building2 className="mr-2 h-4 w-4 text-muted-foreground" />
+                            <p>{currentUser?.department}</p>
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium text-muted-foreground">
+                            Location
+                          </p>
+                          <div className="flex items-center">
+                            <MapPin className="mr-2 h-4 w-4 text-muted-foreground" />
+                            <p>{currentUser?.address}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Account Information */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Account Information</CardTitle>
+                      <CardDescription>
+                        Your account status and details
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-muted-foreground">
+                          Account Status
+                        </p>
+                        <div className="flex items-center">
+                          <Shield className="mr-2 h-4 w-4 text-green-500" />
+                          <p className="text-green-500">Active</p>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm font-medium text-muted-foreground">
+                          Join Date
+                        </p>
+                        <div className="flex items-center">
+                          <Calendar className="mr-2 h-4 w-4 text-muted-foreground" />
+                          <p>{currentUser?.joinDate}</p>
+                        </div>
+                      </div>
+                      <Separator />
+                      <div className="space-y-2">
+                        <p className="text-sm font-medium text-muted-foreground">
+                          Quick Actions
+                        </p>
+                        <div className="grid grid-cols-1 gap-2">
+                          <Button variant="outline" className="w-full">
+                            Change Password
+                          </Button>
+                          <Button variant="outline" className="w-full">
+                            Update Contact Info
+                          </Button>
+                          <Button variant="outline" className="w-full">
+                            Security Settings
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
             </div>
           </div>
