@@ -153,7 +153,7 @@ export default function LandingPage() {
               className="relative text-white py-20 md:py-32 bg-cover bg-center bg-no-repeat"
               style={{
                 backgroundImage:
-                  "linear-gradient(rgba(15, 76, 129, 0.85), rgba(26, 107, 173, 0.9)), url('/images/philippines-community.jpg')",
+                  "linear-gradient(rgba(15, 76, 129, 0.85), rgba(26, 107, 173, 0.9)), url('/images/DSWD-RO3.png')",
                 backgroundSize: "cover",
                 backgroundPosition: "center",
               }}
@@ -921,7 +921,7 @@ export default function LandingPage() {
                       </li>
                       <li>
                         <a
-                          href="https://www.dswd.gov.ph/sustainable-livelihood-program/"
+                          href="https://fo3.dswd.gov.ph/slp/"
                           className="hover:text-[#FFC612] transition-colors"
                         >
                           Sustainable Livelihood Program
