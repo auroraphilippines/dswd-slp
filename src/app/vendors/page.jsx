@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { ToastContainer, toast } from "react-toastify";
-import "react-toastify/dist/ReactToastify.css";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import {
   LayoutDashboard,
   FileBarChart,
@@ -57,12 +57,11 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { ThemeToggle } from "@/components/theme-toggle";
-import {
-  subscribeToVendors,
-  deleteVendor,
-  updateVendorDetails,
-} from "@/service/vendor";
+import { subscribeToVendors, deleteVendor, updateVendorDetails } from "@/service/vendor";
 import { getCurrentUser } from "@/service/auth";
+import { auth, db } from "@/service/firebase";
+import { doc, getDoc } from "firebase/firestore";
+import LoadingPage from "./loading";
 
 export default function VendorsPage() {
   const router = useRouter();
@@ -263,7 +262,7 @@ export default function VendorsPage() {
     // Create a temporary link to download the CSV
     const link = document.createElement("a");
     link.href = url;
-    link.download = "vendors_data.csv";
+    link.download = "vendors_detailed.csv";
     link.click();
 
     // Clean up
@@ -426,14 +425,14 @@ export default function VendorsPage() {
     // Create Blob with UTF-8 BOM for Excel compatibility
     const BOM = "\uFEFF";
     const blob = new Blob([BOM + csvContent], {
-      type: "text/csv;charset=UTF-8",
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8",
     });
     const url = URL.createObjectURL(blob);
 
     // Create a temporary link and trigger download
     const link = document.createElement("a");
     link.href = url;
-    link.download = "vendors_detailed.csv";
+    link.download = "vendors_detailed.xlsx";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -542,14 +541,14 @@ export default function VendorsPage() {
     // Create Blob with UTF-8 BOM for Excel compatibility
     const BOM = "\uFEFF";
     const blob = new Blob([BOM + csvContent], {
-      type: "text/csv;charset=UTF-8",
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8",
     });
     const url = URL.createObjectURL(blob);
 
     // Create a temporary link and trigger download
     const link = document.createElement("a");
     link.href = url;
-    link.download = `vendor_${vendor.vendorId || vendor.id}_details.csv`;
+    link.download = `vendor_${vendor.vendorId || vendor.id}_details.xlsx`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -574,7 +573,7 @@ export default function VendorsPage() {
       toast.error("You must be logged in to update vendors");
       return;
     }
-
+    
     setIsSubmitting(true);
     try {
       const result = await updateVendorDetails(
@@ -611,11 +610,11 @@ export default function VendorsPage() {
       toast.error("You must be logged in to delete vendors");
       return;
     }
-
+    
     setIsSubmitting(true);
     try {
       const result = await deleteVendor(vendorToDelete.id, currentUser.uid);
-
+      
       if (result.success) {
         toast.success("Vendor deleted successfully!");
         setShowDeleteDialog(false);
@@ -1069,16 +1068,32 @@ export default function VendorsPage() {
                       variant="outline"
                       onClick={exportToGoogleSheets}
                     >
-                      <Download className="h-5 w-5" />
-                      Export as CSV Files
+                      <img
+                        src="https://www.google.com/images/about/sheets-icon.svg"
+                        alt="Google Sheets"
+                        className="w-5 h-5"
+                      />
+                      Export to Google Sheets
+                    </Button>
+                    <Button
+                      className="flex items-center justify-start gap-2"
+                      variant="outline"
+                      onClick={exportToExcelOnline}
+                    >
+                      <img
+                        src="https://img.icons8.com/color/48/000000/microsoft-excel-2019--v1.png"
+                        alt="Microsoft Excel"
+                        className="w-5 h-5"
+                      />
+                      Export to Microsoft Excel Online
                     </Button>
                   </div>
                 </DialogContent>
               </Dialog>
 
               {/* Add Edit Dialog */}
-              <Dialog
-                open={!!editingVendor}
+              <Dialog 
+                open={!!editingVendor} 
                 onOpenChange={(open) => {
                   if (!open) setEditingVendor(null);
                 }}
@@ -1129,10 +1144,7 @@ export default function VendorsPage() {
                           id="name"
                           value={editingVendor?.name ?? ""}
                           onChange={(e) =>
-                            setEditingVendor({
-                              ...editingVendor,
-                              name: e.target.value,
-                            })
+                            setEditingVendor({ ...editingVendor, name: e.target.value })
                           }
                           className="col-span-3"
                         />
@@ -1146,10 +1158,7 @@ export default function VendorsPage() {
                           type="email"
                           value={editingVendor?.email ?? ""}
                           onChange={(e) =>
-                            setEditingVendor({
-                              ...editingVendor,
-                              email: e.target.value,
-                            })
+                            setEditingVendor({ ...editingVendor, email: e.target.value })
                           }
                           className="col-span-3"
                         />
@@ -1172,18 +1181,15 @@ export default function VendorsPage() {
               </Dialog>
 
               {/* Add Delete Confirmation Dialog */}
-              <Dialog
-                open={showDeleteDialog}
-                onOpenChange={setShowDeleteDialog}
-              >
+              <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Delete Vendor</DialogTitle>
                   </DialogHeader>
                   <div className="py-4">
                     <p>
-                      Are you sure you want to delete vendor "
-                      {vendorToDelete?.name}"? This action cannot be undone.
+                      Are you sure you want to delete vendor "{vendorToDelete?.name}"? This action
+                      cannot be undone.
                     </p>
                   </div>
                   <DialogFooter>

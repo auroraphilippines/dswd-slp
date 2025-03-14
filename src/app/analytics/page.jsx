@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import LoadingPage from "../loading/page";
 import {
   LayoutDashboard,
   FileBarChart,
@@ -50,11 +49,6 @@ export default function AnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const pathname = usePathname();
 
-  // Close mobile menu when path changes
-  useEffect(() => {
-    setIsMobileMenuOpen(false);
-  }, [pathname]);
-
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -66,17 +60,16 @@ export default function AnalyticsPage() {
             const userData = userDoc.data();
             const rawName = userData.name || "";
             const displayName = rawName === "255" ? "Admin DSWD" : rawName;
-
+            
             setCurrentUser({
               ...userData,
               uid: user.uid,
               email: userData.email || "admin@dswd.gov.ph",
               name: displayName,
-              role: userData.role || "Administrator",
+              role: userData.role || "Administrator"
             });
           }
         }
-        setLoading(false);
       } catch (error) {
         console.error("Error fetching user data:", error);
       } finally {
@@ -84,7 +77,6 @@ export default function AnalyticsPage() {
       }
     };
 
-    fetchUserData();
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
         fetchUserData();
@@ -101,7 +93,7 @@ export default function AnalyticsPage() {
   const getUserInitials = (name) => {
     if (!name) return "AD";
     if (name === "Admin DSWD") return "AD";
-
+    
     const words = name.split(" ");
     if (words.length >= 2) {
       return (words[0][0] + words[1][0]).toUpperCase();
@@ -109,9 +101,10 @@ export default function AnalyticsPage() {
     return name.substring(0, 2).toUpperCase();
   };
 
-  if (loading) {
-    return <LoadingPage />;
-  }
+  // Close mobile menu when path changes
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
 
   if (loading) {
     return <LoadingPage />;
@@ -173,17 +166,11 @@ export default function AnalyticsPage() {
             <div className="flex items-center w-full justify-between">
               <div className="flex items-center">
                 <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                  <span className="text-sm font-medium">
-                    {getUserInitials(currentUser?.name)}
-                  </span>
+                  <span className="text-sm font-medium">{getUserInitials(currentUser?.name)}</span>
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm font-medium">
-                    {currentUser?.name || "Admin DSWD"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {currentUser?.role || "Administrator"}
-                  </p>
+                  <p className="text-sm font-medium">{currentUser?.name || "Admin DSWD"}</p>
+                  <p className="text-xs text-muted-foreground">{currentUser?.role || "Administrator"}</p>
                 </div>
               </div>
               <ThemeToggle />
@@ -255,17 +242,11 @@ export default function AnalyticsPage() {
           <div className="flex-shrink-0 flex border-t p-4">
             <div className="flex items-center">
               <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                <span className="text-sm font-medium">
-                  {getUserInitials(currentUser?.name)}
-                </span>
+                <span className="text-sm font-medium">{getUserInitials(currentUser?.name)}</span>
               </div>
               <div className="ml-3">
-                <p className="text-sm font-medium">
-                  {currentUser?.name || "Admin DSWD"}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {currentUser?.role || "Administrator"}
-                </p>
+                <p className="text-sm font-medium">{currentUser?.name || "Admin DSWD"}</p>
+                <p className="text-xs text-muted-foreground">{currentUser?.role || "Administrator"}</p>
               </div>
             </div>
           </div>
@@ -321,18 +302,14 @@ export default function AnalyticsPage() {
                   >
                     <span className="sr-only">Open user menu</span>
                     <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                      <span className="text-sm font-medium">
-                        {getUserInitials(currentUser?.name)}
-                      </span>
+                      <span className="text-sm font-medium">{getUserInitials(currentUser?.name)}</span>
                     </div>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        {currentUser?.name || "Admin DSWD"}
-                      </p>
+                      <p className="text-sm font-medium leading-none">{currentUser?.name || "Admin DSWD"}</p>
                       <p className="text-xs leading-none text-muted-foreground">
                         {currentUser?.email || "admin@dswd.gov.ph"}
                       </p>

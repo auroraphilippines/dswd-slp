@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import LoadingPage from "../loading/page";
 import {
   LayoutDashboard,
   FileBarChart,
@@ -20,7 +19,6 @@ import {
   CreditCard,
   Lock,
   Layers,
-  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,11 +47,6 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(true);
   const pathname = usePathname();
 
-  // Close mobile menu when path changes
-  useEffect(() => {
-    setIsMobileMenuOpen(false);
-  }, [pathname]);
-
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -65,19 +58,20 @@ export default function SettingsPage() {
             const userData = userDoc.data();
             const rawName = userData.name || "";
             const displayName = rawName === "255" ? "Admin DSWD" : rawName;
-
+            
             setCurrentUser({
               ...userData,
               uid: user.uid,
               email: userData.email || "admin@dswd.gov.ph",
               name: displayName,
-              role: userData.role || "Administrator",
+              role: userData.role || "Administrator"
             });
           }
         }
-        setLoading(false);
       } catch (error) {
         console.error("Error fetching user data:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -86,6 +80,7 @@ export default function SettingsPage() {
         fetchUserData();
       } else {
         setCurrentUser(null);
+        setLoading(false);
       }
     });
 
@@ -96,7 +91,7 @@ export default function SettingsPage() {
   const getUserInitials = (name) => {
     if (!name) return "AD";
     if (name === "Admin DSWD") return "AD";
-
+    
     const words = name.split(" ");
     if (words.length >= 2) {
       return (words[0][0] + words[1][0]).toUpperCase();
@@ -108,6 +103,10 @@ export default function SettingsPage() {
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [pathname]);
+
+  if (loading) {
+    return <LoadingPage />;
+  }
 
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
@@ -165,17 +164,11 @@ export default function SettingsPage() {
             <div className="flex items-center w-full justify-between">
               <div className="flex items-center">
                 <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                  <span className="text-sm font-medium">
-                    {getUserInitials(currentUser?.name)}
-                  </span>
+                  <span className="text-sm font-medium">{getUserInitials(currentUser?.name)}</span>
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm font-medium">
-                    {currentUser?.name || "Admin DSWD"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {currentUser?.role || "Administrator"}
-                  </p>
+                  <p className="text-sm font-medium">{currentUser?.name || "Admin DSWD"}</p>
+                  <p className="text-xs text-muted-foreground">{currentUser?.role || "Administrator"}</p>
                 </div>
               </div>
               <ThemeToggle />
@@ -247,17 +240,11 @@ export default function SettingsPage() {
           <div className="flex-shrink-0 flex border-t p-4">
             <div className="flex items-center">
               <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                <span className="text-sm font-medium">
-                  {getUserInitials(currentUser?.name)}
-                </span>
+                <span className="text-sm font-medium">{getUserInitials(currentUser?.name)}</span>
               </div>
               <div className="ml-3">
-                <p className="text-sm font-medium">
-                  {currentUser?.name || "Admin DSWD"}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {currentUser?.role || "Administrator"}
-                </p>
+                <p className="text-sm font-medium">{currentUser?.name || "Admin DSWD"}</p>
+                <p className="text-xs text-muted-foreground">{currentUser?.role || "Administrator"}</p>
               </div>
             </div>
           </div>
@@ -313,37 +300,22 @@ export default function SettingsPage() {
                   >
                     <span className="sr-only">Open user menu</span>
                     <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                      <span className="text-sm font-medium">
-                        {getUserInitials(currentUser?.name)}
-                      </span>
+                      <span className="text-sm font-medium">{getUserInitials(currentUser?.name)}</span>
                     </div>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        {currentUser?.name || "Admin DSWD"}
-                      </p>
+                      <p className="text-sm font-medium leading-none">{currentUser?.name || "Admin DSWD"}</p>
                       <p className="text-xs leading-none text-muted-foreground">
                         {currentUser?.email || "admin@dswd.gov.ph"}
                       </p>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    <Link href="/profile" className="flex items-center">
-                      <User className="mr-2 h-4 w-4" />
-                      Profile
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Link href="/settings" className="flex items-center">
-                      <Settings className="mr-2 h-4 w-4" />
-                      Settings
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
+                  <DropdownMenuItem>Profile</DropdownMenuItem>
+                  <DropdownMenuItem>Settings</DropdownMenuItem>
                   <DropdownMenuItem>Support</DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>

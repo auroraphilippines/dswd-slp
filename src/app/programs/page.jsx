@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import LoadingPage from "../loading/page";
 import {
   LayoutDashboard,
   FileBarChart,
@@ -77,17 +76,16 @@ export default function ProgramsPage() {
             const userData = userDoc.data();
             const rawName = userData.name || "";
             const displayName = rawName === "255" ? "Admin DSWD" : rawName;
-
+            
             setCurrentUser({
               ...userData,
               uid: user.uid,
               email: userData.email || "admin@dswd.gov.ph",
               name: displayName,
-              role: userData.role || "Administrator",
+              role: userData.role || "Administrator"
             });
           }
         }
-        setLoading(false);
       } catch (error) {
         console.error("Error fetching user data:", error);
       } finally {
@@ -95,7 +93,6 @@ export default function ProgramsPage() {
       }
     };
 
-    fetchUserData();
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
         fetchUserData();
