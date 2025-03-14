@@ -1,19 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Users,
   UserPlus,
   Compass,
-  FileText,
   HelpCircle,
   ChevronDown,
   ArrowRight,
   MapPin,
   Phone,
   Mail,
+  Clock,
 } from "react-feather";
 import { useRouter } from "next/navigation";
 
@@ -26,16 +25,18 @@ export default function LandingPage() {
       setLoading(false);
     }, 4000); // 4 seconds for the animation
 
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+    };
   }, []);
 
   return (
-    <div className="min-h-screen bg-lime-300">
+    <div className="min-h-screen bg-lime-700">
       <AnimatePresence>
         {loading ? (
           <motion.div
             key="loader"
-            className="fixed inset-0 flex items-center justify-center bg-[#0F4C81] z-50"
+            className="fixed inset-0 flex items-center justify-center bg-lime-700 z-50"
             initial={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
@@ -47,22 +48,25 @@ export default function LandingPage() {
               className="text-center"
             >
               <motion.div
-                animate={{
-                  rotate: [0, 10, 0, -10, 0],
-                  scale: [1, 1.1, 1],
-                }}
-                transition={{
-                  duration: 3,
-                  times: [0, 0.25, 0.5, 0.75, 1],
-                  repeat: Number.POSITIVE_INFINITY,
-                  repeatDelay: 0.5,
-                }}
-                className="w-40 h-40 mx-auto mb-4"
+                initial={{ opacity: 0, scale: 0.8 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.8 }}
+                className="w-40 h-40 mx-auto mb-4 relative"
               >
+                <motion.div
+                  className="absolute inset-0 rounded-full bg-lime-300 opacity-30"
+                  animate={{ scale: [1, 1.2, 1] }}
+                  transition={{
+                    duration: 2,
+                    repeat: Number.POSITIVE_INFINITY,
+                    repeatType: "reverse",
+                    ease: "easeInOut",
+                  }}
+                />
                 <img
                   src="/images/SLP.png"
                   alt="SLP Logo"
-                  className="w-full h-full rounded-full object-cover"
+                  className="w-full h-full rounded-full object-cover relative z-10"
                 />
               </motion.div>
               <motion.h1
@@ -135,12 +139,6 @@ export default function LandingPage() {
                     Services
                   </a>
                   <a
-                    href="#required-documents"
-                    className="hover:text-[#FFC612] transition-colors"
-                  >
-                    Documents
-                  </a>
-                  <a
                     href="#faqs"
                     className="hover:text-[#FFC612] transition-colors"
                   >
@@ -150,9 +148,17 @@ export default function LandingPage() {
               </div>
             </header>
 
-            {/* Hero Section */}
-            <section className="bg-gradient-to-b from-[#0F4C81] to-[#1A6BAD] text-white py-20 md:py-32">
-              <div className="container mx-auto px-4 text-center">
+            {/* Hero Section with Background Image */}
+            <section
+              className="relative text-white py-20 md:py-32 bg-cover bg-center bg-no-repeat"
+              style={{
+                backgroundImage:
+                  "linear-gradient(rgba(15, 76, 129, 0.85), rgba(26, 107, 173, 0.9)), url('/images/philippines-community.jpg')",
+                backgroundSize: "cover",
+                backgroundPosition: "center",
+              }}
+            >
+              <div className="container mx-auto px-4 text-center relative z-10">
                 <motion.h2
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -169,16 +175,23 @@ export default function LandingPage() {
                   className="text-lg md:text-xl mb-10 max-w-3xl mx-auto"
                 >
                   Manage inventory, track disbursements, and support
-                  beneficiaries through our integrated platform
+                  beneficiaries through our integrated platform designed to
+                  strengthen communities across the Philippines
                 </motion.p>
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.4, duration: 0.5 }}
+                  className="flex flex-col sm:flex-row justify-center gap-4"
                 >
                   <div onClick={() => router.push("/login")}>
-                    <button className="bg-[#FFC612] hover:bg-[#FFD54F] text-[#0F4C81] font-bold py-4 px-8 rounded-lg text-lg shadow-lg transform transition-transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-yellow-300">
+                    <button className="bg-[#FFC612] hover:bg-[#ffffff] text-[#0F4C81] font-bold py-4 px-8 rounded-lg text-lg shadow-lg transform transition-transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-yellow-300 w-full sm:w-auto">
                       Login to System
+                    </button>
+                  </div>
+                  <div onClick={() => router.push("/about")}>
+                    <button className="bg-transparent border-2 border-white hover:bg-red-700 text-white font-bold py-4 px-8 rounded-lg text-lg shadow-lg transform transition-transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-white w-full sm:w-auto mt-3 sm:mt-0">
+                      Learn More
                     </button>
                   </div>
                 </motion.div>
@@ -230,6 +243,18 @@ export default function LandingPage() {
                             <span className="text-[#0F4C81] mr-2">•</span>
                             <span>Generate comprehensive reports</span>
                           </li>
+                          <li className="flex items-start">
+                            <span className="text-[#0F4C81] mr-2">•</span>
+                            <span>
+                              Oversee program implementation nationwide
+                            </span>
+                          </li>
+                          <li className="flex items-start">
+                            <span className="text-[#0F4C81] mr-2">•</span>
+                            <span>
+                              Manage system security and access controls
+                            </span>
+                          </li>
                         </ul>
                       </div>
 
@@ -249,6 +274,18 @@ export default function LandingPage() {
                           <li className="flex items-start">
                             <span className="text-[#0F4C81] mr-2">•</span>
                             <span>Monitor stock levels and alerts</span>
+                          </li>
+                          <li className="flex items-start">
+                            <span className="text-[#0F4C81] mr-2">•</span>
+                            <span>
+                              Conduct inventory audits and reconciliation
+                            </span>
+                          </li>
+                          <li className="flex items-start">
+                            <span className="text-[#0F4C81] mr-2">•</span>
+                            <span>
+                              Generate inventory forecasts and reports
+                            </span>
                           </li>
                         </ul>
                       </div>
@@ -270,7 +307,44 @@ export default function LandingPage() {
                             <span className="text-[#0F4C81] mr-2">•</span>
                             <span>Track program implementation</span>
                           </li>
+                          <li className="flex items-start">
+                            <span className="text-[#0F4C81] mr-2">•</span>
+                            <span>Coordinate with local government units</span>
+                          </li>
+                          <li className="flex items-start">
+                            <span className="text-[#0F4C81] mr-2">•</span>
+                            <span>
+                              Facilitate beneficiary training and support
+                            </span>
+                          </li>
                         </ul>
+                      </div>
+                    </div>
+
+                    <div className="mt-8 bg-yellow-50 border-l-4 border-yellow-400 p-4">
+                      <div className="flex">
+                        <div className="flex-shrink-0">
+                          <svg
+                            className="h-5 w-5 text-yellow-400"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-sm text-yellow-700">
+                            <strong>Note:</strong> All users must complete
+                            mandatory security training and sign confidentiality
+                            agreements before accessing the system. User
+                            activities are logged for security and audit
+                            purposes.
+                          </p>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -346,6 +420,58 @@ export default function LandingPage() {
                         </div>
                       </div>
 
+                      <div className="bg-blue-50 p-6 rounded-lg">
+                        <h3 className="font-bold text-lg mb-3 text-[#0F4C81]">
+                          Account Approval Process
+                        </h3>
+                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                          <div className="bg-white p-4 rounded-lg text-center">
+                            <div className="w-12 h-12 bg-[#0F4C81] rounded-full flex items-center justify-center mx-auto mb-3">
+                              <span className="text-white font-bold">1</span>
+                            </div>
+                            <h4 className="font-semibold text-[#0F4C81] mb-2">
+                              Request Submission
+                            </h4>
+                            <p className="text-sm text-gray-600">
+                              Submit request with required documentation
+                            </p>
+                          </div>
+                          <div className="bg-white p-4 rounded-lg text-center">
+                            <div className="w-12 h-12 bg-[#0F4C81] rounded-full flex items-center justify-center mx-auto mb-3">
+                              <span className="text-white font-bold">2</span>
+                            </div>
+                            <h4 className="font-semibold text-[#0F4C81] mb-2">
+                              Verification
+                            </h4>
+                            <p className="text-sm text-gray-600">
+                              Information and eligibility verification
+                            </p>
+                          </div>
+                          <div className="bg-white p-4 rounded-lg text-center">
+                            <div className="w-12 h-12 bg-[#0F4C81] rounded-full flex items-center justify-center mx-auto mb-3">
+                              <span className="text-white font-bold">3</span>
+                            </div>
+                            <h4 className="font-semibold text-[#0F4C81] mb-2">
+                              Approval
+                            </h4>
+                            <p className="text-sm text-gray-600">
+                              Review and approval by system administrator
+                            </p>
+                          </div>
+                          <div className="bg-white p-4 rounded-lg text-center">
+                            <div className="w-12 h-12 bg-[#0F4C81] rounded-full flex items-center justify-center mx-auto mb-3">
+                              <span className="text-white font-bold">4</span>
+                            </div>
+                            <h4 className="font-semibold text-[#0F4C81] mb-2">
+                              Account Creation
+                            </h4>
+                            <p className="text-sm text-gray-600">
+                              Account setup and credential delivery
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
                       <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4">
                         <div className="flex">
                           <div className="flex-shrink-0">
@@ -416,6 +542,18 @@ export default function LandingPage() {
                               Generate inventory reports and analytics
                             </span>
                           </li>
+                          <li className="flex items-start">
+                            <ArrowRight className="h-5 w-5 text-[#0F4C81] mr-2 flex-shrink-0 mt-0.5" />
+                            <span>
+                              Barcode scanning for efficient inventory tracking
+                            </span>
+                          </li>
+                          <li className="flex items-start">
+                            <ArrowRight className="h-5 w-5 text-[#0F4C81] mr-2 flex-shrink-0 mt-0.5" />
+                            <span>
+                              Batch processing for bulk inventory management
+                            </span>
+                          </li>
                         </ul>
                       </div>
 
@@ -438,6 +576,18 @@ export default function LandingPage() {
                             <ArrowRight className="h-5 w-5 text-[#0F4C81] mr-2 flex-shrink-0 mt-0.5" />
                             <span>
                               Generate disbursement reports for auditing
+                            </span>
+                          </li>
+                          <li className="flex items-start">
+                            <ArrowRight className="h-5 w-5 text-[#0F4C81] mr-2 flex-shrink-0 mt-0.5" />
+                            <span>
+                              Digital signatures for paperless approvals
+                            </span>
+                          </li>
+                          <li className="flex items-start">
+                            <ArrowRight className="h-5 w-5 text-[#0F4C81] mr-2 flex-shrink-0 mt-0.5" />
+                            <span>
+                              Multi-level approval workflow management
                             </span>
                           </li>
                         </ul>
@@ -466,6 +616,16 @@ export default function LandingPage() {
                               Generate beneficiary reports and statistics
                             </span>
                           </li>
+                          <li className="flex items-start">
+                            <ArrowRight className="h-5 w-5 text-[#0F4C81] mr-2 flex-shrink-0 mt-0.5" />
+                            <span>
+                              Biometric verification for secure identification
+                            </span>
+                          </li>
+                          <li className="flex items-start">
+                            <ArrowRight className="h-5 w-5 text-[#0F4C81] mr-2 flex-shrink-0 mt-0.5" />
+                            <span>Case management and progress tracking</span>
+                          </li>
                         </ul>
                       </div>
 
@@ -489,6 +649,14 @@ export default function LandingPage() {
                           <li className="flex items-start">
                             <ArrowRight className="h-5 w-5 text-[#0F4C81] mr-2 flex-shrink-0 mt-0.5" />
                             <span>Generate program performance reports</span>
+                          </li>
+                          <li className="flex items-start">
+                            <ArrowRight className="h-5 w-5 text-[#0F4C81] mr-2 flex-shrink-0 mt-0.5" />
+                            <span>Geographic mapping of program coverage</span>
+                          </li>
+                          <li className="flex items-start">
+                            <ArrowRight className="h-5 w-5 text-[#0F4C81] mr-2 flex-shrink-0 mt-0.5" />
+                            <span>Impact assessment and outcome tracking</span>
                           </li>
                         </ul>
                       </div>
@@ -514,146 +682,12 @@ export default function LandingPage() {
                           For assistance, contact the DSWD SLP-TIS support team
                         </li>
                       </ol>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Required Documents */}
-                <div id="required-documents" className="mb-20 scroll-mt-20">
-                  <div className="flex items-center mb-6">
-                    <FileText className="w-8 h-8 text-[#0F4C81] mr-3" />
-                    <h2 className="text-2xl md:text-3xl font-bold text-[#0F4C81]">
-                      Required Documents
-                    </h2>
-                  </div>
-                  <div className="bg-white rounded-lg shadow-md p-6 md:p-8">
-                    <p className="text-gray-700 mb-6">
-                      Various documents are required for different processes
-                      within the DSWD Sustainable Livelihood Program - Tracking
-                      Inventory System:
-                    </p>
-
-                    <div className="space-y-6">
-                      <div className="bg-blue-50 p-6 rounded-lg">
-                        <h3 className="font-bold text-lg mb-3 text-[#0F4C81]">
-                          For Account Registration
-                        </h3>
-                        <ul className="space-y-2 text-gray-700">
-                          <li className="flex items-start">
-                            <span className="text-[#0F4C81] mr-2">•</span>
-                            <span>
-                              Official request letter from department head or
-                              agency
-                            </span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="text-[#0F4C81] mr-2">•</span>
-                            <span>
-                              Valid government ID (e.g., DSWD ID, agency ID)
-                            </span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="text-[#0F4C81] mr-2">•</span>
-                            <span>Completed user registration form</span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="text-[#0F4C81] mr-2">•</span>
-                            <span>
-                              Signed confidentiality and data privacy agreement
-                            </span>
-                          </li>
-                        </ul>
-                      </div>
-
-                      <div className="bg-blue-50 p-6 rounded-lg">
-                        <h3 className="font-bold text-lg mb-3 text-[#0F4C81]">
-                          For Inventory Management
-                        </h3>
-                        <ul className="space-y-2 text-gray-700">
-                          <li className="flex items-start">
-                            <span className="text-[#0F4C81] mr-2">•</span>
-                            <span>Purchase orders or donation receipts</span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="text-[#0F4C81] mr-2">•</span>
-                            <span>
-                              Delivery receipts for incoming inventory
-                            </span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="text-[#0F4C81] mr-2">•</span>
-                            <span>
-                              Inventory transfer forms for internal movements
-                            </span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="text-[#0F4C81] mr-2">•</span>
-                            <span>
-                              Stock adjustment forms with proper justification
-                            </span>
-                          </li>
-                        </ul>
-                      </div>
-
-                      <div className="bg-blue-50 p-6 rounded-lg">
-                        <h3 className="font-bold text-lg mb-3 text-[#0F4C81]">
-                          For Disbursement Processing
-                        </h3>
-                        <ul className="space-y-2 text-gray-700">
-                          <li className="flex items-start">
-                            <span className="text-[#0F4C81] mr-2">•</span>
-                            <span>Approved disbursement request form</span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="text-[#0F4C81] mr-2">•</span>
-                            <span>
-                              Beneficiary list with complete information
-                            </span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="text-[#0F4C81] mr-2">•</span>
-                            <span>
-                              Program implementation plan or disaster response
-                              plan
-                            </span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="text-[#0F4C81] mr-2">•</span>
-                            <span>
-                              Proof of delivery and receipt by beneficiaries
-                            </span>
-                          </li>
-                        </ul>
-                      </div>
-
-                      <div className="bg-blue-50 p-6 rounded-lg">
-                        <h3 className="font-bold text-lg mb-3 text-[#0F4C81]">
-                          For Beneficiary Registration
-                        </h3>
-                        <ul className="space-y-2 text-gray-700">
-                          <li className="flex items-start">
-                            <span className="text-[#0F4C81] mr-2">•</span>
-                            <span>Completed beneficiary registration form</span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="text-[#0F4C81] mr-2">•</span>
-                            <span>
-                              Valid ID or other identification document
-                            </span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="text-[#0F4C81] mr-2">•</span>
-                            <span>
-                              Proof of eligibility for the specific program
-                            </span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="text-[#0F4C81] mr-2">•</span>
-                            <span>
-                              Signed consent for data collection and processing
-                            </span>
-                          </li>
-                        </ul>
+                      <div className="mt-4 flex items-center justify-center">
+                        <img
+                          src="/images/dashboard-preview.jpg"
+                          alt="System Dashboard Preview"
+                          className="rounded-lg shadow-md max-w-full h-auto border-2 border-gray-200"
+                        />
                       </div>
                     </div>
                   </div>
@@ -731,7 +765,7 @@ export default function LandingPage() {
                         </p>
                       </div>
 
-                      <div>
+                      <div className="border-b border-gray-200 pb-4">
                         <h3 className="font-bold text-lg mb-2 text-[#0F4C81]">
                           What training is available for new users?
                         </h3>
@@ -741,6 +775,18 @@ export default function LandingPage() {
                           conducted monthly, and additional resources including
                           user manuals and video tutorials are available in the
                           Help section.
+                        </p>
+                      </div>
+
+                      <div>
+                        <h3 className="font-bold text-lg mb-2 text-[#0F4C81]">
+                          Is the system available in multiple languages?
+                        </h3>
+                        <p className="text-gray-700">
+                          Currently, the system interface is available in
+                          English and Filipino. Regional language support is
+                          under development and will be available in future
+                          updates to better serve local communities.
                         </p>
                       </div>
                     </div>
@@ -760,10 +806,17 @@ export default function LandingPage() {
                   Inventory System to manage inventory, process disbursements,
                   and support beneficiaries.
                 </p>
-                <div onClick={() => router.push("/login")}>
-                  <button className="bg-[#FFC612] hover:bg-[#FFD54F] text-[#0F4C81] font-bold py-3 px-6 rounded-lg text-lg shadow-lg transform transition-transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-yellow-300">
-                    Login to System
-                  </button>
+                <div className="flex flex-col sm:flex-row justify-center gap-4">
+                  <div onClick={() => router.push("/login")}>
+                    <button className="bg-[#FFC612] hover:bg-[#ffffff] text-[#0F4C81] font-bold py-3 px-6 rounded-lg text-lg shadow-lg transform transition-transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-yellow-300 w-full sm:w-auto">
+                      Login to System
+                    </button>
+                  </div>
+                  <div onClick={() => router.push("/contact")}>
+                    <button className="bg-transparent border-2 border-white hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg text-lg shadow-lg transform transition-transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-white/30 w-full sm:w-auto mt-3 sm:mt-0">
+                      Contact Support
+                    </button>
+                  </div>
                 </div>
               </div>
             </section>
@@ -789,11 +842,10 @@ export default function LandingPage() {
                     </div>
                     <p className="text-gray-400">
                       The DSWD Sustainable Livelihood Program - Tracking
-                      Inventory System is designed The DSWD Sustainable
-                      Livelihood Program - Tracking Inventory System is designed
-                      to efficiently manage inventory, track disbursements, and
-                      support beneficiaries through integrated digital
-                      solutions.
+                      Inventory System is designed to efficiently manage
+                      inventory, track disbursements, and support beneficiaries
+                      through integrated digital solutions, empowering
+                      communities across the Philippines.
                     </p>
                   </div>
 
@@ -816,6 +868,10 @@ export default function LandingPage() {
                       <li className="flex items-start">
                         <Mail className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
                         <span>inquiry@dswd.gov.ph</span>
+                      </li>
+                      <li className="flex items-start">
+                        <Clock className="h-5 w-5 mr-2 flex-shrink-0 mt-0.5" />
+                        <span>Monday to Friday: 8:00 AM - 5:00 PM</span>
                       </li>
                     </ul>
                   </div>
@@ -845,14 +901,6 @@ export default function LandingPage() {
                           className="hover:text-[#FFC612] transition-colors"
                         >
                           Service Access Guide
-                        </a>
-                      </li>
-                      <li>
-                        <a
-                          href="#required-documents"
-                          className="hover:text-[#FFC612] transition-colors"
-                        >
-                          Required Documents
                         </a>
                       </li>
                       <li>
