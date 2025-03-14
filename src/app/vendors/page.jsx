@@ -215,7 +215,7 @@ export default function VendorsPage() {
     // Create a temporary link to download the CSV
     const link = document.createElement("a");
     link.href = url;
-    link.download = "vendors_detailed.csv";
+    link.download = "vendors_data.csv";
     link.click();
 
     // Clean up
@@ -1022,24 +1022,8 @@ export default function VendorsPage() {
                       variant="outline"
                       onClick={exportToGoogleSheets}
                     >
-                      <img
-                        src="https://www.google.com/images/about/sheets-icon.svg"
-                        alt="Google Sheets"
-                        className="w-5 h-5"
-                      />
-                      Export to Google Sheets
-                    </Button>
-                    <Button
-                      className="flex items-center justify-start gap-2"
-                      variant="outline"
-                      onClick={exportToExcelOnline}
-                    >
-                      <img
-                        src="https://img.icons8.com/color/48/000000/microsoft-excel-2019--v1.png"
-                        alt="Microsoft Excel"
-                        className="w-5 h-5"
-                      />
-                      Export to Microsoft Excel Online
+                      <Download className="h-5 w-5" />
+                      Export as CSV Files
                     </Button>
                   </div>
                 </DialogContent>
