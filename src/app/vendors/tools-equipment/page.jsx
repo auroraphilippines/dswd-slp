@@ -213,10 +213,20 @@ export default function ToolsEquipmentPage() {
         return;
       }
 
-      const result = await saveToolsEquipment(vendorId, tools.map(tool => ({
-        ...tool,
-        userId: user.uid, // Add user ID to tool data
-      })));
+      const result = await saveToolsEquipment(
+        vendorId,
+        tools.map(tool => ({
+          name: tool.name,
+          quantity: tool.quantity,
+          unit: tool.unit,
+          unitPrice: tool.unitPrice,
+          lifeSpan: tool.lifeSpan,
+          productionCycle: tool.productionCycle,
+          totalCost: tool.totalCost,
+          depreciationCost: tool.depreciationCost
+        })),
+        user.uid // Pass the user ID as the third argument
+      );
 
       if (result.success) {
         // Clear the vendorId from localStorage since we're done with the flow

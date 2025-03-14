@@ -54,6 +54,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { BeneficiariesDetailView } from "./beneficiary-detail-view";
 import { auth, db } from "@/service/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import LoadingPage from "./loading";
 
 export default function BeneficiariesPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -96,6 +97,16 @@ export default function BeneficiariesPage() {
     };
 
     fetchUserData();
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        fetchUserData();
+      } else {
+        setCurrentUser(null);
+        setLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
 
   // Get user initials from name
@@ -131,6 +142,7 @@ export default function BeneficiariesPage() {
     { name: "Vendors", href: "/vendors", icon: Store },
     { name: "Beneficiaries", href: "/beneficiaries", icon: Users },
     { name: "Programs", href: "/programs", icon: Building2 },
+   
     { name: "Reports", href: "./reports", icon: FileBarChart },
     { name: "Analytics", href: "./analytics", icon: FileBarChart },
     { name: "Settings", href: "./settings", icon: Settings },
@@ -146,6 +158,10 @@ export default function BeneficiariesPage() {
       beneficiary.program.toLowerCase().includes(searchQuery.toLowerCase())
     );
   });
+
+  if (loading) {
+    return <LoadingPage />;
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">

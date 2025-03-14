@@ -109,6 +109,7 @@ export default function DashboardPage() {
     { name: "Vendors", href: "/vendors", icon: Store },
     { name: "Beneficiaries", href: "/beneficiaries", icon: Users },
     { name: "Programs", href: "/programs", icon: Building2 },
+   
     { name: "Reports", href: "./reports", icon: FileBarChart },
     { name: "Analytics", href: "./analytics", icon: FileBarChart },
     { name: "Settings", href: "./settings", icon: Settings },

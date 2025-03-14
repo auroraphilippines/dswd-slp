@@ -63,7 +63,6 @@ import {
   updateVendorDetails,
 } from "@/service/vendor";
 import { getCurrentUser } from "@/service/auth";
-import LoadingPage from "../loading/page";
 
 export default function VendorsPage() {
   const router = useRouter();
@@ -79,6 +78,12 @@ export default function VendorsPage() {
   const [vendorToDelete, setVendorToDelete] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const [userProfile, setUserProfile] = useState({
+    displayName: "Admin DSWD",
+    email: "admin@dswd.gov.ph",
+    role: "Administrator",
+    initials: "AD"
+  });
 
   // Close mobile menu when path changes
   useEffect(() => {
@@ -114,16 +119,59 @@ export default function VendorsPage() {
     };
   }, [router]);
 
+  // Get user initials from name
+  const getUserInitials = (name) => {
+    if (!name) return "AD";
+    if (name === "Admin DSWD") return "AD";
+    
+    const words = name.split(" ");
+    if (words.length >= 2) {
+      return (words[0][0] + words[1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  // Update user profile fetching to use the new getUserInitials function
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const user = auth.currentUser;
+        if (!user) {
+          router.push("/login");
+          return;
+        }
+
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          
+          // Format display name
+          let displayName = userData.name;
+          if (displayName === "255") {
+            displayName = "Admin DSWD";
+          }
+
+          setUserProfile({
+            displayName,
+            email: userData.email || "admin@dswd.gov.ph", 
+            role: userData.role || "Administrator",
+            initials: getUserInitials(displayName)
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+        // Keep default values if fetch fails
+      }
+    };
+
+    fetchUserProfile();
+  }, [router]);
+
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Vendors", href: "/vendors", icon: Store },
     { name: "Beneficiaries", href: "/beneficiaries", icon: Users },
     { name: "Programs", href: "/programs", icon: Building2 },
-    {
-      name: "Disbursements",
-      href: "./disbursements",
-      icon: ShoppingCart,
-    },
     { name: "Reports", href: "./reports", icon: FileBarChart },
     { name: "Analytics", href: "./analytics", icon: FileBarChart },
     { name: "Settings", href: "./settings", icon: Settings },
@@ -649,11 +697,11 @@ export default function VendorsPage() {
             <div className="flex items-center w-full justify-between">
               <div className="flex items-center">
                 <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                  <span className="text-sm font-medium">AD</span>
+                  <span className="text-sm font-medium">{getUserInitials(userProfile.displayName)}</span>
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm font-medium">Admin DSWD</p>
-                  <p className="text-xs text-muted-foreground">Administrator</p>
+                  <p className="text-sm font-medium">{userProfile.displayName}</p>
+                  <p className="text-xs text-muted-foreground">{userProfile.role}</p>
                 </div>
               </div>
               <ThemeToggle />
@@ -725,11 +773,11 @@ export default function VendorsPage() {
           <div className="flex-shrink-0 flex border-t p-4">
             <div className="flex items-center">
               <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                <span className="text-sm font-medium">AD</span>
+                <span className="text-sm font-medium">{getUserInitials(userProfile.displayName)}</span>
               </div>
               <div className="ml-3">
-                <p className="text-sm font-medium">Admin DSWD</p>
-                <p className="text-xs text-muted-foreground">Administrator</p>
+                <p className="text-sm font-medium">{userProfile.displayName}</p>
+                <p className="text-xs text-muted-foreground">{userProfile.role}</p>
               </div>
             </div>
           </div>
@@ -780,19 +828,18 @@ export default function VendorsPage() {
               {/* Profile dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="ml-3 rounded-full"
-                  >
+                  <Button variant="ghost" size="icon" className="ml-3 rounded-full">
                     <span className="sr-only">Open user menu</span>
                     <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                      <span className="text-sm font-medium">AD</span>
+                      <span className="text-sm font-medium">{getUserInitials(userProfile.displayName)}</span>
                     </div>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
+                  <DropdownMenuItem disabled>
+                    Signed in as {userProfile.email}
+                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem>Profile</DropdownMenuItem>
                   <DropdownMenuItem>Settings</DropdownMenuItem>

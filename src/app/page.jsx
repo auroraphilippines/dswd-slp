@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import {
+import {  
   Users,
   UserPlus,
   Compass,
@@ -15,6 +15,8 @@ import {
   Clock,
 } from "react-feather";
 import { useRouter } from "next/navigation";
+
+
 
 export default function LandingPage() {
   const [loading, setLoading] = useState(true);
