@@ -53,12 +53,14 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { BeneficiariesDetailView } from "./beneficiary-detail-view";
 import { auth, db } from "@/service/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import LoadingPage from "./loading";
 
 export default function BeneficiariesPage() {
   const [selectedBeneficiary, setSelectedBeneficiary] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -82,8 +84,10 @@ export default function BeneficiariesPage() {
             });
           }
         }
+        setLoading(false);
       } catch (error) {
         console.error("Error fetching user data:", error);
+        setLoading(false);
       }
     };
 
@@ -92,6 +96,7 @@ export default function BeneficiariesPage() {
         fetchUserData();
       } else {
         setCurrentUser(null);
+        setLoading(false);
       }
     });
 
@@ -134,11 +139,7 @@ export default function BeneficiariesPage() {
     { name: "Vendors", href: "/vendors", icon: Store },
     { name: "Beneficiaries", href: "/beneficiaries", icon: Users },
     { name: "Programs", href: "/programs", icon: Building2 },
-    {
-      name: "Disbursements",
-      href: "./disbursements",
-      icon: ShoppingCart,
-    },
+   
     { name: "Reports", href: "./reports", icon: FileBarChart },
     { name: "Analytics", href: "./analytics", icon: FileBarChart },
     { name: "Settings", href: "./settings", icon: Settings },
@@ -154,6 +155,10 @@ export default function BeneficiariesPage() {
       beneficiary.program.toLowerCase().includes(searchQuery.toLowerCase())
     );
   });
+
+  if (loading) {
+    return <LoadingPage />;
+  }
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">

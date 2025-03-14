@@ -18,6 +18,7 @@ import {
   Plus,
   Download,
   MoreHorizontal,
+  User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,17 +50,25 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { ProgramDetailView } from "./program-detail-view";
 import { auth, db } from "@/service/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import LoadingPage from "./loading";
 
 export default function ProgramsPage() {
   const [selectedProgram, setSelectedProgram] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const pathname = usePathname();
+
+  // Close mobile menu when path changes
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     const fetchUserData = async () => {
       try {
+        setLoading(true);
         const user = auth.currentUser;
         if (user) {
           const userDoc = await getDoc(doc(db, "users", user.uid));
@@ -79,6 +88,8 @@ export default function ProgramsPage() {
         }
       } catch (error) {
         console.error("Error fetching user data:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -87,6 +98,7 @@ export default function ProgramsPage() {
         fetchUserData();
       } else {
         setCurrentUser(null);
+        setLoading(false);
       }
     });
 
@@ -97,18 +109,13 @@ export default function ProgramsPage() {
   const getUserInitials = (name) => {
     if (!name) return "AD";
     if (name === "Admin DSWD") return "AD";
-    
+
     const words = name.split(" ");
     if (words.length >= 2) {
       return (words[0][0] + words[1][0]).toUpperCase();
     }
     return name.substring(0, 2).toUpperCase();
   };
-
-  // Close mobile menu when path changes
-  useEffect(() => {
-    setIsMobileMenuOpen(false);
-  }, [pathname]);
 
   const handleViewDetails = (program) => {
     setSelectedProgram(program);
@@ -121,6 +128,10 @@ export default function ProgramsPage() {
   const handleSearchChange = (e) => {
     setSearchQuery(e.target.value);
   };
+
+  if (loading) {
+    return <LoadingPage />;
+  }
 
   // Filter programs based on search query
   const filteredPrograms = programData.filter((program) => {
@@ -138,11 +149,6 @@ export default function ProgramsPage() {
     { name: "Vendors", href: "/vendors", icon: Store },
     { name: "Beneficiaries", href: "/beneficiaries", icon: Users },
     { name: "Programs", href: "/programs", icon: Building2 },
-    {
-      name: "Disbursements",
-      href: "./disbursements",
-      icon: ShoppingCart,
-    },
     { name: "Reports", href: "./reports", icon: FileBarChart },
     { name: "Analytics", href: "./analytics", icon: FileBarChart },
     { name: "Settings", href: "./settings", icon: Settings },
@@ -193,11 +199,17 @@ export default function ProgramsPage() {
             <div className="flex items-center w-full justify-between">
               <div className="flex items-center">
                 <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                  <span className="text-sm font-medium">{getUserInitials(currentUser?.name)}</span>
+                  <span className="text-sm font-medium">
+                    {getUserInitials(currentUser?.name)}
+                  </span>
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm font-medium">{currentUser?.name || "Admin DSWD"}</p>
-                  <p className="text-xs text-muted-foreground">{currentUser?.role || "Administrator"}</p>
+                  <p className="text-sm font-medium">
+                    {currentUser?.name || "Admin DSWD"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {currentUser?.role || "Administrator"}
+                  </p>
                 </div>
               </div>
               <ThemeToggle />
@@ -269,11 +281,17 @@ export default function ProgramsPage() {
           <div className="flex-shrink-0 flex border-t p-4">
             <div className="flex items-center">
               <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                <span className="text-sm font-medium">{getUserInitials(currentUser?.name)}</span>
+                <span className="text-sm font-medium">
+                  {getUserInitials(currentUser?.name)}
+                </span>
               </div>
               <div className="ml-3">
-                <p className="text-sm font-medium">{currentUser?.name || "Admin DSWD"}</p>
-                <p className="text-xs text-muted-foreground">{currentUser?.role || "Administrator"}</p>
+                <p className="text-sm font-medium">
+                  {currentUser?.name || "Admin DSWD"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {currentUser?.role || "Administrator"}
+                </p>
               </div>
             </div>
           </div>
@@ -331,22 +349,36 @@ export default function ProgramsPage() {
                   >
                     <span className="sr-only">Open user menu</span>
                     <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                      <span className="text-sm font-medium">{getUserInitials(currentUser?.name)}</span>
+                      <span className="text-sm font-medium">
+                        {getUserInitials(currentUser?.name)}
+                      </span>
                     </div>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">{currentUser?.name || "Admin DSWD"}</p>
+                      <p className="text-sm font-medium leading-none">
+                        {currentUser?.name || "Admin DSWD"}
+                      </p>
                       <p className="text-xs leading-none text-muted-foreground">
                         {currentUser?.email || "admin@dswd.gov.ph"}
                       </p>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>Profile</DropdownMenuItem>
-                  <DropdownMenuItem>Settings</DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Link href="/profile" className="flex items-center">
+                      <User className="mr-2 h-4 w-4" />
+                      Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem>
+                    <Link href="/settings" className="flex items-center">
+                      <Settings className="mr-2 h-4 w-4" />
+                      Settings
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem>Support</DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
@@ -415,19 +447,6 @@ export default function ProgramsPage() {
                       <div className="text-2xl font-bold">₱15.2M</div>
                       <p className="text-xs text-muted-foreground">
                         Allocated for all programs
-                      </p>
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium">
-                        Disbursed Amount
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">₱8.7M</div>
-                      <p className="text-xs text-muted-foreground">
-                        57% of total budget
                       </p>
                     </CardContent>
                   </Card>
@@ -638,26 +657,6 @@ const programData = [
       { type: "Cash Assistance", value: 3000, frequency: "One-time" },
       { type: "Shelter Materials", value: 5000, frequency: "One-time" },
     ],
-    recentDisbursements: [
-      {
-        date: "Jun 15, 2023",
-        barangay: "Barangay Matatag",
-        beneficiaries: 50,
-        amount: 150000,
-      },
-      {
-        date: "Jun 10, 2023",
-        barangay: "Barangay Masigasig",
-        beneficiaries: 45,
-        amount: 135000,
-      },
-      {
-        date: "Jun 5, 2023",
-        barangay: "Barangay Maunlad",
-        beneficiaries: 40,
-        amount: 120000,
-      },
-    ],
   },
   {
     id: "P-1002",
@@ -685,26 +684,6 @@ const programData = [
       { type: "Food Packs", value: 1500, frequency: "Monthly" },
       { type: "Rice (5kg)", value: 250, frequency: "Monthly" },
       { type: "Nutrition Education", value: 0, frequency: "Quarterly" },
-    ],
-    recentDisbursements: [
-      {
-        date: "Jun 20, 2023",
-        barangay: "Barangay Matatag",
-        beneficiaries: 30,
-        amount: 45000,
-      },
-      {
-        date: "Jun 18, 2023",
-        barangay: "Barangay Masigasig",
-        beneficiaries: 25,
-        amount: 37500,
-      },
-      {
-        date: "Jun 15, 2023",
-        barangay: "Barangay Maunlad",
-        beneficiaries: 20,
-        amount: 30000,
-      },
     ],
   },
   {
@@ -734,6 +713,5 @@ const programData = [
       { type: "Uniform Allowance", value: 1500, frequency: "Annual" },
       { type: "Transportation Allowance", value: 500, frequency: "Monthly" },
     ],
-    recentDisbursements: [],
   },
 ];

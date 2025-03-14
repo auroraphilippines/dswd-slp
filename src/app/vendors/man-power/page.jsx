@@ -108,7 +108,6 @@ export default function ManPowerPage() {
   const handleNext = async () => {
     setLoading(true);
     try {
-      // Check authentication before saving
       const user = await getCurrentUser();
       if (!user) {
         alert("Please login to continue");
@@ -123,10 +122,15 @@ export default function ManPowerPage() {
         return;
       }
 
-      const result = await saveManPower(vendorId, workers.map(worker => ({
-        ...worker,
-        userId: user.uid, // Add user ID to worker data
-      })));
+      const result = await saveManPower(
+        vendorId,
+        workers.map(worker => ({
+          name: worker.name,
+          task: worker.task,
+          wage: worker.wage
+        })),
+        user.uid // Pass the user ID as the third argument
+      );
 
       if (result.success) {
         router.push("/vendors/tools-equipment");

@@ -149,8 +149,8 @@ export default function RawMaterialsPage() {
           unitPrice: material.unitPrice,
           frequency: material.frequency,
           totalCost: material.totalCost
-        }))
-      });
+        })),
+      }, user.uid);
 
       if (result.success) {
         // Clear temporary data

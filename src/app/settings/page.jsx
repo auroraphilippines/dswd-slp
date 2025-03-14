@@ -39,15 +39,18 @@ import { NotificationsSettings } from "./notifications";
 import { SecuritySettings } from "./security";
 import { auth, db } from "@/service/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import LoadingPage from "./loading";
 
 export default function SettingsPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   const pathname = usePathname();
 
   useEffect(() => {
     const fetchUserData = async () => {
       try {
+        setLoading(true);
         const user = auth.currentUser;
         if (user) {
           const userDoc = await getDoc(doc(db, "users", user.uid));
@@ -67,6 +70,8 @@ export default function SettingsPage() {
         }
       } catch (error) {
         console.error("Error fetching user data:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -75,6 +80,7 @@ export default function SettingsPage() {
         fetchUserData();
       } else {
         setCurrentUser(null);
+        setLoading(false);
       }
     });
 
@@ -98,16 +104,16 @@ export default function SettingsPage() {
     setIsMobileMenuOpen(false);
   }, [pathname]);
 
+  if (loading) {
+    return <LoadingPage />;
+  }
+
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Vendors", href: "/vendors", icon: Store },
     { name: "Beneficiaries", href: "/beneficiaries", icon: Users },
     { name: "Programs", href: "/programs", icon: Building2 },
-    {
-      name: "Disbursements",
-      href: "./disbursements",
-      icon: ShoppingCart,
-    },
+    
     { name: "Reports", href: "./reports", icon: FileBarChart },
     { name: "Analytics", href: "./analytics", icon: FileBarChart },
     { name: "Settings", href: "./settings", icon: Settings },

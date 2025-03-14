@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Facebook, Linkedin, Twitter, Home } from "lucide-react";
+import { Facebook, Linkedin, Twitter, Home, User, Mail, Lock } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { registerUser, loginUser } from "@/service/auth";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 export default function LoginPage() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -43,12 +45,15 @@ export default function LoginPage() {
     try {
       const result = await registerUser(name, email, password);
       if (result.success) {
+        toast.success("Account created successfully!");
         router.push("/dashboard");
       } else {
+        toast.error(result.error || "Failed to create account");
         setError(result.error);
       }
     } catch (error) {
       console.error("Error during signup:", error);
+      toast.error("An unexpected error occurred.");
       setError("An unexpected error occurred.");
     } finally {
       setLoading(false);
@@ -63,12 +68,15 @@ export default function LoginPage() {
     try {
       const result = await loginUser(email, password);
       if (result.success) {
+        toast.success("Logged in successfully!");
         router.push("/dashboard");
       } else {
+        toast.error(result.error || "Failed to login");
         setError(result.error);
       }
     } catch (error) {
       console.error("Error during signin:", error);
+      toast.error("An unexpected error occurred.");
       setError("An unexpected error occurred.");
     } finally {
       setLoading(false);
@@ -108,7 +116,7 @@ export default function LoginPage() {
           font-size: 12px;
           background: linear-gradient(
             135deg,
-            var(--green-primary) 0%,
+            var(--green-primary) 0%, 
             var(--gold-primary) 100%
           );
           color: var(--gray);
@@ -191,11 +199,25 @@ export default function LoginPage() {
           margin-bottom: 10px;
         }
 
+        .input-container {
+          position: relative;
+          width: 100%;
+          margin: 4px 0;
+        }
+
+        .input-icon {
+          position: absolute;
+          left: 8px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: var(--gray);
+        }
+
         .form__input {
           width: 100%;
           height: 40px;
-          margin: 4px 0;
-          padding-left: 25px;
+          margin: 0;
+          padding-left: 40px;
           font-size: 13px;
           letter-spacing: 0.15px;
           border: 1px solid #e5e7eb;
@@ -450,9 +472,35 @@ export default function LoginPage() {
           transform: translateY(-2px);
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
+
+        /* Toast customization */
+        .Toastify__toast {
+          border-radius: 8px;
+          font-family: "Montserrat", sans-serif;
+        }
+
+        .Toastify__toast--success {
+          background: var(--green-primary);
+        }
+
+        .Toastify__toast--error {
+          background: #d32f2f;
+        }
       `}</style>
 
       <div className="main">
+        <ToastContainer
+          position="top-right"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="colored"
+        />
         <button className="home-button" onClick={goToHome}>
           <Home size={20} />
           <span>Back Home</span>
@@ -478,30 +526,39 @@ export default function LoginPage() {
               <Twitter className="form__icon" size={24} />
             </div>
             <span className="form__span">or use email for registration</span>
-            <input
-              type="text"
-              className="form__input"
-              placeholder="Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-            <input
-              type="email"
-              className="form__input"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-            <input
-              type="password"
-              className="form__input"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
+            <div className="input-container">
+              <User className="input-icon" size={20} />
+              <input
+                type="text"
+                className="form__input"
+                placeholder="Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </div>
+            <div className="input-container">
+              <Mail className="input-icon" size={20} />
+              <input
+                type="email"
+                className="form__input"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="input-container">
+              <Lock className="input-icon" size={20} />
+              <input
+                type="password"
+                className="form__input"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
             {error && <div className="error-message">{error}</div>}
             <button
               className="form__button button submit"
@@ -536,22 +593,28 @@ export default function LoginPage() {
               <Twitter className="form__icon" size={24} />
             </div>
             <span className="form__span">or use your email account</span>
-            <input
-              type="email"
-              className="form__input"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-            <input
-              type="password"
-              className="form__input"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
+            <div className="input-container">
+              <Mail className="input-icon" size={20} />
+              <input
+                type="email"
+                className="form__input"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="input-container">
+              <Lock className="input-icon" size={20} />
+              <input
+                type="password"
+                className="form__input"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+            </div>
             {error && <div className="error-message">{error}</div>}
             <a className="form__link">Forgot your password?</a>
             <button

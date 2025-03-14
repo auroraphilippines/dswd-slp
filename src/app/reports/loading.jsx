@@ -2,7 +2,7 @@
 
 import React from "react";
 
-const LoadingPage = ({ text = "Loading beneficiaries..." }) => {
+export default function LoadingPage() {
   return (
     <div className="loading-container">
       <div className="loading-spinner">
@@ -10,13 +10,13 @@ const LoadingPage = ({ text = "Loading beneficiaries..." }) => {
         <div className="circle circle-2"></div>
         <div className="circle circle-3"></div>
       </div>
-      <p className="loading-text">{text}</p>
+      <p className="loading-text">Loading reports...</p>
 
       <style jsx>{`
         .loading-container {
           display: flex;
           flex-direction: column;
-          align-items: center;
+          align-items: center;  
           justify-content: center;
           min-height: 100vh;
           background-color: var(--background);
@@ -74,18 +74,14 @@ const LoadingPage = ({ text = "Loading beneficiaries..." }) => {
           font-family: var(--font-sans);
           letter-spacing: 0.5px;
         }
-
+ 
         @keyframes rotate {
-          0% {
-            transform: rotate(0deg);
-          }
-          100% {
-            transform: rotate(360deg);
-          }
+          0% { transform: rotate(0deg); }
+          100% { transform: rotate(360deg); }
         }
       `}</style>
     </div>
   );
-};
+}
 
-export default LoadingPage;
+
