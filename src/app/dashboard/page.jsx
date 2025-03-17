@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import LoadingPage from "../loading/page";
 import {
   LayoutDashboard,
   FileBarChart,
   Settings,
-  ShoppingCart,
   Users,
   Menu,
   X,
@@ -109,9 +109,9 @@ export default function DashboardPage() {
     { name: "Vendors", href: "/vendors", icon: Store },
     { name: "Beneficiaries", href: "/beneficiaries", icon: Users },
     { name: "Programs", href: "/programs", icon: Building2 },
-    { name: "Reports", href: "./reports", icon: FileBarChart },
-    { name: "Analytics", href: "./analytics", icon: FileBarChart },
-    { name: "Settings", href: "./settings", icon: Settings },
+    { name: "Reports", href: "/reports", icon: FileBarChart },
+    { name: "Analytics", href: "/analytics", icon: FileBarChart },
+    { name: "Settings", href: "/settings", icon: Settings },
   ];
 
   return (
@@ -121,8 +121,15 @@ export default function DashboardPage() {
         <div className="flex flex-col flex-grow pt-5 overflow-y-auto border-r bg-card">
           <div className="flex items-center flex-shrink-0 px-4">
             <Link href="/dashboard" className="flex items-center">
-              <img src="./images/SLP.png" alt="Logo" className="h-8 w-8" />
-              <span className="ml-2 text-xl font-bold">DSWD SLP-TIS</span>
+              <div className="relative h-8 w-8">
+                <Image
+                  src="/images/SLP.png"
+                  alt="Logo"
+                  fill
+                  className="object-contain"
+                />
+              </div>
+              <span className="ml-2 text-xl font-bold">DSWD SLP-PS</span>
             </Link>
           </div>
           <div className="mt-8 flex-1 flex flex-col">
@@ -205,7 +212,14 @@ export default function DashboardPage() {
           <div className="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
             <div className="flex-shrink-0 flex items-center px-4">
               <Link href="/dashboard" className="flex items-center">
-                <img src="./images/SLP.png" alt="Logo" className="h-8 w-8" />
+                <div className="relative h-8 w-8">
+                  <Image
+                    src="/images/SLP.png"
+                    alt="Logo"
+                    fill
+                    className="object-contain"
+                  />
+                </div>
                 <span className="ml-2 text-xl font-bold">DSWD SLP-TIS</span>
               </Link>
             </div>
@@ -326,19 +340,21 @@ export default function DashboardPage() {
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem>
-                    <Link href="/profile" className="flex items-center">
+                    <Link href="/profile" className="flex w-full items-center">
                       <User className="mr-2 h-4 w-4" />
                       Profile
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem>
-                    <Link href="/settings" className="flex items-center">
+                    <Link href="/settings" className="flex w-full items-center">
                       <Settings className="mr-2 h-4 w-4" />
                       Settings
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem>
-                    <Link href="/">Sign out</Link>
+                    <Link href="/" className="w-full">
+                      Sign out
+                    </Link>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -350,12 +366,12 @@ export default function DashboardPage() {
           <div className="py-6">
             {/* Dashboard Content */}
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex flex-col space-y-4">
-                <div className="flex items-center justify-between">
+              <div className="flex flex-col space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <h1 className="text-2xl font-bold tracking-tight">
-                    DSWD Social Welfare Capital Fund
+                    DSWD Sustainable Livelihood Program - Proposal System
                   </h1>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
                     <Button variant="outline">
                       <TrendingUp className="mr-2 h-4 w-4" />
                       Generate Report
@@ -416,8 +432,25 @@ export default function DashboardPage() {
                       <Progress value={15} className="mt-2 h-1" />
                     </CardContent>
                   </Card>
+                  <Card className="sm:col-span-2 lg:col-span-1">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">
+                        Active Programs
+                      </CardTitle>
+                      <Building2 className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">24</div>
+                      <div className="flex items-center pt-1 text-xs text-green-500">
+                        <ArrowUpRight className="mr-1 h-3 w-3" />
+                        <span>+2 new programs</span>
+                      </div>
+                      <Progress value={85} className="mt-2 h-1" />
+                    </CardContent>
+                  </Card>
                 </div>
 
+                {/* Recent Activities */}
                 <Card className="col-span-1">
                   <CardHeader>
                     <CardTitle>Recent Activities</CardTitle>
@@ -429,45 +462,64 @@ export default function DashboardPage() {
                     <RecentActivities />
                   </CardContent>
                 </Card>
-              </div>
 
-              {/* Quick Actions */}
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium">
-                      Low Stock Alert
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      47 items are running low on stock and need replenishment.
-                    </p>
-                    <Link href="/dashboard/inventory?filter=low-stock">
-                      <Button variant="secondary" className="w-full">
-                        View Low Stock Items
-                      </Button>
-                    </Link>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm font-medium">
-                      Monthly Report
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground mb-2">
-                      Generate and download the monthly inventory and fund
-                      report.
-                    </p>
-                    <Link href="/dashboard/reports/generate">
-                      <Button variant="secondary" className="w-full">
-                        Generate Report
-                      </Button>
-                    </Link>
-                  </CardContent>
-                </Card>
+                {/* Quick Actions */}
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium">
+                        Low Stock Alert
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        47 items are running low on stock and need
+                        replenishment.
+                      </p>
+                      <Link href="/dashboard/inventory?filter=low-stock">
+                        <Button variant="secondary" className="w-full">
+                          View Low Stock Items
+                        </Button>
+                      </Link>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium">
+                        Monthly Report
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Generate and download the monthly inventory and fund
+                        report.
+                      </p>
+                      <Link href="/dashboard/reports/generate">
+                        <Button variant="secondary" className="w-full">
+                          Generate Report
+                        </Button>
+                      </Link>
+                    </CardContent>
+                  </Card>
+                  <Card className="sm:col-span-2 lg:col-span-1">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium">
+                        Beneficiary Registration
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground mb-2">
+                        Register new beneficiaries for the social welfare
+                        programs.
+                      </p>
+                      <Link href="/beneficiaries/register">
+                        <Button variant="secondary" className="w-full">
+                          Register Beneficiary
+                        </Button>
+                      </Link>
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
             </div>
           </div>
