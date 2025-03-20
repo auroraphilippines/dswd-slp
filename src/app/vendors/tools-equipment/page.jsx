@@ -324,7 +324,6 @@ export default function ToolsEquipmentPage() {
       setLoading(false);
     }
   };
-
   // Calculate total costs
   const totalEquipmentCost = tools.reduce(
     (sum, tool) => sum + tool.totalCost,
