@@ -29,22 +29,44 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { saveManPower } from "@/service/vendor";
 import { getCurrentUser } from "@/service/auth";
 
+// Initial worker state
+const initialWorker = {
+  id: 1,
+  numberOfWorkers: 0,
+  task: "",
+  wage: 0,
+};
+
 export default function ManPowerPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [formId] = useState("100002");
+  const [isClient, setIsClient] = useState(false);
   const MAX_WORKERS = 5;
-  const [workers, setWorkers] = useState([
-    {
-      id: 1,
-      name: "",
-      task: "",
-      wage: 0,
-    },
-  ]);
+  const [workers, setWorkers] = useState([initialWorker]);
 
-  // Check authentication on page load
+  // Set isClient to true when component mounts
   useEffect(() => {
+    setIsClient(true);
+
+    // Load saved worker data after component mounts
+    const savedData = localStorage.getItem('workerData');
+    if (savedData) {
+      try {
+        const parsedData = JSON.parse(savedData);
+        // Ensure all numeric fields are properly converted
+        const processedData = parsedData.map(worker => ({
+          ...worker,
+          numberOfWorkers: Number(worker.numberOfWorkers) || 0,
+          wage: Number(worker.wage) || 0,
+        }));
+        setWorkers(processedData);
+      } catch (error) {
+        console.error("Error loading saved worker data:", error);
+      }
+    }
+
+    // Check authentication
     const checkAuth = async () => {
       const user = await getCurrentUser();
       if (!user) {
@@ -54,6 +76,13 @@ export default function ManPowerPage() {
     };
     checkAuth();
   }, [router]);
+
+  // Save worker data whenever it changes
+  useEffect(() => {
+    if (isClient && workers.length > 0) {
+      localStorage.setItem('workerData', JSON.stringify(workers));
+    }
+  }, [workers, isClient]);
 
   const handleInputChange = (index, field, value) => {
     const updatedWorkers = [...workers];
@@ -70,7 +99,7 @@ export default function ManPowerPage() {
       ...workers,
       {
         id: workers.length + 1,
-        name: "",
+        numberOfWorkers: 0,
         task: "",
         wage: 0,
       },
@@ -87,63 +116,36 @@ export default function ManPowerPage() {
     setWorkers(updatedWorkers);
   };
 
-  const handleIncrement = (index) => {
+  const handleIncrement = (index, field) => {
     const updatedWorkers = [...workers];
-    updatedWorkers[index].wage += 50; // Increment by 50 pesos
+    updatedWorkers[index][field] += 1;
     setWorkers(updatedWorkers);
   };
 
-  const handleDecrement = (index) => {
+  const handleDecrement = (index, field) => {
     const updatedWorkers = [...workers];
-    if (updatedWorkers[index].wage >= 50) {
-      updatedWorkers[index].wage -= 50; // Decrement by 50 pesos
+    if (updatedWorkers[index][field] > 0) {
+      updatedWorkers[index][field] -= 1;
       setWorkers(updatedWorkers);
     }
   };
 
   const handlePrev = () => {
+    // Save current state before navigating back
+    localStorage.setItem('workerData', JSON.stringify(workers));
     router.back();
   };
 
-  const handleNext = async () => {
-    setLoading(true);
-    try {
-      // Check authentication before saving
-      const user = await getCurrentUser();
-      if (!user) {
-        alert("Please login to continue");
-        router.push('/login');
-        return;
-      }
-
-      const vendorId = localStorage.getItem('currentVendorId');
-      if (!vendorId) {
-        alert("Vendor ID not found. Please start from the beginning.");
-        router.push("/vendors/add");
-        return;
-      }
-
-      const result = await saveManPower(vendorId, workers.map(worker => ({
-        ...worker,
-        userId: user.uid, // Add user ID to worker data
-      })));
-
-      if (result.success) {
-        router.push("/vendors/tools-equipment");
-      } else {
-        console.error("Failed to save manpower data:", result.error);
-        alert("Failed to save manpower data. Please try again.");
-      }
-    } catch (error) {
-      console.error("Error:", error);
-      alert("An error occurred. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+  const handleNext = () => {
+    // Save current state before navigating forward
+    localStorage.setItem('workerData', JSON.stringify(workers));
+    router.push("/vendors/tools-equipment");
   };
 
   // Calculate total daily wages
-  const totalDailyWages = workers.reduce((sum, worker) => sum + worker.wage, 0);
+  const totalDailyWages = workers.reduce((sum, worker) => 
+    sum + (worker.wage * worker.numberOfWorkers), 0
+  );
 
   return (
     <div className="container mx-auto px-4 py-6">
@@ -186,17 +188,42 @@ export default function ManPowerPage() {
 
                   <div className="space-y-4">
                     <div className="space-y-2">
-                      <Label htmlFor={`worker-name-${index}`}>
-                        Name of Worker in Microenterprise #{worker.id}
+                      <Label htmlFor={`worker-number-${index}`}>
+                        Number of Workers #{worker.id}
                       </Label>
-                      <Input
-                        id={`worker-name-${index}`}
-                        value={worker.name}
-                        onChange={(e) =>
-                          handleInputChange(index, "name", e.target.value)
-                        }
-                        placeholder="Enter worker's name"
-                      />
+                      <div className="flex">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="rounded-r-none"
+                          onClick={() => handleDecrement(index, "numberOfWorkers")}
+                        >
+                          <Minus className="h-4 w-4" />
+                        </Button>
+                        <Input
+                          id={`worker-number-${index}`}
+                          type="number"
+                          value={worker.numberOfWorkers}
+                          onChange={(e) =>
+                            handleInputChange(
+                              index,
+                              "numberOfWorkers",
+                              Number.parseInt(e.target.value) || 0
+                            )
+                          }
+                          className="rounded-none text-center"
+                        />
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="icon"
+                          className="rounded-l-none"
+                          onClick={() => handleIncrement(index, "numberOfWorkers")}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
 
                     <div className="space-y-2">
@@ -215,7 +242,7 @@ export default function ManPowerPage() {
 
                     <div className="space-y-2">
                       <Label htmlFor={`worker-wage-${index}`}>
-                        Daily Wage/Salary #{worker.id}
+                        Daily Wage/Salary per Worker #{worker.id}
                       </Label>
                       <div className="flex">
                         <div className="flex items-center border rounded-l-md px-3 bg-muted">
@@ -240,7 +267,7 @@ export default function ManPowerPage() {
                             variant="ghost"
                             size="icon"
                             className="rounded-none border-r"
-                            onClick={() => handleDecrement(index)}
+                            onClick={() => handleDecrement(index, "wage")}
                           >
                             <Minus className="h-4 w-4" />
                           </Button>
@@ -249,7 +276,7 @@ export default function ManPowerPage() {
                             variant="ghost"
                             size="icon"
                             className="rounded-none"
-                            onClick={() => handleIncrement(index)}
+                            onClick={() => handleIncrement(index, "wage")}
                           >
                             <Plus className="h-4 w-4" />
                           </Button>

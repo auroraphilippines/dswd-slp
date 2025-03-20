@@ -26,23 +26,52 @@ import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { saveVendorDetails } from "@/service/vendor";
 import { getCurrentUser } from "@/service/auth";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
+// Initial material state
+const initialMaterial = {
+  id: 1,
+  name: "",
+  quantity: 0,
+  unit: "",
+  unitPrice: 0,
+  frequency: "",
+  totalCost: 0,
+};
 
 export default function RawMaterialsPage() {
   const router = useRouter();
   const [formId] = useState("100002");
-  const MAX_MATERIALS = 30;
-  const [rawMaterials, setRawMaterials] = useState([
-    {
-      id: 1,
-      name: "",
-      quantity: "",
-      unit: "",
-      unitPrice: "",
-      frequency: "",
-      totalCost: "",
-    },
-  ]);
+  const MAX_MATERIALS = 50;
+  const [isClient, setIsClient] = useState(false);
+  const [rawMaterials, setRawMaterials] = useState([initialMaterial]);
   const [loading, setLoading] = useState(false);
+
+  // Set isClient to true once component mounts
+  useEffect(() => {
+    setIsClient(true);
+    // Load saved data after component mounts
+    const savedData = localStorage.getItem('rawMaterialsData');
+    if (savedData) {
+      const parsedData = JSON.parse(savedData);
+      // Ensure all numeric fields are properly converted
+      const processedData = parsedData.map(material => ({
+        ...material,
+        quantity: Number(material.quantity) || 0,
+        unitPrice: Number(material.unitPrice) || 0,
+        totalCost: Number(material.totalCost) || 0,
+      }));
+      setRawMaterials(processedData);
+    }
+  }, []);
+
+  // Save raw materials data whenever it changes
+  useEffect(() => {
+    if (isClient) {
+      localStorage.setItem('rawMaterialsData', JSON.stringify(rawMaterials));
+    }
+  }, [rawMaterials, isClient]);
 
   const handleInputChange = (index, field, value) => {
     const updatedMaterials = [...rawMaterials];
@@ -50,8 +79,9 @@ export default function RawMaterialsPage() {
 
     // Recalculate total cost if quantity or unit price changes
     if (field === "quantity" || field === "unitPrice") {
-      updatedMaterials[index].totalCost =
-        updatedMaterials[index].quantity * updatedMaterials[index].unitPrice;
+      const quantity = Number(updatedMaterials[index].quantity) || 0;
+      const unitPrice = Number(updatedMaterials[index].unitPrice) || 0;
+      updatedMaterials[index].totalCost = quantity * unitPrice;
     }
 
     setRawMaterials(updatedMaterials);
@@ -59,19 +89,14 @@ export default function RawMaterialsPage() {
 
   const handleAddMaterial = () => {
     if (rawMaterials.length >= MAX_MATERIALS) {
-      return; // Don't add more if limit reached
+      return;
     }
 
     setRawMaterials([
       ...rawMaterials,
       {
+        ...initialMaterial,
         id: rawMaterials.length + 1,
-        name: "",
-        quantity: 0,
-        unit: "",
-        unitPrice: 0,
-        frequency: "Once",
-        totalCost: 0,
       },
     ]);
   };
@@ -118,66 +143,55 @@ export default function RawMaterialsPage() {
   };
 
   const handlePrev = () => {
+    // Save current state before navigating
+    localStorage.setItem('rawMaterialsData', JSON.stringify(rawMaterials));
     router.back();
   };
 
-  const handleNext = async () => {
-    setLoading(true);
-    try {
-      const user = await getCurrentUser();
-      if (!user) {
-        alert("Please login to continue");
-        router.push('/login');
-        return;
+  // Function to handle key press for form navigation
+  const handleKeyPress = (e, index, currentField) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      
+      // Define the field order
+      const fieldOrder = ['name', 'quantity', 'unit', 'unitPrice', 'frequency'];
+      const currentIndex = fieldOrder.indexOf(currentField);
+      
+      if (currentIndex < fieldOrder.length - 1) {
+        // Move to next field in the same material
+        document.getElementById(`${fieldOrder[currentIndex + 1]}-${index}`).focus();
+      } else if (index < rawMaterials.length - 1) {
+        // Move to first field of next material
+        document.getElementById(`name-${index + 1}`).focus();
       }
-
-      // Get the temporary vendor data from localStorage
-      const tempVendorData = JSON.parse(localStorage.getItem('tempVendorData'));
-      if (!tempVendorData) {
-        alert("Vendor data not found. Please start from the beginning.");
-        router.push('/vendors/add');
-        return;
-      }
-
-      // Save vendor data along with raw materials
-      const result = await saveVendorDetails({
-        ...tempVendorData,
-        rawMaterials: rawMaterials.map(material => ({
-          name: material.name,
-          quantity: material.quantity,
-          unit: material.unit,
-          unitPrice: material.unitPrice,
-          frequency: material.frequency,
-          totalCost: material.totalCost
-        }))
-      });
-
-      if (result.success) {
-        // Clear temporary data
-        localStorage.removeItem('tempVendorData');
-        // Store the vendor ID for the next step
-        localStorage.setItem('currentVendorId', result.vendorId);
-        router.push("/vendors/man-power");
-      } else {
-        console.error("Failed to save vendor details:", result.error);
-        alert("Failed to save vendor details. Please try again.");
-      }
-    } catch (error) {
-      console.error("Error saving vendor data:", error);
-      alert("An error occurred while saving. Please try again.");
-    } finally {
-      setLoading(false);
     }
   };
 
+  const handleNext = () => {
+    // Just navigate to the next page without validation or saving
+    router.push("/vendors/man-power");
+  };
+
   // Calculate total cost of all materials
-  const totalProjectCost = rawMaterials.reduce(
-    (sum, material) => sum + material.totalCost,
+  const totalProjectCost = isClient ? rawMaterials.reduce(
+    (sum, material) => sum + (Number(material.totalCost) || 0),
     0
-  );
+  ) : 0;
 
   return (
     <div className="container mx-auto px-4 py-6">
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
       <div className="max-w-4xl mx-auto">
         <Card className="shadow-lg">
           <CardHeader className="bg-card border-b">
@@ -221,15 +235,16 @@ export default function RawMaterialsPage() {
 
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
-                      <Label htmlFor={`material-name-${index}`}>
+                      <Label htmlFor={`name-${index}`}>
                         Raw Material #{material.id}
                       </Label>
                       <Input
-                        id={`material-name-${index}`}
+                        id={`name-${index}`}
                         value={material.name}
                         onChange={(e) =>
                           handleInputChange(index, "name", e.target.value)
                         }
+                        onKeyDown={(e) => handleKeyPress(e, index, "name")}
                         placeholder="Enter material name"
                       />
                     </div>
@@ -259,6 +274,7 @@ export default function RawMaterialsPage() {
                               Number.parseInt(e.target.value) || 0
                             )
                           }
+                          onKeyDown={(e) => handleKeyPress(e, index, "quantity")}
                           className="rounded-none text-center"
                         />
                         <Button
@@ -283,6 +299,7 @@ export default function RawMaterialsPage() {
                         onChange={(e) =>
                           handleInputChange(index, "unit", e.target.value)
                         }
+                        onKeyDown={(e) => handleKeyPress(e, index, "unit")}
                         placeholder="e.g., Pcs, Liter, Kg"
                       />
                     </div>
@@ -312,6 +329,7 @@ export default function RawMaterialsPage() {
                               Number.parseInt(e.target.value) || 0
                             )
                           }
+                          onKeyDown={(e) => handleKeyPress(e, index, "unitPrice")}
                           className="rounded-none text-center"
                         />
                         <Button
@@ -336,6 +354,7 @@ export default function RawMaterialsPage() {
                         onChange={(e) =>
                           handleInputChange(index, "frequency", e.target.value)
                         }
+                        onKeyDown={(e) => handleKeyPress(e, index, "frequency")}
                         placeholder="e.g., Once, Monthly, Quarterly"
                       />
                     </div>
@@ -380,12 +399,14 @@ export default function RawMaterialsPage() {
 
               <Separator />
 
-              <div className="flex justify-between items-center">
-                <span className="font-medium">Total Project Cost:</span>
-                <span className="text-xl font-bold">
-                  ₱ {totalProjectCost.toLocaleString()}
-                </span>
-              </div>
+              {isClient && (
+                <div className="flex justify-between items-center">
+                  <span className="font-medium">Total Project Cost:</span>
+                  <span className="text-xl font-bold">
+                    ₱ {totalProjectCost.toLocaleString()}
+                  </span>
+                </div>
+              )}
             </div>
           </CardContent>
           <CardFooter className="flex justify-between border-t p-6 bg-card">
