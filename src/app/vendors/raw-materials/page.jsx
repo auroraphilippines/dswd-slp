@@ -149,7 +149,7 @@ export default function RawMaterialsPage() {
   };
 
   // Function to handle key press for form navigation
-  const handleKeyPress = (e, index, currentField) => {
+  const handleKeyPress = async (e, index, currentField) => {
     if (e.key === 'Enter') {
       e.preventDefault();
       
@@ -165,42 +165,44 @@ export default function RawMaterialsPage() {
         document.getElementById(`name-${index + 1}`).focus();
       }
 
-      // Get the temporary vendor data from localStorage
-      const tempVendorData = JSON.parse(localStorage.getItem('tempVendorData'));
-      if (!tempVendorData) {
-        alert("Vendor data not found. Please start from the beginning.");
-        router.push('/vendors/add');
-        return;
-      }
+      try {
+        // Get the temporary vendor data from localStorage
+        const tempVendorData = JSON.parse(localStorage.getItem('tempVendorData'));
+        if (!tempVendorData) {
+          alert("Vendor data not found. Please start from the beginning.");
+          router.push('/vendors/add');
+          return;
+        }
 
-      // Save vendor data along with raw materials
-      const result = await saveVendorDetails({
-        ...tempVendorData,
-        rawMaterials: rawMaterials.map(material => ({
-          name: material.name,
-          quantity: material.quantity,
-          unit: material.unit,
-          unitPrice: material.unitPrice,
-          frequency: material.frequency,
-          totalCost: material.totalCost
-        })),
-      }, user.uid);
+        // Save vendor data along with raw materials
+        const result = await saveVendorDetails({
+          ...tempVendorData,
+          rawMaterials: rawMaterials.map(material => ({
+            name: material.name,
+            quantity: material.quantity,
+            unit: material.unit,
+            unitPrice: material.unitPrice,
+            frequency: material.frequency,
+            totalCost: material.totalCost
+          })),
+        }, user.uid);
 
-      if (result.success) {
-        // Clear temporary data
-        localStorage.removeItem('tempVendorData');
-        // Store the vendor ID for the next step
-        localStorage.setItem('currentVendorId', result.vendorId);
-        router.push("/vendors/man-power");
-      } else {
-        console.error("Failed to save vendor details:", result.error);
-        alert("Failed to save vendor details. Please try again.");
+        if (result.success) {
+          // Clear temporary data
+          localStorage.removeItem('tempVendorData');
+          // Store the vendor ID for the next step
+          localStorage.setItem('currentVendorId', result.vendorId);
+          router.push("/vendors/man-power");
+        } else {
+          console.error("Failed to save vendor details:", result.error);
+          alert("Failed to save vendor details. Please try again.");
+        }
+      } catch (error) {
+        console.error("Error saving vendor data:", error);
+        alert("An error occurred while saving. Please try again.");
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error("Error saving vendor data:", error);
-      alert("An error occurred while saving. Please try again.");
-    } finally {
-      setLoading(false);
     }
   };
 
