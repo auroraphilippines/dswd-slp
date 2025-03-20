@@ -25,30 +25,58 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { saveToolsEquipment } from "@/service/vendor";
+import { saveToolsEquipment, saveVendorDetails } from "@/service/vendor";
 import { getCurrentUser } from "@/service/auth";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
+// Initial tool state
+const initialTool = {
+  id: 1,
+  name: "",
+  quantity: 0,
+  unit: "",
+  unitPrice: 0,
+  totalCost: 0,
+  lifeSpan: 0,
+  productionCycle: 0,
+  depreciationCost: 0,
+};
 
 export default function ToolsEquipmentPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [formId] = useState("100002");
+  const [isClient, setIsClient] = useState(false);
   const MAX_TOOLS = 5;
-  const [tools, setTools] = useState([
-    {
-      id: 1,
-      name: "",
-      quantity: 0,
-      unit: "",
-      unitPrice: 0,
-      totalCost: 0,
-      lifeSpan: 0,
-      productionCycle: 0,
-      depreciationCost: 0,
-    },
-  ]);
+  const [tools, setTools] = useState([initialTool]);
 
-  // Check authentication on page load
+  // Set isClient to true when component mounts
   useEffect(() => {
+    setIsClient(true);
+
+    // Load saved tool data after component mounts
+    const savedData = localStorage.getItem('toolsData');
+    if (savedData) {
+      try {
+        const parsedData = JSON.parse(savedData);
+        // Ensure all numeric fields are properly converted
+        const processedData = parsedData.map(tool => ({
+          ...tool,
+          quantity: Number(tool.quantity) || 0,
+          unitPrice: Number(tool.unitPrice) || 0,
+          totalCost: Number(tool.totalCost) || 0,
+          lifeSpan: Number(tool.lifeSpan) || 0,
+          productionCycle: Number(tool.productionCycle) || 0,
+          depreciationCost: Number(tool.depreciationCost) || 0,
+        }));
+        setTools(processedData);
+      } catch (error) {
+        console.error("Error loading saved tool data:", error);
+      }
+    }
+
+    // Check authentication
     const checkAuth = async () => {
       const user = await getCurrentUser();
       if (!user) {
@@ -58,6 +86,13 @@ export default function ToolsEquipmentPage() {
     };
     checkAuth();
   }, [router]);
+
+  // Save tool data whenever it changes
+  useEffect(() => {
+    if (isClient && tools.length > 0) {
+      localStorage.setItem('toolsData', JSON.stringify(tools));
+    }
+  }, [tools, isClient]);
 
   const handleInputChange = (index, field, value) => {
     const updatedTools = [...tools];
@@ -100,15 +135,8 @@ export default function ToolsEquipmentPage() {
     setTools([
       ...tools,
       {
+        ...initialTool,
         id: tools.length + 1,
-        name: "",
-        quantity: 0,
-        unit: "",
-        unitPrice: 0,
-        totalCost: 0,
-        lifeSpan: 0,
-        productionCycle: 0,
-        depreciationCost: 0,
       },
     ]);
   };
@@ -192,16 +220,18 @@ export default function ToolsEquipmentPage() {
   };
 
   const handlePrev = () => {
+    // Save current state before navigating back
+    localStorage.setItem('toolsData', JSON.stringify(tools));
     router.back();
   };
 
-  const handleNext = async () => {
+  const handleSubmit = async () => {
     setLoading(true);
     try {
       // Check authentication before saving
       const user = await getCurrentUser();
       if (!user) {
-        alert("Please login to continue");
+        toast.error("Please login to continue");
         router.push('/login');
         return;
       }
@@ -213,37 +243,35 @@ export default function ToolsEquipmentPage() {
         return;
       }
 
-      const result = await saveToolsEquipment(
-        vendorId,
-        tools.map(tool => ({
-          name: tool.name,
-          quantity: tool.quantity,
-          unit: tool.unit,
-          unitPrice: tool.unitPrice,
-          lifeSpan: tool.lifeSpan,
-          productionCycle: tool.productionCycle,
-          totalCost: tool.totalCost,
-          depreciationCost: tool.depreciationCost
-        })),
-        user.uid // Pass the user ID as the third argument
-      );
+      const result = await saveToolsEquipment(vendorId, tools.map(tool => ({
+        ...tool,
+        userId: user.uid, // Add user ID to tool data
+      })));
 
       if (result.success) {
-        // Clear the vendorId from localStorage since we're done with the flow
+        toast.success("All vendor details saved successfully!");
+        
+        // Clear all temporary data from localStorage
+        localStorage.removeItem('tempVendorData');
+        localStorage.removeItem('rawMaterialsData');
+        localStorage.removeItem('workerData');
+        localStorage.removeItem('toolsData');
         localStorage.removeItem('currentVendorId');
-        router.push("/vendors");
+        
+        // Navigate back to vendors list
+        setTimeout(() => {
+          router.push("/vendors");
+        }, 2000);
       } else {
-        console.error("Failed to save tools data:", result.error);
-        alert("Failed to save tools data. Please try again.");
+        toast.error(result.error || "Failed to save vendor details. Please try again.");
       }
     } catch (error) {
-      console.error("Error:", error);
-      alert("An error occurred. Please try again.");
+      console.error("Error saving vendor data:", error);
+      toast.error(error.message || "An error occurred while saving. Please try again.");
     } finally {
       setLoading(false);
     }
   };
-
   // Calculate total costs
   const totalEquipmentCost = tools.reduce(
     (sum, tool) => sum + tool.totalCost,
@@ -254,8 +282,49 @@ export default function ToolsEquipmentPage() {
     0
   );
 
+  // Function to handle key press for form navigation
+  const handleKeyPress = (e, index, currentField) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      
+      // Define the field order
+      const fieldOrder = ['name', 'quantity', 'unit', 'unitPrice', 'lifeSpan', 'productionCycle'];
+      const currentIndex = fieldOrder.indexOf(currentField);
+      
+      if (currentIndex < fieldOrder.length - 1) {
+        // Move to next field in the same tool
+        const nextFieldId = 
+          currentField === 'name' ? `tool-name-${index}` :
+          currentField === 'quantity' ? `quantity-${index}` :
+          currentField === 'unit' ? `unit-${index}` :
+          currentField === 'unitPrice' ? `unit-price-${index}` :
+          currentField === 'lifeSpan' ? `life-span-${index}` :
+          `production-cycle-${index}`;
+          
+        const nextField = document.getElementById(nextFieldId);
+        if (nextField) nextField.focus();
+      } else if (index < tools.length - 1) {
+        // Move to first field of next tool
+        const nextToolField = document.getElementById(`tool-name-${index + 1}`);
+        if (nextToolField) nextToolField.focus();
+      }
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-6">
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
       <div className="max-w-4xl mx-auto">
         <Card className="shadow-lg">
           <CardHeader className="bg-card border-b">
@@ -308,6 +377,7 @@ export default function ToolsEquipmentPage() {
                         onChange={(e) =>
                           handleInputChange(index, "name", e.target.value)
                         }
+                        onKeyDown={(e) => handleKeyPress(e, index, "name")}
                         placeholder="Enter tool/equipment name"
                       />
                     </div>
@@ -337,6 +407,7 @@ export default function ToolsEquipmentPage() {
                               Number.parseInt(e.target.value) || 0
                             )
                           }
+                          onKeyDown={(e) => handleKeyPress(e, index, "quantity")}
                           className="rounded-none text-center"
                         />
                         <Button
@@ -359,6 +430,7 @@ export default function ToolsEquipmentPage() {
                         onChange={(e) =>
                           handleInputChange(index, "unit", e.target.value)
                         }
+                        onKeyDown={(e) => handleKeyPress(e, index, "unit")}
                         placeholder="e.g., Pcs, Set, Unit"
                       />
                     </div>
@@ -388,6 +460,7 @@ export default function ToolsEquipmentPage() {
                               Number.parseInt(e.target.value) || 0
                             )
                           }
+                          onKeyDown={(e) => handleKeyPress(e, index, "unitPrice")}
                           className="rounded-none text-center"
                         />
                         <Button
@@ -427,6 +500,7 @@ export default function ToolsEquipmentPage() {
                               Number.parseInt(e.target.value) || 0
                             )
                           }
+                          onKeyDown={(e) => handleKeyPress(e, index, "lifeSpan")}
                           className="rounded-none text-center"
                         />
                         <Button
@@ -468,6 +542,7 @@ export default function ToolsEquipmentPage() {
                               Number.parseInt(e.target.value) || 0
                             )
                           }
+                          onKeyDown={(e) => handleKeyPress(e, index, "productionCycle")}
                           className="rounded-none text-center"
                         />
                         <Button
@@ -558,9 +633,18 @@ export default function ToolsEquipmentPage() {
               <ArrowLeft className="h-4 w-4 mr-2" />
               Previous
             </Button>
-            <Button onClick={handleNext}>
-              <ArrowRight className="h-4 w-4 mr-2" />
-              Next
+            <Button onClick={handleSubmit} disabled={loading}>
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <ArrowRight className="h-4 w-4 mr-2" />
+                  Submit
+                </>
+              )}
             </Button>
           </CardFooter>
         </Card>

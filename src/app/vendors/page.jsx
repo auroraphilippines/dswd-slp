@@ -632,6 +632,31 @@ export default function VendorsPage() {
     }
   };
 
+  const handleDetailUpdate = async (updatedVendor) => {
+    if (!currentUser) {
+      toast.error("You must be logged in to update vendors");
+      return;
+    }
+
+    try {
+      const result = await updateVendorDetails(
+        updatedVendor.id,
+        updatedVendor,
+        currentUser.uid
+      );
+
+      if (result.success) {
+        toast.success("Vendor details updated successfully!");
+        setSelectedVendor(updatedVendor); // Update the local state
+      } else {
+        toast.error(result.error || "Failed to update vendor details");
+      }
+    } catch (error) {
+      console.error("Error updating vendor details:", error);
+      toast.error("An error occurred while updating vendor details");
+    }
+  };
+
   // Filter vendors based on search query
   const filteredVendors = vendors.filter((vendor) => {
     const searchLower = searchQuery.toLowerCase();
@@ -1046,7 +1071,10 @@ export default function VendorsPage() {
                             </Button>
                           </div>
 
-                          <VendorDetailView vendor={selectedVendor} />
+                          <VendorDetailView 
+                            vendor={selectedVendor} 
+                            onUpdate={handleDetailUpdate}
+                          />
                         </div>
                       )}
                     </div>
