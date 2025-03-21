@@ -89,7 +89,6 @@ export default function AnalyticsPage() {
     return () => unsubscribe();
   }, []);
 
-  // Get user initials from name
   const getUserInitials = (name) => {
     if (!name) return "AD";
     if (name === "Admin DSWD") return "AD";
