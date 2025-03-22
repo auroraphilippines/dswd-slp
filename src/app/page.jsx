@@ -682,7 +682,7 @@ export default function LandingPage() {
                       </ol>
                       <div className="mt-4 flex items-center justify-center">
                         <img
-                          src="/images/dashboard-preview.jpg"
+                          src="/images/login.png"
                           alt="System Dashboard Preview"
                           className="rounded-lg shadow-md max-w-full h-auto border-2 border-gray-200"
                         />
