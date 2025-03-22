@@ -117,7 +117,9 @@ export default function SettingsPage() {
           <div className="flex items-center flex-shrink-0 px-4">
             <Link href="/dashboard" className="flex items-center">
               <img src="./images/SLP.png" alt="Logo" className="h-8 w-8" />
-              <span className="ml-2 text-xl font-bold">DSWD SLP-TIS</span>
+              <span className="ml-3 text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                DSWD SLP-PS
+              </span>
             </Link>
           </div>
           <div className="mt-8 flex-1 flex flex-col">
@@ -201,7 +203,9 @@ export default function SettingsPage() {
             <div className="flex-shrink-0 flex items-center px-4">
               <Link href="/dashboard" className="flex items-center">
                 <img src="./images/SLP.png" alt="Logo" className="h-8 w-8" />
-                <span className="ml-2 text-xl font-bold">DSWD SLP-TIS</span>
+                <span className="ml-3 text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                  DSWD SLP-PS
+                </span>
               </Link>
             </div>
             <nav className="mt-5 px-2 space-y-1">

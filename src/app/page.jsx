@@ -75,7 +75,7 @@ export default function LandingPage() {
                 transition={{ delay: 0.5, duration: 0.8 }}
                 className="text-2xl font-bold text-white"
               >
-                DSWD SLP-TIS
+                DSWD SLP-PS
               </motion.h1>
               <motion.p
                 initial={{ opacity: 0 }}
@@ -83,7 +83,7 @@ export default function LandingPage() {
                 transition={{ delay: 1, duration: 0.8 }}
                 className="text-white mt-2"
               >
-                Sustainable Livelihood Program - Tracking Inventory System
+                Sustainable Livelihood Program - Proposal System
               </motion.p>
             </motion.div>
           </motion.div>
@@ -113,9 +113,9 @@ export default function LandingPage() {
                     />
                   </div>
                   <div>
-                    <h1 className="text-xl font-bold">DSWD SLP-TIS</h1>
+                    <h1 className="text-xl font-bold">DSWD SLP-PS</h1>
                     <p className="text-xs">
-                      Sustainable Livelihood Program - Tracking Inventory System
+                      Sustainable Livelihood Program - Proposal System
                     </p>
                   </div>
                 </div>
@@ -165,8 +165,8 @@ export default function LandingPage() {
                   transition={{ duration: 0.8 }}
                   className="text-3xl md:text-5xl font-bold mb-6"
                 >
-                  Welcome to DSWD Sustainable Livelihood Program - Tracking
-                  Inventory System
+                  Welcome to DSWD Sustainable Livelihood Program - Proposal
+                  System
                 </motion.h2>
                 <motion.p
                   initial={{ opacity: 0, y: 20 }}
@@ -220,9 +220,9 @@ export default function LandingPage() {
                   </div>
                   <div className="bg-white rounded-lg shadow-md p-6 md:p-8">
                     <p className="text-gray-700 mb-6">
-                      The DSWD Sustanable Livelihood Program - Tracking
-                      Inventory System serves various stakeholders involved in
-                      social welfare programs:
+                      The DSWD Sustanable Livelihood Program - Proposal System
+                      serves various stakeholders involved in social welfare
+                      programs:
                     </p>
 
                     <div className="grid md:grid-cols-3 gap-6">
@@ -361,8 +361,7 @@ export default function LandingPage() {
                   <div className="bg-white rounded-lg shadow-md p-6 md:p-8">
                     <p className="text-gray-700 mb-6">
                       To access the DSWD Sustanable Livelihood Program -
-                      Tracking Inventory System, you need to have an authorized
-                      account:
+                      Proposal System, you need to have an authorized account:
                     </p>
 
                     <div className="space-y-6">
@@ -492,7 +491,7 @@ export default function LandingPage() {
                               <strong>Important:</strong> Account creation is
                               strictly controlled for security purposes.
                               Self-registration is not available. All accounts
-                              must be authorized by the DSWD SLP-TIS
+                              must be authorized by the DSWD SLP-PS
                               administration.
                             </p>
                           </div>
@@ -512,9 +511,8 @@ export default function LandingPage() {
                   </div>
                   <div className="bg-white rounded-lg shadow-md p-6 md:p-8">
                     <p className="text-gray-700 mb-6">
-                      The DSWD Sustainable Livelihood Program - Tracking
-                      Inventory System provides various services to support
-                      social welfare programs:
+                      The DSWD Sustainable Livelihood Program - Proposal System
+                      various services to support social welfare programs:
                     </p>
 
                     <div className="grid md:grid-cols-2 gap-6 mb-8">
@@ -668,7 +666,7 @@ export default function LandingPage() {
                       </h3>
                       <ol className="space-y-4 text-gray-700 list-decimal pl-5">
                         <li>
-                          Log in to the DSWD SLP-TIS system using your
+                          Log in to the DSWD SLP-PS system using your
                           credentials
                         </li>
                         <li>
@@ -679,7 +677,7 @@ export default function LandingPage() {
                           desired service
                         </li>
                         <li>
-                          For assistance, contact the DSWD SLP-TIS support team
+                          For assistance, contact the DSWD SLP-PS support team
                         </li>
                       </ol>
                       <div className="mt-4 flex items-center justify-center">
@@ -705,13 +703,13 @@ export default function LandingPage() {
                     <div className="space-y-6">
                       <div className="border-b border-gray-200 pb-4">
                         <h3 className="font-bold text-lg mb-2 text-[#0F4C81]">
-                          How do I request an account for the DSWD SLP-TIS
+                          How do I request an account for the DSWD SLP-PS
                           system?
                         </h3>
                         <p className="text-gray-700">
                           DSWD staff should submit a request through their
                           department head. Partner agencies need to send an
-                          official letter to the DSWD SLP-TIS office.
+                          official letter to the DSWD SLP-PS office.
                           Self-registration is not available for security
                           reasons.
                         </p>
@@ -734,7 +732,7 @@ export default function LandingPage() {
                           How do I report technical issues with the system?
                         </h3>
                         <p className="text-gray-700">
-                          For technical issues, contact the DSWD SLP-TIS support
+                          For technical issues, contact the DSWD SLP-PS support
                           team via email at support@dswdswcf.gov.ph or call the
                           helpdesk at (02) 8931-8101. Please provide detailed
                           information about the issue.
@@ -802,9 +800,9 @@ export default function LandingPage() {
                   Ready to Get Started?
                 </h2>
                 <p className="text-lg mb-8 max-w-2xl mx-auto">
-                  Access the DSWD Sustainable Livelihood Program - Tracking
-                  Inventory System to manage inventory, process disbursements,
-                  and support beneficiaries.
+                  Access the DSWD Sustainable Livelihood Program - Proposal
+                  System to manage inventory, process disbursements, and support
+                  beneficiaries.
                 </p>
                 <div className="flex flex-col sm:flex-row justify-center gap-4">
                   <div onClick={() => router.push("/login")}>
@@ -833,19 +831,18 @@ export default function LandingPage() {
                         />
                       </div>
                       <div>
-                        <h3 className="text-lg font-bold">DSWD SLP-TIS</h3>
+                        <h3 className="text-lg font-bold">DSWD SLP-PS</h3>
                         <p className="text-xs text-gray-400">
-                          Sustainable Livelihood Program - Tracking Inventory
-                          System
+                          Sustainable Livelihood Program - Proposal System
                         </p>
                       </div>
                     </div>
                     <p className="text-gray-400">
-                      The DSWD Sustainable Livelihood Program - Tracking
-                      Inventory System is designed to efficiently manage
-                      inventory, track disbursements, and support beneficiaries
-                      through integrated digital solutions, empowering
-                      communities across the Philippines.
+                      The DSWD Sustainable Livelihood Program - Proposal System
+                      is designed to efficiently manage inventory, track
+                      disbursements, and support beneficiaries through
+                      integrated digital solutions, empowering communities
+                      across the Philippines.
                     </p>
                   </div>
 
