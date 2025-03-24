@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import {
   LayoutDashboard,
   FileBarChart,
@@ -57,11 +57,13 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { subscribeToVendors, deleteVendor, updateVendorDetails } from "@/service/vendor";
+import {
+  subscribeToVendors,
+  deleteVendor,
+  updateVendorDetails,
+} from "@/service/vendor";
 import { getCurrentUser } from "@/service/auth";
-import { auth, db } from "@/service/firebase";
-import { doc, getDoc } from "firebase/firestore";
-import LoadingPage from "./loading";
+import LoadingPage from "../loading/page";
 
 export default function VendorsPage() {
   const router = useRouter();
@@ -77,12 +79,6 @@ export default function VendorsPage() {
   const [vendorToDelete, setVendorToDelete] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
-  const [userProfile, setUserProfile] = useState({
-    displayName: "Admin DSWD",
-    email: "admin@dswd.gov.ph",
-    role: "Administrator",
-    initials: "AD"
-  });
 
   // Close mobile menu when path changes
   useEffect(() => {
@@ -116,54 +112,6 @@ export default function VendorsPage() {
     return () => {
       unsubscribe();
     };
-  }, [router]);
-
-  // Get user initials from name
-  const getUserInitials = (name) => {
-    if (!name) return "AD";
-    if (name === "Admin DSWD") return "AD";
-    
-    const words = name.split(" ");
-    if (words.length >= 2) {
-      return (words[0][0] + words[1][0]).toUpperCase();
-    }
-    return name.substring(0, 2).toUpperCase();
-  };
-
-  // Update user profile fetching to use the new getUserInitials function
-  useEffect(() => {
-    const fetchUserProfile = async () => {
-      try {
-        const user = auth.currentUser;
-        if (!user) {
-          router.push("/login");
-          return;
-        }
-
-        const userDoc = await getDoc(doc(db, "users", user.uid));
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          
-          // Format display name
-          let displayName = userData.name;
-          if (displayName === "255") {
-            displayName = "Admin DSWD";
-          }
-
-          setUserProfile({
-            displayName,
-            email: userData.email || "admin@dswd.gov.ph", 
-            role: userData.role || "Administrator",
-            initials: getUserInitials(displayName)
-          });
-        }
-      } catch (error) {
-        console.error("Error fetching user profile:", error);
-        // Keep default values if fetch fails
-      }
-    };
-
-    fetchUserProfile();
   }, [router]);
 
   const navigation = [
@@ -262,7 +210,7 @@ export default function VendorsPage() {
     // Create a temporary link to download the CSV
     const link = document.createElement("a");
     link.href = url;
-    link.download = "vendors_detailed.csv";
+    link.download = "vendors_data.csv";
     link.click();
 
     // Clean up
@@ -425,14 +373,14 @@ export default function VendorsPage() {
     // Create Blob with UTF-8 BOM for Excel compatibility
     const BOM = "\uFEFF";
     const blob = new Blob([BOM + csvContent], {
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8",
+      type: "text/csv;charset=UTF-8",
     });
     const url = URL.createObjectURL(blob);
 
     // Create a temporary link and trigger download
     const link = document.createElement("a");
     link.href = url;
-    link.download = "vendors_detailed.xlsx";
+    link.download = "vendors_detailed.csv";
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -541,14 +489,14 @@ export default function VendorsPage() {
     // Create Blob with UTF-8 BOM for Excel compatibility
     const BOM = "\uFEFF";
     const blob = new Blob([BOM + csvContent], {
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8",
+      type: "text/csv;charset=UTF-8",
     });
     const url = URL.createObjectURL(blob);
 
     // Create a temporary link and trigger download
     const link = document.createElement("a");
     link.href = url;
-    link.download = `vendor_${vendor.vendorId || vendor.id}_details.xlsx`;
+    link.download = `vendor_${vendor.vendorId || vendor.id}_details.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -573,7 +521,7 @@ export default function VendorsPage() {
       toast.error("You must be logged in to update vendors");
       return;
     }
-    
+
     setIsSubmitting(true);
     try {
       const result = await updateVendorDetails(
@@ -610,11 +558,11 @@ export default function VendorsPage() {
       toast.error("You must be logged in to delete vendors");
       return;
     }
-    
+
     setIsSubmitting(true);
     try {
       const result = await deleteVendor(vendorToDelete.id, currentUser.uid);
-      
+
       if (result.success) {
         toast.success("Vendor deleted successfully!");
         setShowDeleteDialog(false);
@@ -684,7 +632,9 @@ export default function VendorsPage() {
           <div className="flex items-center flex-shrink-0 px-4">
             <Link href="/dashboard" className="flex items-center">
               <img src="./images/SLP.png" alt="Logo" className="h-8 w-8" />
-              <span className="ml-2 text-xl font-bold">DSWD SLP-TIS</span>
+              <span className="ml-3 text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                DSWD SLP-PS
+              </span>
             </Link>
           </div>
           <div className="mt-8 flex-1 flex flex-col">
@@ -721,11 +671,11 @@ export default function VendorsPage() {
             <div className="flex items-center w-full justify-between">
               <div className="flex items-center">
                 <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                  <span className="text-sm font-medium">{getUserInitials(userProfile.displayName)}</span>
+                  <span className="text-sm font-medium">AD</span>
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm font-medium">{userProfile.displayName}</p>
-                  <p className="text-xs text-muted-foreground">{userProfile.role}</p>
+                  <p className="text-sm font-medium">Admin DSWD</p>
+                  <p className="text-xs text-muted-foreground">Administrator</p>
                 </div>
               </div>
               <ThemeToggle />
@@ -762,7 +712,9 @@ export default function VendorsPage() {
             <div className="flex-shrink-0 flex items-center px-4">
               <Link href="/dashboard" className="flex items-center">
                 <img src="./images/SLP.png" alt="Logo" className="h-8 w-8" />
-                <span className="ml-2 text-xl font-bold">DSWD SLP-TIS</span>
+                <span className="ml-3 text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                  DSWD SLP-PS
+                </span>
               </Link>
             </div>
             <nav className="mt-5 px-2 space-y-1">
@@ -797,11 +749,11 @@ export default function VendorsPage() {
           <div className="flex-shrink-0 flex border-t p-4">
             <div className="flex items-center">
               <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                <span className="text-sm font-medium">{getUserInitials(userProfile.displayName)}</span>
+                <span className="text-sm font-medium">AD</span>
               </div>
               <div className="ml-3">
-                <p className="text-sm font-medium">{userProfile.displayName}</p>
-                <p className="text-xs text-muted-foreground">{userProfile.role}</p>
+                <p className="text-sm font-medium">Admin DSWD</p>
+                <p className="text-xs text-muted-foreground">Administrator</p>
               </div>
             </div>
           </div>
@@ -852,18 +804,19 @@ export default function VendorsPage() {
               {/* Profile dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="ml-3 rounded-full">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="ml-3 rounded-full"
+                  >
                     <span className="sr-only">Open user menu</span>
                     <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                      <span className="text-sm font-medium">{getUserInitials(userProfile.displayName)}</span>
+                      <span className="text-sm font-medium">AD</span>
                     </div>
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuLabel>My Account</DropdownMenuLabel>
-                  <DropdownMenuItem disabled>
-                    Signed in as {userProfile.email}
-                  </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem>Profile</DropdownMenuItem>
                   <DropdownMenuItem>Settings</DropdownMenuItem>
@@ -1071,8 +1024,8 @@ export default function VendorsPage() {
                             </Button>
                           </div>
 
-                          <VendorDetailView 
-                            vendor={selectedVendor} 
+                          <VendorDetailView
+                            vendor={selectedVendor}
                             onUpdate={handleDetailUpdate}
                           />
                         </div>
@@ -1096,32 +1049,16 @@ export default function VendorsPage() {
                       variant="outline"
                       onClick={exportToGoogleSheets}
                     >
-                      <img
-                        src="https://www.google.com/images/about/sheets-icon.svg"
-                        alt="Google Sheets"
-                        className="w-5 h-5"
-                      />
-                      Export to Google Sheets
-                    </Button>
-                    <Button
-                      className="flex items-center justify-start gap-2"
-                      variant="outline"
-                      onClick={exportToExcelOnline}
-                    >
-                      <img
-                        src="https://img.icons8.com/color/48/000000/microsoft-excel-2019--v1.png"
-                        alt="Microsoft Excel"
-                        className="w-5 h-5"
-                      />
-                      Export to Microsoft Excel Online
+                      <Download className="h-5 w-5" />
+                      Export as CSV Files
                     </Button>
                   </div>
                 </DialogContent>
               </Dialog>
 
               {/* Add Edit Dialog */}
-              <Dialog 
-                open={!!editingVendor} 
+              <Dialog
+                open={!!editingVendor}
                 onOpenChange={(open) => {
                   if (!open) setEditingVendor(null);
                 }}
@@ -1172,7 +1109,10 @@ export default function VendorsPage() {
                           id="name"
                           value={editingVendor?.name ?? ""}
                           onChange={(e) =>
-                            setEditingVendor({ ...editingVendor, name: e.target.value })
+                            setEditingVendor({
+                              ...editingVendor,
+                              name: e.target.value,
+                            })
                           }
                           className="col-span-3"
                         />
@@ -1186,7 +1126,10 @@ export default function VendorsPage() {
                           type="email"
                           value={editingVendor?.email ?? ""}
                           onChange={(e) =>
-                            setEditingVendor({ ...editingVendor, email: e.target.value })
+                            setEditingVendor({
+                              ...editingVendor,
+                              email: e.target.value,
+                            })
                           }
                           className="col-span-3"
                         />
@@ -1209,15 +1152,18 @@ export default function VendorsPage() {
               </Dialog>
 
               {/* Add Delete Confirmation Dialog */}
-              <Dialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+              <Dialog
+                open={showDeleteDialog}
+                onOpenChange={setShowDeleteDialog}
+              >
                 <DialogContent>
                   <DialogHeader>
                     <DialogTitle>Delete Vendor</DialogTitle>
                   </DialogHeader>
                   <div className="py-4">
                     <p>
-                      Are you sure you want to delete vendor "{vendorToDelete?.name}"? This action
-                      cannot be undone.
+                      Are you sure you want to delete vendor "
+                      {vendorToDelete?.name}"? This action cannot be undone.
                     </p>
                   </div>
                   <DialogFooter>

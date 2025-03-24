@@ -136,45 +136,10 @@ export default function ManPowerPage() {
     router.back();
   };
 
-  const handleNext = async () => {
-    setLoading(true);
-    try {
-      const user = await getCurrentUser();
-      if (!user) {
-        alert("Please login to continue");
-        router.push('/login');
-        return;
-      }
-
-      const vendorId = localStorage.getItem('currentVendorId');
-      if (!vendorId) {
-        alert("Vendor ID not found. Please start from the beginning.");
-        router.push("/vendors/add");
-        return;
-      }
-
-      const result = await saveManPower(
-        vendorId,
-        workers.map(worker => ({
-          name: worker.name,
-          task: worker.task,
-          wage: worker.wage
-        })),
-        user.uid // Pass the user ID as the third argument
-      );
-
-      if (result.success) {
-        router.push("/vendors/tools-equipment");
-      } else {
-        console.error("Failed to save manpower data:", result.error);
-        alert("Failed to save manpower data. Please try again.");
-      }
-    } catch (error) {
-      console.error("Error:", error);
-      alert("An error occurred. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+  const handleNext = () => {
+    // Save current state before navigating forward
+    localStorage.setItem('workerData', JSON.stringify(workers));
+    router.push("/vendors/tools-equipment");
   };
 
   // Calculate total daily wages

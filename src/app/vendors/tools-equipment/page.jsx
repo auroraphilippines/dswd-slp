@@ -236,17 +236,69 @@ export default function ToolsEquipmentPage() {
         return;
       }
 
-      const vendorId = localStorage.getItem('currentVendorId');
-      if (!vendorId) {
-        alert("Vendor ID not found. Please start from the beginning.");
-        router.push("/vendors/add");
-        return;
-      }
+      // Get vendor data from all steps
+      const tempVendorData = JSON.parse(localStorage.getItem('tempVendorData')) || {};
+      const rawMaterialsData = JSON.parse(localStorage.getItem('rawMaterialsData')) || [];
+      const workerData = JSON.parse(localStorage.getItem('workerData')) || [];
+      
+      // Get or create vendorId
+      const vendorId = localStorage.getItem('currentVendorId') || `VEN${Date.now()}`;
 
-      const result = await saveToolsEquipment(vendorId, tools.map(tool => ({
-        ...tool,
-        userId: user.uid, // Add user ID to tool data
-      })));
+      // Format worker data properly
+      const formattedWorkers = workerData.map(worker => ({
+        numberOfWorkers: Number(worker.numberOfWorkers) || 0,
+        task: worker.task?.trim() || '',
+        wage: Number(worker.wage) || 0,
+        totalWage: (Number(worker.numberOfWorkers) || 0) * (Number(worker.wage) || 0)
+      }));
+
+      // Format tool data properly
+      const formattedTools = tools.map(tool => ({
+        name: tool.name?.trim() || '',
+        quantity: Number(tool.quantity) || 0,
+        unit: tool.unit?.trim() || '',
+        unitPrice: Number(tool.unitPrice) || 0,
+        totalCost: Number(tool.totalCost) || 0,
+        lifeSpan: Number(tool.lifeSpan) || 0,
+        productionCycle: Number(tool.productionCycle) || 0,
+        depreciationCost: Number(tool.depreciationCost) || 0
+      }));
+
+      // Prepare the consolidated vendor data with all information
+      const vendorDataToSave = {
+        ...tempVendorData,
+        userId: user.uid,
+        vendorId: vendorId,
+        userDisplayName: user.displayName || '',
+        userEmail: user.email || '',
+        createdAt: new Date().toISOString(),
+        // Raw materials from step 1
+        rawMaterials: rawMaterialsData,
+        // Workers from step 2
+        manpower: formattedWorkers,
+        // Tools from current step
+        tools: formattedTools,
+        // Add summary data
+        summary: {
+          totalManpowerCost: formattedWorkers.reduce((sum, worker) => sum + worker.totalWage, 0),
+          totalMaterialsCost: rawMaterialsData.reduce((sum, material) => sum + (Number(material.totalCost) || 0), 0),
+          totalEquipmentCost: formattedTools.reduce((sum, tool) => sum + (Number(tool.totalCost) || 0), 0),
+          totalDepreciationCost: formattedTools.reduce((sum, tool) => sum + (Number(tool.depreciationCost) || 0), 0)
+        }
+      };
+
+      // Log data before saving for debugging
+      console.log("========== DEBUG LOGS ==========");
+      console.log("Raw Worker Data:", workerData);
+      console.log("Formatted Workers:", formattedWorkers);
+      console.log("Raw Tools Data:", tools);
+      console.log("Formatted Tools:", formattedTools);
+      console.log("Raw Materials Data:", rawMaterialsData);
+      console.log("Complete vendor data to save:", vendorDataToSave);
+      console.log("==============================");
+
+      // Save all vendor data
+      const result = await saveVendorDetails(vendorDataToSave, user.uid);
 
       if (result.success) {
         toast.success("All vendor details saved successfully!");
@@ -272,6 +324,7 @@ export default function ToolsEquipmentPage() {
       setLoading(false);
     }
   };
+
   // Calculate total costs
   const totalEquipmentCost = tools.reduce(
     (sum, tool) => sum + tool.totalCost,
