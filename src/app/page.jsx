@@ -175,7 +175,7 @@ export default function LandingPage() {
                   className="text-lg md:text-xl mb-10 max-w-3xl mx-auto"
                 >
                   Manage inventory, track disbursements, and support
-                  beneficiaries through our integrated platform designed to
+                  participants through our integrated platform designed to
                   strengthen communities across the Philippines
                 </motion.p>
                 <motion.div
@@ -297,7 +297,7 @@ export default function LandingPage() {
                         <ul className="space-y-2 text-gray-700">
                           <li className="flex items-start">
                             <span className="text-[#0F4C81] mr-2">•</span>
-                            <span>Manage beneficiary information</span>
+                            <span>Manage participants information</span>
                           </li>
                           <li className="flex items-start">
                             <span className="text-[#0F4C81] mr-2">•</span>
@@ -314,7 +314,7 @@ export default function LandingPage() {
                           <li className="flex items-start">
                             <span className="text-[#0F4C81] mr-2">•</span>
                             <span>
-                              Facilitate beneficiary training and support
+                              Facilitate participants training and support
                             </span>
                           </li>
                         </ul>
@@ -593,25 +593,25 @@ export default function LandingPage() {
 
                       <div className="bg-blue-50 p-6 rounded-lg">
                         <h3 className="font-bold text-lg mb-3 text-[#0F4C81]">
-                          Beneficiary Management
+                          Participants Management
                         </h3>
                         <ul className="space-y-3 text-gray-700">
                           <li className="flex items-start">
                             <ArrowRight className="h-5 w-5 text-[#0F4C81] mr-2 flex-shrink-0 mt-0.5" />
                             <span>
-                              Register and manage beneficiary information
+                              Register and manage participants information
                             </span>
                           </li>
                           <li className="flex items-start">
                             <ArrowRight className="h-5 w-5 text-[#0F4C81] mr-2 flex-shrink-0 mt-0.5" />
                             <span>
-                              Track assistance provided to beneficiaries
+                              Track assistance provided to participants
                             </span>
                           </li>
                           <li className="flex items-start">
                             <ArrowRight className="h-5 w-5 text-[#0F4C81] mr-2 flex-shrink-0 mt-0.5" />
                             <span>
-                              Generate beneficiary reports and statistics
+                              Generate participants reports and statistics
                             </span>
                           </li>
                           <li className="flex items-start">
@@ -802,7 +802,7 @@ export default function LandingPage() {
                 <p className="text-lg mb-8 max-w-2xl mx-auto">
                   Access the DSWD Sustainable Livelihood Program - Proposal
                   System to manage inventory, process disbursements, and support
-                  beneficiaries.
+                  participants.
                 </p>
                 <div className="flex flex-col sm:flex-row justify-center gap-4">
                   <div onClick={() => router.push("/login")}>
@@ -840,9 +840,9 @@ export default function LandingPage() {
                     <p className="text-gray-400">
                       The DSWD Sustainable Livelihood Program - Proposal System
                       is designed to efficiently manage inventory, track
-                      disbursements, and support beneficiaries through
-                      integrated digital solutions, empowering communities
-                      across the Philippines.
+                      disbursements, and support participants through integrated
+                      digital solutions, empowering communities across the
+                      Philippines.
                     </p>
                   </div>
 

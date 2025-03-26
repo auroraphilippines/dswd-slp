@@ -137,7 +137,7 @@ export default function ProgramsPage() {
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Vendors", href: "/vendors", icon: Store },
-    { name: "Beneficiaries", href: "/beneficiaries", icon: Users },
+    { name: "Participants", href: "/participants", icon: Users },
     { name: "Programs", href: "/programs", icon: Building2 },
     { name: "Reports", href: "./reports", icon: FileBarChart },
     { name: "Analytics", href: "./analytics", icon: FileBarChart },
@@ -421,7 +421,7 @@ export default function ProgramsPage() {
                   <Card>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium">
-                        Total Beneficiaries
+                        Total Participants
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -472,7 +472,7 @@ export default function ProgramsPage() {
                               <TableHead className="w-[80px]">ID</TableHead>
                               <TableHead>Program Name</TableHead>
                               <TableHead>Category</TableHead>
-                              <TableHead>Beneficiaries</TableHead>
+                              <TableHead>Participants</TableHead>
                               <TableHead>Status</TableHead>
                               <TableHead className="text-right">
                                 Actions
@@ -506,7 +506,7 @@ export default function ProgramsPage() {
                                   </TableCell>
                                   <TableCell>{program.category}</TableCell>
                                   <TableCell>
-                                    {program.beneficiaryCount}
+                                    {program.participantsCount}
                                   </TableCell>
                                   <TableCell>
                                     <Badge
@@ -559,7 +559,7 @@ export default function ProgramsPage() {
                                         <DropdownMenuItem
                                           onClick={(e) => e.stopPropagation()}
                                         >
-                                          Manage Beneficiaries
+                                          Manage Participants
                                         </DropdownMenuItem>
                                         <DropdownMenuSeparator />
                                         <DropdownMenuItem
@@ -629,7 +629,7 @@ const programData = [
     name: "Disaster Relief Program",
     category: "Emergency Assistance",
     status: "Active",
-    beneficiaryCount: 1250,
+    participantsCount: 1250,
     description:
       "Provides immediate assistance to families affected by natural disasters and calamities.",
     startDate: "Jan 15, 2023",
@@ -657,7 +657,7 @@ const programData = [
     name: "Food Security Program",
     category: "Nutrition",
     status: "Active",
-    beneficiaryCount: 850,
+    participantsCount: 850,
     description:
       "Ensures access to nutritious food for vulnerable families and communities.",
     startDate: "Feb 1, 2023",
@@ -685,7 +685,7 @@ const programData = [
     name: "Educational Assistance",
     category: "Education",
     status: "Planned",
-    beneficiaryCount: 0,
+    participantsCount: 0,
     description:
       "Provides educational support to children from low-income families.",
     startDate: "Jul 1, 2023",

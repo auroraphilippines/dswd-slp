@@ -51,15 +51,15 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { BeneficiariesDetailView } from "./beneficiary-detail-view";
+import { ParticipntsDetailView } from "./participants-detail-view";
 import { auth, db } from "@/service/firebase";
 import { doc, getDoc } from "firebase/firestore";
 
-export default function BeneficiariesPage() {
+export default function ParticipantsPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [selectedBeneficiary, setSelectedBeneficiary] = useState(null);
+  const [selectedParticipants, setSelectedParticipants] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const pathname = usePathname();
 
@@ -110,12 +110,12 @@ export default function BeneficiariesPage() {
     return name.substring(0, 2).toUpperCase();
   };
 
-  const handleViewDetails = (beneficiary) => {
-    setSelectedBeneficiary(beneficiary);
+  const handleViewDetails = (participants) => {
+    setSelectedParticipants(participants);
   };
 
   const handleCloseDetails = () => {
-    setSelectedBeneficiary(null);
+    setSelectedParticipants(null);
   };
 
   const handleSearchChange = (e) => {
@@ -129,21 +129,21 @@ export default function BeneficiariesPage() {
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Vendors", href: "/vendors", icon: Store },
-    { name: "Beneficiaries", href: "/beneficiaries", icon: Users },
+    { name: "Participants", href: "/participants", icon: Users },
     { name: "Programs", href: "/programs", icon: Building2 },
     { name: "Reports", href: "./reports", icon: FileBarChart },
     { name: "Analytics", href: "./analytics", icon: FileBarChart },
     { name: "Settings", href: "./settings", icon: Settings },
   ];
 
-  // Filter beneficiaries based on search query
-  const filteredBeneficiaries = beneficiaryData.filter((beneficiary) => {
+  // Filter participants based on search query
+  const filteredParticipants = participantData.filter((participants) => {
     return (
       searchQuery === "" ||
-      beneficiary.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      beneficiary.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      beneficiary.barangay.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      beneficiary.program.toLowerCase().includes(searchQuery.toLowerCase())
+      participants.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      participants.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      participants.barangay.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      participants.program.toLowerCase().includes(searchQuery.toLowerCase())
     );
   });
 
@@ -384,7 +384,7 @@ export default function BeneficiariesPage() {
               <div className="flex flex-col space-y-4">
                 <div className="flex items-center justify-between">
                   <h1 className="text-2xl font-bold tracking-tight">
-                    Beneficiary Management
+                    Participants Management
                   </h1>
                   <div className="flex items-center space-x-2">
                     <Button variant="outline">
@@ -393,7 +393,7 @@ export default function BeneficiariesPage() {
                     </Button>
                     <Button>
                       <Plus className="mr-2 h-4 w-4" />
-                      Add Beneficiary
+                      Add Participants
                     </Button>
                   </div>
                 </div>
@@ -402,7 +402,7 @@ export default function BeneficiariesPage() {
                   <Card>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium">
-                        Total Beneficiaries
+                        Total Participants
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -415,7 +415,7 @@ export default function BeneficiariesPage() {
                   <Card>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium">
-                        Active Beneficiaries
+                        Active Participants
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -439,11 +439,6 @@ export default function BeneficiariesPage() {
                     </CardContent>
                   </Card>
                   <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium">
-                        Graduated Beneficiaries
-                      </CardTitle>
-                    </CardHeader>
                     <CardContent>
                       <div className="text-2xl font-bold">251</div>
                       <p className="text-xs text-muted-foreground">
@@ -457,9 +452,9 @@ export default function BeneficiariesPage() {
                   <CardHeader className="pb-3">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                       <div>
-                        <CardTitle>Beneficiaries</CardTitle>
+                        <CardTitle>Participants</CardTitle>
                         <CardDescription>
-                          Manage program beneficiaries and their details
+                          Manage program participants and their details
                         </CardDescription>
                       </div>
                     </div>
@@ -467,13 +462,13 @@ export default function BeneficiariesPage() {
                   <CardContent className="p-0">
                     <div
                       className={`grid ${
-                        selectedBeneficiary
+                        selectedParticipants
                           ? "grid-cols-1 lg:grid-cols-2"
                           : "grid-cols-1"
                       } gap-0`}
                     >
                       <div
-                        className={`${selectedBeneficiary ? "border-r" : ""}`}
+                        className={`${selectedParticipants ? "border-r" : ""}`}
                       >
                         <Table>
                           <TableHeader>
@@ -489,19 +484,21 @@ export default function BeneficiariesPage() {
                             </TableRow>
                           </TableHeader>
                           <TableBody>
-                            {filteredBeneficiaries.length > 0 ? (
-                              filteredBeneficiaries.map((beneficiary) => (
+                            {filteredParticipants.length > 0 ? (
+                              filteredParticipants.map((participants) => (
                                 <TableRow
-                                  key={beneficiary.id}
+                                  key={participants.id}
                                   className={`cursor-pointer ${
-                                    selectedBeneficiary?.id === beneficiary.id
+                                    selectedParticipants?.id === participants.id
                                       ? "bg-muted"
                                       : ""
                                   }`}
-                                  onClick={() => handleViewDetails(beneficiary)}
+                                  onClick={() =>
+                                    handleViewDetails(participants)
+                                  }
                                 >
                                   <TableCell className="font-medium">
-                                    {beneficiary.id}
+                                    {participants.id}
                                   </TableCell>
                                   <TableCell>
                                     <div className="flex items-center space-x-2">
@@ -509,15 +506,15 @@ export default function BeneficiariesPage() {
                                         <Users className="h-5 w-5 text-muted-foreground" />
                                       </div>
                                       <div className="font-medium">
-                                        {beneficiary.name}
+                                        {participants.name}
                                       </div>
                                     </div>
                                   </TableCell>
-                                  <TableCell>{beneficiary.barangay}</TableCell>
-                                  <TableCell>{beneficiary.program}</TableCell>
+                                  <TableCell>{participants.barangay}</TableCell>
+                                  <TableCell>{participants.program}</TableCell>
                                   <TableCell>
-                                    <BeneficiaryStatusBadge
-                                      status={beneficiary.status}
+                                    <ParticipantsStatusBadge
+                                      status={participants.status}
                                     />
                                   </TableCell>
                                   <TableCell className="text-right">
@@ -540,7 +537,7 @@ export default function BeneficiariesPage() {
                                         <DropdownMenuItem
                                           onClick={(e) => {
                                             e.stopPropagation();
-                                            handleViewDetails(beneficiary);
+                                            handleViewDetails(participants);
                                           }}
                                         >
                                           View Details
@@ -548,7 +545,7 @@ export default function BeneficiariesPage() {
                                         <DropdownMenuItem
                                           onClick={(e) => e.stopPropagation()}
                                         >
-                                          Edit Beneficiary
+                                          Edit Participants
                                         </DropdownMenuItem>
                                         <DropdownMenuItem
                                           onClick={(e) => e.stopPropagation()}
@@ -560,9 +557,9 @@ export default function BeneficiariesPage() {
                                           className="text-destructive"
                                           onClick={(e) => e.stopPropagation()}
                                         >
-                                          {beneficiary.status === "Active"
-                                            ? "Deactivate Beneficiary"
-                                            : "Activate Beneficiary"}
+                                          {participants.status === "Active"
+                                            ? "Deactivate Participants"
+                                            : "Activate Participants"}
                                         </DropdownMenuItem>
                                       </DropdownMenuContent>
                                     </DropdownMenu>
@@ -575,7 +572,7 @@ export default function BeneficiariesPage() {
                                   colSpan={6}
                                   className="text-center py-4"
                                 >
-                                  No beneficiaries found. Try adjusting your
+                                  No participants found. Try adjusting your
                                   search.
                                 </TableCell>
                               </TableRow>
@@ -584,11 +581,11 @@ export default function BeneficiariesPage() {
                         </Table>
                       </div>
 
-                      {selectedBeneficiary && (
+                      {selectedParticipants && (
                         <div className="p-4 overflow-auto max-h-[800px]">
                           <div className="flex justify-between items-center mb-4">
                             <h3 className="text-lg font-semibold">
-                              Beneficiary Details
+                              Participants Details
                             </h3>
                             <Button
                               variant="ghost"
@@ -603,8 +600,8 @@ export default function BeneficiariesPage() {
                             </Button>
                           </div>
 
-                          <BeneficiaryDetailView
-                            beneficiary={selectedBeneficiary}
+                          <ParticipantsDetailView
+                            participants={selectedParticipants}
                           />
                         </div>
                       )}
@@ -620,7 +617,7 @@ export default function BeneficiariesPage() {
   );
 }
 
-function BeneficiaryStatusBadge({ status }) {
+function ParticipantsStatusBadge({ status }) {
   if (status === "Active") {
     return (
       <Badge
@@ -654,7 +651,7 @@ function BeneficiaryStatusBadge({ status }) {
   }
 }
 
-const beneficiaryData = [
+const participantsData = [
   {
     id: "B-1001",
     name: "Maria Santos",

@@ -112,7 +112,7 @@ export default function DashboardPage() {
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Vendors", href: "/vendors", icon: Store },
-    { name: "Beneficiaries", href: "/beneficiaries", icon: Users },
+    { name: "Participants", href: "/participants", icon: Users },
     { name: "Programs", href: "/programs", icon: Building2 },
     { name: "Reports", href: "/reports", icon: FileBarChart },
     { name: "Analytics", href: "/analytics", icon: TrendingUp },
@@ -306,7 +306,7 @@ export default function DashboardPage() {
                   <Input
                     id="search-field"
                     className="block w-full h-9 pl-10 pr-3 rounded-full bg-muted/50 border-0 text-sm placeholder:text-muted-foreground/70"
-                    placeholder="Search resources, beneficiaries, vendors..."
+                    placeholder="Search resources, participants, vendors..."
                     type="search"
                   />
                 </div>
@@ -392,7 +392,7 @@ export default function DashboardPage() {
                       DSWD Sustainable Livelihood Program - Proposal System
                     </h1>
                     <p className="text-muted-foreground">
-                      Monitor and manage resources, beneficiaries, and programs
+                      Monitor and manage resources, participants, and programs
                     </p>
                   </div>
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
@@ -584,20 +584,20 @@ export default function DashboardPage() {
                     <Card className="border shadow-sm">
                       <CardHeader className="pb-2">
                         <CardTitle className="text-sm font-medium">
-                          Beneficiary Registration
+                          Participants Registration
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
                         <p className="text-sm text-muted-foreground mb-3">
-                          Register new beneficiaries for the social welfare
+                          Register new participants for the social welfare
                           programs.
                         </p>
-                        <Link href="/beneficiaries/register">
+                        <Link href="/participants/register">
                           <Button
                             variant="secondary"
                             className="w-full rounded-lg"
                           >
-                            Register Beneficiary
+                            Register Participants
                           </Button>
                         </Link>
                       </CardContent>
