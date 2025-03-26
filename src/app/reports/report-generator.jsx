@@ -174,7 +174,6 @@ export function ReportGenerator() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="pdf">PDF Document</SelectItem>
-              <SelectItem value="excel">Excel Spreadsheet</SelectItem>
               <SelectItem value="csv">CSV File</SelectItem>
             </SelectContent>
           </Select>
