@@ -14,8 +14,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CheckCircle, X, AlertTriangle } from "lucide-react";
 
-export function BeneficiariesDetailView({ beneficiary }) {
-  if (!beneficiary) return null;
+export function ParticipantsDetailView({ participants }) {
+  if (!participants) return null;
 
   return (
     <Tabs defaultValue="basic">
@@ -37,33 +37,33 @@ export function BeneficiariesDetailView({ beneficiary }) {
             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
               <div className="flex justify-between sm:block">
                 <dt className="text-sm font-medium text-muted-foreground">
-                  Beneficiary ID:
+                  Participants ID:
                 </dt>
-                <dd className="text-sm font-medium">{beneficiary.id}</dd>
+                <dd className="text-sm font-medium">{participants.id}</dd>
               </div>
               <div className="flex justify-between sm:block">
                 <dt className="text-sm font-medium text-muted-foreground">
                   Name:
                 </dt>
-                <dd className="text-sm font-medium">{beneficiary.name}</dd>
+                <dd className="text-sm font-medium">{participants.name}</dd>
               </div>
               <div className="flex justify-between sm:block">
                 <dt className="text-sm font-medium text-muted-foreground">
                   Gender:
                 </dt>
-                <dd className="text-sm font-medium">{beneficiary.gender}</dd>
+                <dd className="text-sm font-medium">{participants.gender}</dd>
               </div>
               <div className="flex justify-between sm:block">
                 <dt className="text-sm font-medium text-muted-foreground">
                   Age:
                 </dt>
-                <dd className="text-sm font-medium">{beneficiary.age}</dd>
+                <dd className="text-sm font-medium">{participants.age}</dd>
               </div>
               <div className="flex justify-between sm:block">
                 <dt className="text-sm font-medium text-muted-foreground">
                   Program:
                 </dt>
-                <dd className="text-sm font-medium">{beneficiary.program}</dd>
+                <dd className="text-sm font-medium">{participants.program}</dd>
               </div>
               <div className="flex justify-between sm:block">
                 <dt className="text-sm font-medium text-muted-foreground">
@@ -72,15 +72,15 @@ export function BeneficiariesDetailView({ beneficiary }) {
                 <dd className="text-sm font-medium">
                   <Badge
                     variant={
-                      beneficiary.status === "Active" ? "outline" : "secondary"
+                      participants.status === "Active" ? "outline" : "secondary"
                     }
                     className={
-                      beneficiary.status === "Active"
+                      participants.status === "Active"
                         ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
                         : ""
                     }
                   >
-                    {beneficiary.status}
+                    {participants.status}
                   </Badge>
                 </dd>
               </div>
@@ -89,21 +89,21 @@ export function BeneficiariesDetailView({ beneficiary }) {
                   Date Registered:
                 </dt>
                 <dd className="text-sm font-medium">
-                  {beneficiary.dateRegistered}
+                  {participants.dateRegistered}
                 </dd>
               </div>
               <div className="flex justify-between sm:block">
                 <dt className="text-sm font-medium text-muted-foreground">
                   Valid ID Type:
                 </dt>
-                <dd className="text-sm font-medium">{beneficiary.validID}</dd>
+                <dd className="text-sm font-medium">{participants.validID}</dd>
               </div>
               <div className="flex justify-between sm:block">
                 <dt className="text-sm font-medium text-muted-foreground">
                   Valid ID Number:
                 </dt>
                 <dd className="text-sm font-medium">
-                  {beneficiary.validIDNumber}
+                  {participants.validIDNumber}
                 </dd>
               </div>
             </dl>
@@ -123,20 +123,20 @@ export function BeneficiariesDetailView({ beneficiary }) {
                   Contact Number:
                 </dt>
                 <dd className="text-sm font-medium">
-                  {beneficiary.contactNumber}
+                  {participants.contactNumber}
                 </dd>
               </div>
               <div className="col-span-1 sm:col-span-2">
                 <dt className="text-sm font-medium text-muted-foreground">
                   Address:
                 </dt>
-                <dd className="text-sm">{beneficiary.address}</dd>
+                <dd className="text-sm">{participants.address}</dd>
               </div>
               <div className="flex justify-between sm:block">
                 <dt className="text-sm font-medium text-muted-foreground">
                   Barangay:
                 </dt>
-                <dd className="text-sm font-medium">{beneficiary.barangay}</dd>
+                <dd className="text-sm font-medium">{participants.barangay}</dd>
               </div>
             </dl>
           </CardContent>
@@ -149,14 +149,14 @@ export function BeneficiariesDetailView({ beneficiary }) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {beneficiary.emergencyContact ? (
+            {participants.emergencyContact ? (
               <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
                 <div className="flex justify-between sm:block">
                   <dt className="text-sm font-medium text-muted-foreground">
                     Name:
                   </dt>
                   <dd className="text-sm font-medium">
-                    {beneficiary.emergencyContact.name}
+                    {participants.emergencyContact.name}
                   </dd>
                 </div>
                 <div className="flex justify-between sm:block">
@@ -164,7 +164,7 @@ export function BeneficiariesDetailView({ beneficiary }) {
                     Relationship:
                   </dt>
                   <dd className="text-sm font-medium">
-                    {beneficiary.emergencyContact.relationship}
+                    {participants.emergencyContact.relationship}
                   </dd>
                 </div>
                 <div className="flex justify-between sm:block">
@@ -172,7 +172,7 @@ export function BeneficiariesDetailView({ beneficiary }) {
                     Contact Number:
                   </dt>
                   <dd className="text-sm font-medium">
-                    {beneficiary.emergencyContact.contactNumber}
+                    {participants.emergencyContact.contactNumber}
                   </dd>
                 </div>
               </dl>
@@ -199,7 +199,7 @@ export function BeneficiariesDetailView({ beneficiary }) {
                   Number of Family Members:
                 </dt>
                 <dd className="text-sm font-medium">
-                  {beneficiary.familyMembers}
+                  {participants.familyMembers}
                 </dd>
               </div>
             </dl>
@@ -207,7 +207,7 @@ export function BeneficiariesDetailView({ beneficiary }) {
               <p className="text-sm text-muted-foreground">
                 Family member details would be displayed here. This would
                 include names, ages, relationships, and other relevant
-                information about the beneficiary's family members.
+                information about the participant's family members.
               </p>
             </div>
           </CardContent>
@@ -222,8 +222,8 @@ export function BeneficiariesDetailView({ beneficiary }) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {beneficiary.assistanceHistory &&
-            beneficiary.assistanceHistory.length > 0 ? (
+            {participants.assistanceHistory &&
+            participants.assistanceHistory.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -235,7 +235,7 @@ export function BeneficiariesDetailView({ beneficiary }) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {beneficiary.assistanceHistory.map((assistance, index) => (
+                  {participants.assistanceHistory.map((assistance, index) => (
                     <TableRow key={index}>
                       <TableCell>{assistance.date}</TableCell>
                       <TableCell>{assistance.type}</TableCell>
@@ -253,14 +253,14 @@ export function BeneficiariesDetailView({ beneficiary }) {
                       Total
                     </TableCell>
                     <TableCell className="text-right font-medium">
-                      {beneficiary.assistanceHistory.reduce(
+                      {participants.assistanceHistory.reduce(
                         (total, item) => total + item.quantity,
                         0
                       )}
                     </TableCell>
                     <TableCell className="text-right font-medium">
                       ₱
-                      {beneficiary.assistanceHistory
+                      {participants.assistanceHistory
                         .reduce((total, item) => total + item.value, 0)
                         .toLocaleString()}
                     </TableCell>
@@ -301,7 +301,7 @@ export function BeneficiariesDetailView({ beneficiary }) {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {beneficiary.documents && beneficiary.documents.length > 0 ? (
+            {participants.documents && participants.documents.length > 0 ? (
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -312,7 +312,7 @@ export function BeneficiariesDetailView({ beneficiary }) {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {beneficiary.documents.map((document, index) => (
+                  {participants.documents.map((document, index) => (
                     <TableRow key={index}>
                       <TableCell>{document.name}</TableCell>
                       <TableCell>{document.dateSubmitted}</TableCell>
@@ -344,7 +344,7 @@ export function BeneficiariesDetailView({ beneficiary }) {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground">
-              Upload additional documents for this beneficiary using the button
+              Upload additional documents for this participants using the button
               below.
             </p>
             <Button className="mt-4" size="sm">

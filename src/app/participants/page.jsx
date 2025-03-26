@@ -51,7 +51,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { ParticipntsDetailView } from "./participants-detail-view";
+import { ParticipantsDetailView } from "./participants-detail-view";
 import { auth, db } from "@/service/firebase";
 import { doc, getDoc } from "firebase/firestore";
 
@@ -137,7 +137,7 @@ export default function ParticipantsPage() {
   ];
 
   // Filter participants based on search query
-  const filteredParticipants = participantData.filter((participants) => {
+  const filteredParticipants = participantsData.filter((participants) => {
     return (
       searchQuery === "" ||
       participants.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
