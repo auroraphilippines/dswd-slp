@@ -1,13 +1,7 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Helper function to check if user owns the vendor
-    function isVendorOwner(vendorId) {
-      return request.auth != null && 
-        get(/databases/$(database)/documents/vendors/$(vendorId)).data.userId == request.auth.uid;
-    }
-
-    // User collection rules
+    // Allow access to authenticated users
     match /users/{userId} {
       allow read: if request.auth != null;
       allow create: if request.auth != null && request.auth.uid == userId;
@@ -15,37 +9,36 @@ service cloud.firestore {
       allow delete: if false;
     }
 
-    // Vendors collection rules
+    // Vendors collection - full access for authenticated users
     match /vendors/{vendorId} {
-      // Allow read operations if authenticated
-      allow read: if request.auth != null;
+      // Allow all operations for any authenticated user
+      allow read, write, create, update, delete: if request.auth != null;
       
-      // Allow delete if user owns the vendor
-      allow delete: if request.auth != null && 
-        resource.data.userId == request.auth.uid;
-      
-      // Allow create if user is setting themselves as owner
-      allow create: if request.auth != null && 
-        request.resource.data.userId == request.auth.uid;
-      
-      // Allow update if user owns the vendor and isn't changing ownership
-      allow update: if request.auth != null && 
-        resource.data.userId == request.auth.uid;
-
-      // Manpower subcollection
-      match /manpower/{docId} {
-        allow read: if request.auth != null;
-        allow write, delete: if isVendorOwner(vendorId);
-      }
-
-      // Tools subcollection
-      match /tools/{docId} {
-        allow read: if request.auth != null;
-        allow write, delete: if isVendorOwner(vendorId);
+      // Allow access to all subcollections under vendors
+      match /{document=**} {
+        allow read, write, delete: if request.auth != null;
       }
     }
 
-    // Default rule - deny all other access
+    // Programs collection
+    match /programs/{programId} {
+      allow read, write, create, update, delete: if request.auth != null;
+      
+      match /{document=**} {
+        allow read, write, delete: if request.auth != null;
+      }
+    }
+
+    // Beneficiaries collection
+    match /beneficiaries/{beneficiaryId} {
+      allow read, write, create, update, delete: if request.auth != null;
+      
+      match /{document=**} {
+        allow read, write, delete: if request.auth != null;
+      }
+    }
+
+    // Default deny
     match /{document=**} {
       allow read, write: if false;
     }

@@ -46,7 +46,7 @@ export const registerUser = async (name, email, password) => {
                     uid: user.uid,
                     name,
                     email,
-                    role: "user",
+                    role: "SLP Member",
                     status: "active",
                     createdAt: serverTimestamp(),
                     updatedAt: serverTimestamp()
@@ -76,7 +76,7 @@ export const registerUser = async (name, email, password) => {
                 uid: user.uid,
                 email: user.email,
                 name,
-                role: "user",
+                role: "SLP Member",
                 status: "active"
             }
         };

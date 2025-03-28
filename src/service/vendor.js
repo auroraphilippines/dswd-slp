@@ -12,7 +12,8 @@ import {
     collectionGroup,
     deleteDoc,
     updateDoc,
-    getDoc
+    getDoc,
+    orderBy
 } from "firebase/firestore";
 
 // Helper function to generate a unique vendor ID
@@ -30,40 +31,29 @@ const fetchSubcollectionData = async (vendorId, subcollectionName) => {
     }));
 };
 
-export const subscribeToVendors = (userId, callback) => {
-    const vendorsRef = collection(db, "vendors");
-    const q = query(vendorsRef, where("userId", "==", userId));
+export const subscribeToVendors = (callback) => {
+    try {
+        // Create a query to get all vendors
+        const vendorsRef = collection(db, 'vendors');
+        // Optional: Add orderBy if you want to sort at database level
+        const vendorsQuery = query(vendorsRef, orderBy('createdAt', 'desc'));
 
-    return onSnapshot(q, async (snapshot) => {
-        try {
-            const vendorsData = [];
-            
-            // Fetch all vendors and their subcollections
-            for (const doc of snapshot.docs) {
-                const vendorData = {
-                    id: doc.id,
-                    ...doc.data()
-                };
+        // Set up real-time listener
+        const unsubscribe = onSnapshot(vendorsQuery, (snapshot) => {
+            const vendors = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+            }));
+            callback(vendors);
+        }, (error) => {
+            console.error("Error fetching vendors:", error);
+        });
 
-                // Fetch manpower data
-                const workers = await fetchSubcollectionData(doc.id, "manpower");
-                
-                // Fetch tools and equipment data
-                const toolsAndEquipment = await fetchSubcollectionData(doc.id, "tools");
-
-                vendorsData.push({
-                    ...vendorData,
-                    workers,
-                    toolsAndEquipment
-                });
-            }
-
-            callback(vendorsData);
-        } catch (error) {
-            console.error("Error fetching vendor data:", error);
-            callback([]);
-        }
-    });
+        return unsubscribe;
+    } catch (error) {
+        console.error("Error setting up vendors subscription:", error);
+        return () => {};
+    }
 };
 
 export const saveVendorDetails = async (vendorData, userId) => {
@@ -236,83 +226,31 @@ export const fetchVendors = async (userId) => {
     }
 };
 
-export const deleteVendor = async (vendorId, userId) => {
+export const deleteVendor = async (vendorId) => {
     try {
-        const vendorRef = doc(db, "vendors", vendorId);
-        
-        // First verify this vendor belongs to the user
-        const vendorDoc = await getDoc(vendorRef);
-        if (!vendorDoc.exists()) {
-            throw new Error("Vendor not found");
-        }
-        if (vendorDoc.data().userId !== userId) {
-            throw new Error("Unauthorized to delete this vendor");
-        }
-
-        // Delete all manpower documents in the subcollection
-        const manpowerRef = collection(db, "vendors", vendorId, "manpower");
-        const manpowerDocs = await getDocs(manpowerRef);
-        const manpowerDeletes = manpowerDocs.docs.map(doc => 
-            deleteDoc(doc.ref).catch(error => {
-                console.error(`Error deleting manpower doc ${doc.id}:`, error);
-                return null;
-            })
-        );
-
-        // Delete all tools documents in the subcollection
-        const toolsRef = collection(db, "vendors", vendorId, "tools");
-        const toolsDocs = await getDocs(toolsRef);
-        const toolsDeletes = toolsDocs.docs.map(doc => 
-            deleteDoc(doc.ref).catch(error => {
-                console.error(`Error deleting tool doc ${doc.id}:`, error);
-                return null;
-            })
-        );
-
-        // Wait for all subcollection deletions to complete
-        await Promise.all([...manpowerDeletes, ...toolsDeletes]);
-
-        // Finally, delete the vendor document
+        const vendorRef = doc(db, 'vendors', vendorId);
         await deleteDoc(vendorRef);
-
-        return {
-            success: true,
-            message: "Vendor deleted successfully"
-        };
+        return { success: true };
     } catch (error) {
         console.error("Error deleting vendor:", error);
-        return {
-            success: false,
-            error: error.message || "Failed to delete vendor"
-        };
+        return { success: false, error: error.message };
     }
 };
 
 export const updateVendorDetails = async (vendorId, updatedData, userId) => {
     try {
-        const vendorRef = doc(db, "vendors", vendorId);
+        const vendorRef = doc(db, 'vendors', vendorId);
         
-        // First verify this vendor belongs to the user
-        const vendorDoc = await getDoc(vendorRef);
-        if (!vendorDoc.exists() || vendorDoc.data().userId !== userId) {
-            throw new Error("Unauthorized to update this vendor");
-        }
-
+        // Remove the ownership check since we want any authenticated user to update
         await updateDoc(vendorRef, {
             ...updatedData,
-            userId,
             updatedAt: serverTimestamp(),
+            lastUpdatedBy: userId // Optional: keep track of who made the last update
         });
 
-        return {
-            success: true,
-            message: "Vendor updated successfully"
-        };
+        return { success: true };
     } catch (error) {
         console.error("Error updating vendor:", error);
-        return {
-            success: false,
-            error: error.message || "Failed to update vendor"
-        };
+        return { success: false, error: error.message };
     }
 }; 

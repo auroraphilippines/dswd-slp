@@ -97,12 +97,19 @@ export default function VendorsPage() {
         }
 
         setCurrentUser(user);
-        unsubscribe = subscribeToVendors(user.uid, (fetchedVendors) => {
-          setVendors(fetchedVendors);
+        
+        // Subscribe to all vendors collection without user filtering
+        unsubscribe = subscribeToVendors((fetchedVendors) => {
+          // Sort vendors by createdAt date in descending order (newest first)
+          const sortedVendors = fetchedVendors.sort((a, b) => 
+            b.createdAt?.toDate() - a.createdAt?.toDate()
+          );
+          setVendors(sortedVendors);
           setLoading(false);
         });
       } catch (error) {
         console.error("Error setting up vendors subscription:", error);
+        toast.error("Failed to load vendors");
         setLoading(false);
       }
     };
@@ -542,6 +549,7 @@ export default function VendorsPage() {
         toast.error(result.error || "Failed to update vendor");
       }
     } catch (error) {
+      console.error("Error updating vendor:", error);
       toast.error("An error occurred while updating the vendor");
     } finally {
       setIsSubmitting(false);
@@ -561,7 +569,7 @@ export default function VendorsPage() {
 
     setIsSubmitting(true);
     try {
-      const result = await deleteVendor(vendorToDelete.id, currentUser.uid);
+      const result = await deleteVendor(vendorToDelete.id);
 
       if (result.success) {
         toast.success("Vendor deleted successfully!");
@@ -574,6 +582,7 @@ export default function VendorsPage() {
         toast.error(result.error || "Failed to delete vendor");
       }
     } catch (error) {
+      console.error("Error deleting vendor:", error);
       toast.error("An error occurred while deleting the vendor");
     } finally {
       setIsSubmitting(false);

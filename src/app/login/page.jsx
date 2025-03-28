@@ -45,7 +45,7 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const result = await registerUser(name, email, password);
+      const result = await registerUser(name, email, password, "SLP Member");
       if (result.success) {
         toast.success("Account created successfully!");
         router.push("/dashboard");
