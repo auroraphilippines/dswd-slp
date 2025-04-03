@@ -137,7 +137,7 @@ export default function ProgramsPage() {
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Vendors", href: "/vendors", icon: Store },
-    { name: "Beneficiaries", href: "/beneficiaries", icon: Users },
+    { name: "Participants", href: "/participants", icon: Users },
     { name: "Programs", href: "/programs", icon: Building2 },
     { name: "Reports", href: "./reports", icon: FileBarChart },
     { name: "Analytics", href: "./analytics", icon: FileBarChart },
@@ -421,7 +421,7 @@ export default function ProgramsPage() {
                   <Card>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium">
-                        Total Beneficiaries
+                        Total Participants
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
@@ -472,7 +472,7 @@ export default function ProgramsPage() {
                               <TableHead className="w-[80px]">ID</TableHead>
                               <TableHead>Program Name</TableHead>
                               <TableHead>Category</TableHead>
-                              <TableHead>Beneficiaries</TableHead>
+                              <TableHead>Participants</TableHead>
                               <TableHead>Status</TableHead>
                               <TableHead className="text-right">
                                 Actions
@@ -559,7 +559,7 @@ export default function ProgramsPage() {
                                         <DropdownMenuItem
                                           onClick={(e) => e.stopPropagation()}
                                         >
-                                          Manage Beneficiaries
+                                          Manage Participants
                                         </DropdownMenuItem>
                                         <DropdownMenuSeparator />
                                         <DropdownMenuItem

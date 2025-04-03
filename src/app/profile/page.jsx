@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import LoadingPage from "../loading/page";
@@ -42,14 +42,32 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Separator } from "@/components/ui/separator";
-import { auth, db } from "@/service/firebase";
+import { auth, db, storage } from "@/service/firebase";
 import { doc, getDoc } from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { updateDoc } from "firebase/firestore";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { toast } from "react-toastify";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { uploadProfilePhoto } from "@/service/storage";
 
 export default function ProfilePage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const pathname = usePathname();
+  const [profileUrl, setProfileUrl] = useState(null);
+  const [showContactDialog, setShowContactDialog] = useState(false);
+  const [updatingContact, setUpdatingContact] = useState(false);
+  const [newPhoneNumber, setNewPhoneNumber] = useState("");
+  const fileInputRef = useRef(null);
 
   // Close mobile menu when path changes
   useEffect(() => {
@@ -78,6 +96,11 @@ export default function ProfilePage() {
               joinDate: userData.joinDate || "January 2023",
               department: userData.department || "Administration",
             });
+
+            // Add photo URL
+            if (userData.photoURL) {
+              setProfileUrl(userData.photoURL);
+            }
           }
         }
         setLoading(false);
@@ -115,6 +138,72 @@ export default function ProfilePage() {
     { name: "Analytics", href: "./analytics", icon: FileBarChart },
     { name: "Settings", href: "./settings", icon: Settings },
   ];
+
+  // Handle profile photo upload
+  const handlePhotoUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file || !currentUser?.uid) {
+      toast.error("Please select a file and ensure you're logged in");
+      return;
+    }
+
+    try {
+      // Show loading toast
+      toast.loading("Uploading photo...", { id: "photoUpload" });
+
+      // Upload photo and get URL
+      const photoURL = await uploadProfilePhoto(file, currentUser.uid);
+      console.log("Photo uploaded successfully, URL:", photoURL);
+
+      // Update user document in Firestore
+      const userRef = doc(db, "users", currentUser.uid);
+      await updateDoc(userRef, {
+        photoURL: photoURL,
+        lastUpdated: new Date().toISOString()
+      });
+
+      // Update local state
+      setProfileUrl(photoURL);
+      setCurrentUser(prev => ({
+        ...prev,
+        photoURL: photoURL
+      }));
+
+      // Show success message
+      toast.success("Profile photo updated successfully!", { id: "photoUpload" });
+    } catch (error) {
+      console.error("Error uploading photo:", error);
+      toast.error("Failed to upload photo: " + error.message, { id: "photoUpload" });
+    }
+  };
+
+  // Handle contact info update
+  const handleContactUpdate = async () => {
+    if (!newPhoneNumber) {
+      toast.error("Please enter a phone number");
+      return;
+    }
+
+    setUpdatingContact(true);
+    try {
+      const userRef = doc(db, "users", currentUser.uid);
+      await updateDoc(userRef, {
+        phoneNumber: newPhoneNumber
+      });
+
+      setCurrentUser(prev => ({
+        ...prev,
+        phoneNumber: newPhoneNumber
+      }));
+      setShowContactDialog(false);
+      toast.success("Contact information updated successfully!");
+    } catch (error) {
+      console.error("Error updating contact:", error);
+      toast.error("Failed to update contact information");
+    } finally {
+      setUpdatingContact(false);
+    }
+  };
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -372,8 +461,13 @@ export default function ProfilePage() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="flex items-center space-x-4">
-                        <div className="h-20 w-20 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-2xl font-bold">
-                          {getUserInitials(currentUser?.name)}
+                        <div className="relative">
+                          <Avatar className="h-20 w-20">
+                            <AvatarImage src={profileUrl} />
+                            <AvatarFallback className="bg-primary text-primary-foreground text-2xl font-bold">
+                              {getUserInitials(currentUser?.name)}
+                            </AvatarFallback>
+                          </Avatar>
                         </div>
                         <div>
                           <h3 className="text-lg font-medium">
@@ -462,7 +556,11 @@ export default function ProfilePage() {
                           <Button variant="outline" className="w-full">
                             Change Password
                           </Button>
-                          <Button variant="outline" className="w-full">
+                          <Button 
+                            variant="outline" 
+                            className="w-full"
+                            onClick={() => setShowContactDialog(true)}
+                          >
                             Update Contact Info
                           </Button>
                           <Button variant="outline" className="w-full">
@@ -478,6 +576,46 @@ export default function ProfilePage() {
           </div>
         </main>
       </div>
+
+      {/* Contact Update Dialog */}
+      <Dialog open={showContactDialog} onOpenChange={setShowContactDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Contact Information</DialogTitle>
+            <DialogDescription>
+              Enter your new contact number below.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="phone" className="text-right">
+                Phone
+              </label>
+              <Input
+                id="phone"
+                value={newPhoneNumber}
+                onChange={(e) => setNewPhoneNumber(e.target.value)}
+                placeholder="+63 XXX XXX XXXX"
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowContactDialog(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleContactUpdate}
+              disabled={updatingContact}
+            >
+              {updatingContact ? "Updating..." : "Update"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -108,7 +108,7 @@ export default function ReportsPage() {
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Vendors", href: "/vendors", icon: Store },
-    { name: "Beneficiaries", href: "/beneficiaries", icon: Users },
+    { name: "Participants", href: "/participants", icon: Users },
     { name: "Programs", href: "/programs", icon: Building2 },
     { name: "Reports", href: "./reports", icon: FileBarChart },
     { name: "Analytics", href: "./analytics", icon: FileBarChart },

@@ -112,7 +112,7 @@ export default function DashboardPage() {
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Vendors", href: "/vendors", icon: Store },
-    { name: "Beneficiaries", href: "/beneficiaries", icon: Users },
+    { name: "Participants", href: "/participants", icon: Users },
     { name: "Programs", href: "/programs", icon: Building2 },
     { name: "Reports", href: "/reports", icon: FileBarChart },
     { name: "Analytics", href: "/analytics", icon: TrendingUp },
@@ -584,20 +584,20 @@ export default function DashboardPage() {
                     <Card className="border shadow-sm">
                       <CardHeader className="pb-2">
                         <CardTitle className="text-sm font-medium">
-                          Beneficiary Registration
+                          Participant Registration
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
                         <p className="text-sm text-muted-foreground mb-3">
-                          Register new beneficiaries for the social welfare
+                          Register new participants for the social welfare
                           programs.
                         </p>
-                        <Link href="/beneficiaries/register">
+                        <Link href="/participants/register">
                           <Button
                             variant="secondary"
                             className="w-full rounded-lg"
                           >
-                            Register Beneficiary
+                            Register Participant
                           </Button>
                         </Link>
                       </CardContent>
