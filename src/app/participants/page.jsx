@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import LoadingPage from "../loading/page";
-import {
+import { 
   LayoutDashboard,
   FileBarChart,
   Settings,
@@ -27,6 +27,7 @@ import {
   Trash2,
   Power,
   Eye,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,13 +71,68 @@ export default function ParticipantsPage() {
   const [loading, setLoading] = useState(true);
   const [selectedParticipant, setSelectedParticipant] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const pathname = usePathname();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [participants, setParticipants] = useState([]);
+  const [familyDetails, setFamilyDetails] = useState([]);
+  const [combinedResults, setCombinedResults] = useState([]);
   const [editingParticipant, setEditingParticipant] = useState(null);
   const [isAssistanceModalOpen, setIsAssistanceModalOpen] = useState(false);
   const [selectedParticipantId, setSelectedParticipantId] = useState(null);
+
+  const pathname = usePathname();
   const router = useRouter();
+
+  // Move useMemo before any other logic
+  const filteredParticipants = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return [...participants, ...familyDetails];
+    }
+    
+    const query = searchQuery.toLowerCase().trim();
+    
+    // Search in participants
+    const matchedParticipants = participants.filter((participant) => {
+      const fieldsToSearch = [
+        participant.name,
+        participant.id,
+        participant.address,
+        participant.project,
+        // Add family members search if they exist
+        ...(participant.familyMembers?.map(member => 
+          `${member.name} ${member.relationship} ${member.occupation}`
+        ) || [])
+      ];
+
+      return fieldsToSearch
+        .filter(Boolean)
+        .map(field => field.toLowerCase())
+        .some(field => field.includes(query));
+    });
+
+    // Search in family details
+    const matchedFamilies = familyDetails.filter((family) => {
+      const fieldsToSearch = [
+        family.familyName,
+        family.familyId,
+        family.householdHead,
+        family.familyAddress,
+        family.barangay,
+        family.municipality,
+        // Add family members if they exist
+        ...(family.members?.map(member => 
+          `${member.name} ${member.relationship} ${member.occupation}`
+        ) || [])
+      ];
+
+      return fieldsToSearch
+        .filter(Boolean)
+        .map(field => field.toLowerCase())
+        .some(field => field.includes(query));
+    });
+
+    // Combine and return both results
+    return [...matchedParticipants, ...matchedFamilies];
+  }, [searchQuery, participants, familyDetails]);
 
   // Close mobile menu when path changes
   useEffect(() => {
@@ -114,28 +170,89 @@ export default function ParticipantsPage() {
   }, []);
 
   useEffect(() => {
-    const fetchParticipants = async () => {
+    const fetchData = async () => {
       try {
-        const participantsRef = collection(db, "participants");
-        const q = query(participantsRef, orderBy("createdAt", "desc"));
-        const querySnapshot = await getDocs(q);
+        setLoading(true);
         
-        const participantsData = querySnapshot.docs.map(doc => ({
-          ...doc.data(),
-          docId: doc.id,
-          dateRegistered: doc.data().dateRegistered?.toDate().toLocaleDateString() || new Date().toLocaleDateString()
-        }));
+        // Wait for auth state to be determined
+        const user = auth.currentUser;
+        if (!user) {
+          console.error("No authenticated user found");
+          toast.error("Please sign in to access this page");
+          router.push('/'); // Redirect to login page
+          return;
+        }
+
+        let fetchedParticipantsData = [];
+        let fetchedFamilyData = [];
+
+        // Fetch participants with error handling
+        try {
+          const participantsRef = collection(db, "participants");
+          const q = query(participantsRef, orderBy("createdAt", "desc"));
+          const participantsSnapshot = await getDocs(q);
+          
+          fetchedParticipantsData = participantsSnapshot.docs.map(doc => ({
+            ...doc.data(),
+            docId: doc.id,
+            dateRegistered: doc.data().dateRegistered?.toDate().toLocaleDateString() || new Date().toLocaleDateString(),
+            type: 'participant'
+          }));
+          
+          setParticipants(fetchedParticipantsData);
+        } catch (participantsError) {
+          console.error("Error fetching participants:", participantsError);
+          toast.error("Error loading participants data");
+        }
         
-        setParticipants(participantsData);
+        // Fetch family details with separate error handling
+        try {
+          const familyDetailsRef = collection(db, "familydetails");
+          const familyQuery = query(familyDetailsRef, orderBy("createdAt", "desc"));
+          const familySnapshot = await getDocs(familyQuery);
+          
+          fetchedFamilyData = familySnapshot.docs.map(doc => ({
+            ...doc.data(),
+            docId: doc.id,
+            dateRegistered: doc.data().dateRegistered?.toDate().toLocaleDateString() || new Date().toLocaleDateString(),
+            type: 'family'
+          }));
+          
+          setFamilyDetails(fetchedFamilyData);
+        } catch (familyError) {
+          console.error("Error fetching family details:", familyError);
+          toast.error("Error loading family details");
+        }
+
+        // Update combined results with both sets of data
+        setCombinedResults([...fetchedParticipantsData, ...fetchedFamilyData]);
+
       } catch (error) {
-        console.error("Error fetching participants:", error);
+        console.error("Error in fetchData:", error);
+        toast.error("Error loading data");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchParticipants();
-  }, []);
+    // Only fetch data if we have a current user
+    if (auth.currentUser) {
+      fetchData();
+    } else {
+      // Listen for auth state changes
+      const unsubscribe = auth.onAuthStateChanged((user) => {
+        if (user) {
+          fetchData();
+        } else {
+          console.log("No authenticated user");
+          router.push('/');
+        }
+      });
+
+      // Cleanup subscription
+      return () => unsubscribe();
+    }
+  }, [router]);
 
   // Get user initials from name
   const getUserInitials = (name) => {
@@ -266,16 +383,111 @@ export default function ParticipantsPage() {
     { name: "Settings", href: "./settings", icon: Settings },
   ];
 
-  // Update the filteredParticipants to use the participants state
-  const filteredParticipants = participants.filter((participant) => {
+  // Update the table to handle both types of results
+  const renderTableRow = (item) => {
+    const isFamily = item.type === 'family';
     return (
-      searchQuery === "" ||
-      participant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      participant.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      participant.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (participant.project && participant.project.toLowerCase().includes(searchQuery.toLowerCase()))
+      <TableRow
+        key={item.docId}
+        className={`cursor-pointer transition-colors hover:bg-[#96B54A]/5 ${
+          selectedParticipant?.docId === item.docId ? "bg-[#96B54A]/10" : ""
+        }`}
+        onClick={() => handleViewDetails(item)}
+      >
+        <TableCell className="font-medium text-black">
+          {isFamily ? item.familyId : item.id}
+        </TableCell>
+        <TableCell>
+          <div className="flex items-center space-x-2">
+            <div className="h-10 w-10 rounded-full bg-[#96B54A]/10 flex items-center justify-center">
+              {isFamily ? <Users className="h-5 w-5 text-[#496E22]" /> : <User className="h-5 w-5 text-[#496E22]" />}
+            </div>
+            <div className="font-medium text-black">
+              {isFamily ? (item.familyName || item.householdHead) : item.name}
+            </div>
+          </div>
+        </TableCell>
+        <TableCell className="text-black/90">
+          {isFamily ? item.familyAddress : item.address}
+        </TableCell>
+        <TableCell className="text-black/90">
+          {isFamily ? 'Family' : item.project}
+        </TableCell>
+        <TableCell>
+          <ParticipantStatusBadge status={item.status || 'Active'} />
+        </TableCell>
+        <TableCell className="text-right">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+              <Button variant="ghost" size="icon" className="text-[#496E22] hover:text-[#96B54A] hover:bg-[#96B54A]/10">
+                <MoreHorizontal className="h-4 w-4" />
+                <span className="sr-only">Open menu</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-white/95 backdrop-blur-sm border-[#96B54A]/20">
+              <DropdownMenuLabel className="text-[#496E22]">Actions</DropdownMenuLabel>
+              <DropdownMenuItem
+                className="text-[#496E22] focus:text-[#496E22] focus:bg-[#96B54A]/10"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleViewDetails(item);
+                }}
+              >
+                <Eye className="mr-2 h-4 w-4" />
+                View Details
+              </DropdownMenuItem>
+              {!isFamily && (
+                <>
+                  <DropdownMenuItem
+                    className="text-[#496E22] focus:text-[#496E22] focus:bg-[#96B54A]/10"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingParticipant(item);
+                    }}
+                  >
+                    <Edit className="mr-2 h-4 w-4" />
+                    Edit Participant
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-[#496E22] focus:text-[#496E22] focus:bg-[#96B54A]/10"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedParticipantId(item.docId);
+                      setIsAssistanceModalOpen(true);
+                    }}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Program
+                  </DropdownMenuItem>
+                </>
+              )}
+              <DropdownMenuSeparator className="bg-[#96B54A]/10" />
+              <DropdownMenuItem
+                className="text-red-500 focus:text-red-500 focus:bg-red-50 flex items-center"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleStatusChange(item);
+                }}
+              >
+                <Power className="mr-2 h-4 w-4" />
+                {item.status === "Active" ? "Deactivate" : "Activate"} {isFamily ? 'Family' : 'Participant'}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="text-red-500 focus:text-red-500 focus:bg-red-50 flex items-center"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDeleteParticipant(item);
+                }}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete {isFamily ? 'Family' : 'Participant'}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </TableCell>
+      </TableRow>
     );
-  });
+  };
 
   return (
     <>
@@ -325,7 +537,7 @@ export default function ParticipantsPage() {
                         className={`${
                           isActive
                             ? "text-primary"
-                            : "text-muted-foreground group-hover:text-foreground"
+                            : "text-muted-foreground group-hover:text-foreground" 
                         } mr-3 flex-shrink-0 h-5 w-5`}
                         aria-hidden="true"
                       />
@@ -586,95 +798,24 @@ export default function ParticipantsPage() {
                               </TableRow>
                             </TableHeader>
                             <TableBody>
-                              {filteredParticipants.map((participant) => (
-                                <TableRow
-                                  key={participant.id}
-                                  className={`cursor-pointer transition-colors hover:bg-[#96B54A]/5 ${
-                                    selectedParticipant?.id === participant.id ? "bg-[#96B54A]/10" : ""
-                                  }`}
-                                  onClick={() => handleViewDetails(participant)}
-                                >
-                                  <TableCell className="font-medium text-black">{participant.id}</TableCell>
-                                  <TableCell>
-                                    <div className="flex items-center space-x-2">
-                                      <div className="h-10 w-10 rounded-full bg-[#96B54A]/10 flex items-center justify-center">
-                                        <Users className="h-5 w-5 text-[#496E22]" />
-                                      </div>
-                                      <div className="font-medium text-black">{participant.name}</div>
+                              {loading ? (
+                                <TableRow>
+                                  <TableCell colSpan={6} className="h-24 text-center">
+                                    <div className="flex items-center justify-center">
+                                      <Loader2 className="h-6 w-6 animate-spin text-[#496E22]" />
+                                      <span className="ml-2">Loading...</span>
                                     </div>
                                   </TableCell>
-                                  <TableCell className="text-black/90">{participant.address}</TableCell>
-                                  <TableCell className="text-black/90">{participant.project}</TableCell>
-                                  <TableCell>
-                                    <ParticipantStatusBadge status={participant.status} />
-                                  </TableCell>
-                                  <TableCell className="text-right">
-                                    <DropdownMenu>
-                                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                        <Button variant="ghost" size="icon" className="text-[#496E22] hover:text-[#96B54A] hover:bg-[#96B54A]/10">
-                                          <MoreHorizontal className="h-4 w-4" />
-                                          <span className="sr-only">Open menu</span>
-                                        </Button>
-                                      </DropdownMenuTrigger>
-                                      <DropdownMenuContent align="end" className="bg-white/95 backdrop-blur-sm border-[#96B54A]/20">
-                                        <DropdownMenuLabel className="text-[#496E22]">Actions</DropdownMenuLabel>
-                                        <DropdownMenuItem
-                                          className="text-[#496E22] focus:text-[#496E22] focus:bg-[#96B54A]/10"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleViewDetails(participant);
-                                          }}
-                                        >
-                                          <Eye className="mr-2 h-4 w-4" />
-                                          View Details
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem
-                                          className="text-[#496E22] focus:text-[#496E22] focus:bg-[#96B54A]/10"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setEditingParticipant(participant);
-                                          }}
-                                        >
-                                          <Edit className="mr-2 h-4 w-4" />
-                                          Edit Participant
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem
-                                          className="text-[#496E22] focus:text-[#496E22] focus:bg-[#96B54A]/10"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setSelectedParticipantId(participant.docId);
-                                            setIsAssistanceModalOpen(true);
-                                          }}
-                                        >
-                                          <Plus className="mr-2 h-4 w-4" />
-                                          Add Program
-                                        </DropdownMenuItem>
-                                        <DropdownMenuSeparator className="bg-[#96B54A]/10" />
-                                        <DropdownMenuItem
-                                          className="text-red-500 focus:text-red-500 focus:bg-red-50 flex items-center"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleStatusChange(participant);
-                                          }}
-                                        >
-                                          <Power className="mr-2 h-4 w-4" />
-                                          {participant.status === "Active" ? "Deactivate" : "Activate"} Participant
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem
-                                          className="text-red-500 focus:text-red-500 focus:bg-red-50 flex items-center"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleDeleteParticipant(participant);
-                                          }}
-                                        >
-                                          <Trash2 className="mr-2 h-4 w-4" />
-                                          Delete Participant
-                                        </DropdownMenuItem>
-                                      </DropdownMenuContent>
-                                    </DropdownMenu>
+                                </TableRow>
+                              ) : filteredParticipants.length === 0 ? (
+                                <TableRow>
+                                  <TableCell colSpan={6} className="h-24 text-center">
+                                    No {searchQuery ? "matching" : ""} participants found.
                                   </TableCell>
                                 </TableRow>
-                              ))}
+                              ) : (
+                                filteredParticipants.map(renderTableRow)
+                              )}
                             </TableBody>
                           </Table>
                         </div>
