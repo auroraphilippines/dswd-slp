@@ -25,7 +25,7 @@ export function EditParticipantModal({ isOpen, onClose, onSubmit, participant })
     name: "",
     gender: "",
     age: "",
-    program: "",
+    project: "",
     contactNumber: "",
     address: "",
     barangay: "",
@@ -45,7 +45,7 @@ export function EditParticipantModal({ isOpen, onClose, onSubmit, participant })
         name: participant.name || "",
         gender: participant.gender || "",
         age: participant.age || "",
-        program: participant.program || "",
+        project: participant.project || "",
         contactNumber: participant.contactNumber || "",
         address: participant.address || "",
         barangay: participant.barangay || "",
@@ -144,16 +144,16 @@ export function EditParticipantModal({ isOpen, onClose, onSubmit, participant })
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="program">Program</Label>
+              <Label htmlFor="project">Project</Label>
               <Select
-                name="program"
-                value={formData.program}
+                name="project"
+                value={formData.project}
                 onValueChange={(value) =>
-                  handleChange({ target: { name: "program", value } })
+                  handleChange({ target: { name: "project", value } })
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select program" />
+                  <SelectValue placeholder="Select project" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Disaster Relief Program">

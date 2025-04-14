@@ -217,7 +217,7 @@ export default function VendorsPage() {
 
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Vendors", href: "/vendors", icon: Store },
+    { name: "Projects", href: "/vendors", icon: Building2 },
     { name: "Participants", href: "/participants", icon: Users },
     { name: "Programs", href: "/programs", icon: Building2 },
     { name: "Reports", href: "./reports", icon: FileBarChart },
@@ -1058,10 +1058,10 @@ export default function VendorsPage() {
                 </div>
 
                 {/* Program Distribution Chart */}
-                <Card className="mb-6">
+                <Card className="mb-6 bg-gradient-to-br from-[#1E3B0C] to-[#2C4A1B] border-0">
                   <CardHeader className="pb-2">
-                    <CardTitle className="text-lg font-semibold">Program Distribution</CardTitle>
-                    <CardDescription>Distribution of vendors across different programs</CardDescription>
+                    <CardTitle className="text-lg font-semibold text-white">Program Distribution</CardTitle>
+                    <CardDescription className="text-white/70">Distribution of vendors across different programs</CardDescription>
                   </CardHeader>
                   <CardContent>
                     <div className="h-[300px] relative">
@@ -1075,7 +1075,7 @@ export default function VendorsPage() {
                               label: 'Vendors',
                               data: Object.values(analytics.programDistribution || {}),
                               backgroundColor: [
-                                'rgba(220, 233, 169, 0.8)', // lightest green
+                                'rgba(197, 212, 138, 0.8)', // lightest green
                                 'rgba(183, 204, 96, 0.8)',  // light green
                                 'rgba(150, 181, 74, 0.8)',  // medium green
                                 'rgba(121, 159, 58, 0.8)',  // green
@@ -1083,7 +1083,7 @@ export default function VendorsPage() {
                                 'rgba(73, 110, 34, 0.8)',   // darkest green
                               ],
                               borderColor: [
-                                'rgb(220, 233, 169)', // lightest green
+                                'rgb(197, 212, 138)', // lightest green
                                 'rgb(183, 204, 96)',  // light green
                                 'rgb(150, 181, 74)',  // medium green
                                 'rgb(121, 159, 58)',  // green
@@ -1097,7 +1097,7 @@ export default function VendorsPage() {
                               type: 'line',
                               label: 'Trend',
                               data: Object.values(analytics.programDistribution || {}),
-                              borderColor: 'rgba(121, 159, 58, 0.8)', // medium green
+                              borderColor: 'rgba(197, 212, 138, 0.8)', // light green
                               borderWidth: 2,
                               fill: true,
                               backgroundColor: (context) => {
@@ -1106,14 +1106,14 @@ export default function VendorsPage() {
                                 if (!chartArea) return null;
                                 
                                 const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-                                gradient.addColorStop(0, 'rgba(121, 159, 58, 0.4)');
-                                gradient.addColorStop(0.5, 'rgba(121, 159, 58, 0.1)');
-                                gradient.addColorStop(1, 'rgba(121, 159, 58, 0)');
+                                gradient.addColorStop(0, 'rgba(197, 212, 138, 0.4)');
+                                gradient.addColorStop(0.5, 'rgba(197, 212, 138, 0.1)');
+                                gradient.addColorStop(1, 'rgba(197, 212, 138, 0)');
                                 return gradient;
                               },
                               tension: 0.4,
-                              pointBackgroundColor: 'rgb(121, 159, 58)',
-                              pointBorderColor: '#fff',
+                              pointBackgroundColor: 'rgb(197, 212, 138)',
+                              pointBorderColor: '#2C4A1B',
                               pointBorderWidth: 2,
                               pointRadius: 4,
                             },
@@ -1137,7 +1137,7 @@ export default function VendorsPage() {
                               },
                               tension: 0.4,
                               pointBackgroundColor: 'rgb(183, 204, 96)',
-                              pointBorderColor: '#fff',
+                              pointBorderColor: '#2C4A1B',
                               pointBorderWidth: 2,
                               pointRadius: 4,
                             }
@@ -1153,7 +1153,10 @@ export default function VendorsPage() {
                                 color: 'rgba(255, 255, 255, 0.1)',
                               },
                               ticks: {
-                                color: 'rgba(255, 255, 255, 0.7)',
+                                color: 'rgba(255, 255, 255, 0.8)',
+                                font: {
+                                  weight: '500'
+                                }
                               }
                             },
                             x: {
@@ -1161,7 +1164,10 @@ export default function VendorsPage() {
                                 display: false
                               },
                               ticks: {
-                                color: 'rgba(255, 255, 255, 0.7)',
+                                color: 'rgba(255, 255, 255, 0.8)',
+                                font: {
+                                  weight: '500'
+                                }
                               }
                             }
                           },
@@ -1170,12 +1176,20 @@ export default function VendorsPage() {
                               display: true,
                               position: 'top',
                               labels: {
-                                color: 'rgba(255, 255, 255, 0.7)',
+                                color: 'rgba(255, 255, 255, 0.9)',
+                                font: {
+                                  weight: '500'
+                                }
                               }
                             },
                             tooltip: {
                               mode: 'index',
                               intersect: false,
+                              backgroundColor: 'rgba(46, 74, 27, 0.9)',
+                              titleColor: 'rgba(255, 255, 255, 1)',
+                              bodyColor: 'rgba(255, 255, 255, 0.8)',
+                              borderColor: 'rgba(197, 212, 138, 0.3)',
+                              borderWidth: 1,
                             },
                           },
                         }}

@@ -23,13 +23,33 @@ import {
   arrayUnion, 
   serverTimestamp 
 } from "firebase/firestore";
-import { ToastContainer, toast } from 'react-toastify';
+import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { ErrorBoundary } from 'react-error-boundary';
+
+// Add date formatting function
+const formatDate = (dateString) => {
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleString('en-PH', {
+      timeZone: 'Asia/Manila',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  } catch (error) {
+    console.error("Error formatting date:", error);
+    return dateString;
+  }
+};
 
 export function ParticipantDetailView({ participant, onEdit, onAddAssistance }) {
   const [familyMembers, setFamilyMembers] = useState(participant.familyMembers || []);
   const [isEditingFamily, setIsEditingFamily] = useState(false);
+  const [showFamilyForm, setShowFamilyForm] = useState(false);
   const [newFamilyMember, setNewFamilyMember] = useState({
     name: "",
     relationship: "",
@@ -37,40 +57,86 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance }) 
     occupation: ""
   });
   const [isLoading, setIsLoading] = useState(false);
+  const [members, setMembers] = useState(participant.members || []);
+  const [newMember, setNewMember] = useState({
+    name: "",
+    position: "",
+    contactNumber: "",
+    address: "",
+    status: "Active"
+  });
+  const [editingMember, setEditingMember] = useState(null);
+  const [showMemberForm, setShowMemberForm] = useState(false);
+  const [editingFamilyMember, setEditingFamilyMember] = useState(null);
 
   // Family member handlers
   const handleAddFamilyMember = async () => {
     if (!newFamilyMember.name || !newFamilyMember.relationship) {
-      toast.error("Name and relationship are required", {
-        position: "top-right",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-      });
+      toast.error("Name and relationship are required");
       return;
     }
 
     setIsLoading(true);
     try {
       const participantRef = doc(db, "participants", participant.docId);
-      const newMember = { ...newFamilyMember, id: Date.now() };
       
-      await updateDoc(participantRef, {
-        familyMembers: arrayUnion(newMember),
-        updatedAt: serverTimestamp()
-      });
+      if (editingFamilyMember) {
+        // Update existing member
+        const updatedMembers = familyMembers.map(member =>
+          member.id === editingFamilyMember.id 
+            ? { ...newFamilyMember, id: member.id }
+            : member
+        );
 
-      setFamilyMembers([...familyMembers, newMember]);
-      setNewFamilyMember({ name: "", relationship: "", age: "", occupation: "" });
-      toast.success("Family member added successfully");
+        await updateDoc(participantRef, {
+          familyMembers: updatedMembers,
+          updatedAt: serverTimestamp()
+        });
+
+        setFamilyMembers(updatedMembers);
+        toast.success("Family member updated successfully");
+      } else {
+        // Add new member
+        const newMember = { ...newFamilyMember, id: Date.now() };
+        
+        await updateDoc(participantRef, {
+          familyMembers: arrayUnion(newMember),
+          updatedAt: serverTimestamp()
+        });
+
+        setFamilyMembers([...familyMembers, newMember]);
+        toast.success("Family member added successfully");
+      }
+
+      handleCancelFamilyAdd();
     } catch (error) {
-      console.error("Error adding family member:", error);
-      toast.error("Failed to add family member");
+      console.error("Error managing family member:", error);
+      toast.error(editingFamilyMember ? "Failed to update family member" : "Failed to add family member");
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleEditFamilyMember = (member) => {
+    setEditingFamilyMember(member);
+    setNewFamilyMember({
+      name: member.name || "",
+      relationship: member.relationship || "",
+      age: member.age || "",
+      occupation: member.occupation || ""
+    });
+    setShowFamilyForm(true);
+  };
+
+  const handleCancelFamilyAdd = () => {
+    setShowFamilyForm(false);
+    setEditingFamilyMember(null);
+    setNewFamilyMember({
+      name: "",
+      relationship: "",
+      age: "",
+      occupation: ""
+    });
   };
 
   const handleRemoveFamilyMember = async (memberId) => {
@@ -94,19 +160,17 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance }) 
     }
   };
 
-  const handleSaveFamilyChanges = () => {
-    onEdit(participant.docId, { familyMembers });
-    setIsEditingFamily(false);
-  };
-
   // Program History Functions
   const handleAddProgram = async (programData) => {
     setIsLoading(true);
     try {
       const participantRef = doc(db, "participants", participant.docId);
+      const now = new Date();
+      // Convert to Philippine time
+      const phTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Manila' }));
       const newProgram = {
         ...programData,
-        date: new Date().toISOString(),
+        date: phTime.toISOString(),
         status: "Ongoing",
         id: Date.now()
       };
@@ -170,28 +234,162 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance }) 
     });
   };
 
+  // Add member handler
+  const handleAddMember = async () => {
+    if (!newMember.name || !newMember.position) {
+      toast.error("Name and position are required");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const participantRef = doc(db, "participants", participant.docId);
+      const memberToAdd = {
+        id: Date.now().toString(),
+        name: newMember.name || "",
+        position: newMember.position || "",
+        contactNumber: newMember.contactNumber || "",
+        address: newMember.address || "",
+        status: "Active",
+        createdAt: new Date().toISOString()
+      };
+
+      // Get current members array or initialize it
+      const currentMembers = participant.members || [];
+      const updatedMembers = [...currentMembers, memberToAdd];
+
+      await updateDoc(participantRef, {
+        members: updatedMembers,
+        updatedAt: serverTimestamp()
+      });
+
+      setMembers(updatedMembers);
+      // Reset form with empty strings
+      setNewMember({
+        name: "",
+        position: "",
+        contactNumber: "",
+        address: "",
+        status: "Active"
+      });
+      setEditingMember(null);
+      toast.success("Member added successfully");
+    } catch (error) {
+      console.error("Error adding member:", error);
+      toast.error("Failed to add member");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Edit member handler
+  const handleEditMember = (member) => {
+    setEditingMember(member);
+    // Ensure all values are strings when setting form data
+    setNewMember({
+      name: member.name || "",
+      position: member.position || "",
+      contactNumber: member.contactNumber || "",
+      address: member.address || "",
+      status: member.status || "Active"
+    });
+  };
+
+  // Update member handler
+  const handleUpdateMember = async () => {
+    if (!editingMember || !newMember.name || !newMember.position) {
+      toast.error("Name and position are required");
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const updatedMember = {
+        id: editingMember.id,
+        name: newMember.name || "",
+        position: newMember.position || "",
+        contactNumber: newMember.contactNumber || "",
+        address: newMember.address || "",
+        status: "Active",
+        createdAt: editingMember.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      const updatedMembers = members.map(member =>
+        member.id === editingMember.id ? updatedMember : member
+      );
+
+      const participantRef = doc(db, "participants", participant.docId);
+      await updateDoc(participantRef, {
+        members: updatedMembers,
+        updatedAt: serverTimestamp()
+      });
+
+      setMembers(updatedMembers);
+      // Reset form with empty strings
+      setNewMember({
+        name: "",
+        position: "",
+        contactNumber: "",
+        address: "",
+        status: "Active"
+      });
+      setEditingMember(null);
+      toast.success("Member updated successfully");
+    } catch (error) {
+      console.error("Error updating member:", error);
+      toast.error("Failed to update member");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Cancel edit handler
+  const handleCancelEdit = () => {
+    setEditingMember(null);
+    // Reset form with empty strings
+    setNewMember({
+      name: "",
+      position: "",
+      contactNumber: "",
+      address: "",
+      status: "Active"
+    });
+  };
+
+  // Remove member handler
+  const handleRemoveMember = async (memberId) => {
+    if (!memberId) return;
+
+    setIsLoading(true);
+    try {
+      const updatedMembers = members.filter(member => member.id !== memberId);
+      const participantRef = doc(db, "participants", participant.docId);
+
+      await updateDoc(participantRef, {
+        members: updatedMembers || [],
+        updatedAt: serverTimestamp()
+      });
+
+      setMembers(updatedMembers);
+      toast.success("Member removed successfully");
+    } catch (error) {
+      console.error("Error removing member:", error);
+      toast.error("Failed to remove member");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   if (!participant) return null;
 
   return (
     <>
-      <ToastContainer
-        position="top-right"
-        autoClose={5000}
-        hideProgressBar={false}
-        newestOnTop
-        closeOnClick
-        rtl={false}
-        pauseOnFocusLoss
-        draggable
-        pauseOnHover
-        theme="light"
-      />
-
       <Tabs defaultValue="basic">
         <TabsList className="mb-4">
           <TabsTrigger value="basic">Basic Info</TabsTrigger>
           <TabsTrigger value="family">Family Details</TabsTrigger>
-          <TabsTrigger value="program">Program History</TabsTrigger>
+          <TabsTrigger value="program">Member details</TabsTrigger>
         </TabsList>
 
         <TabsContent value="basic" className="space-y-4">
@@ -229,9 +427,9 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance }) 
                 </div>
                 <div className="flex justify-between sm:block">
                   <dt className="text-sm font-medium text-muted-foreground">
-                    Program:
+                    Project:
                   </dt>
-                  <dd className="text-sm font-medium">{participant.program}</dd>
+                  <dd className="text-sm font-medium">{participant.project}</dd>
                 </div>
                 <div className="flex justify-between sm:block">
                   <dt className="text-sm font-medium text-muted-foreground">
@@ -298,59 +496,14 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance }) 
                   <dt className="text-sm font-medium text-muted-foreground">
                     Address:
                   </dt>
-                  <dd className="text-sm">{participant.address}</dd>
+                  <dd className="text-sm font-medium">
+                    {participant.address}</dd>
                 </div>
-                <div className="flex justify-between sm:block">
-                  <dt className="text-sm font-medium text-muted-foreground">
-                    Barangay:
-                  </dt>
-                  <dd className="text-sm font-medium">{participant.barangay}</dd>
-                </div>
+              
               </dl>
             </CardContent>
           </Card>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">
-                Emergency Contact
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {participant.emergencyContact ? (
-                <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
-                  <div className="flex justify-between sm:block">
-                    <dt className="text-sm font-medium text-muted-foreground">
-                      Name:
-                    </dt>
-                    <dd className="text-sm font-medium">
-                      {participant.emergencyContact.name}
-                    </dd>
-                  </div>
-                  <div className="flex justify-between sm:block">
-                    <dt className="text-sm font-medium text-muted-foreground">
-                      Relationship:
-                    </dt>
-                    <dd className="text-sm font-medium">
-                      {participant.emergencyContact.relationship}
-                    </dd>
-                  </div>
-                  <div className="flex justify-between sm:block">
-                    <dt className="text-sm font-medium text-muted-foreground">
-                      Contact Number:
-                    </dt>
-                    <dd className="text-sm font-medium">
-                      {participant.emergencyContact.contactNumber}
-                    </dd>
-                  </div>
-                </dl>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  No emergency contact information available
-                </p>
-              )}
-            </CardContent>
-          </Card>
         </TabsContent>
 
         <TabsContent value="family" className="space-y-4">
@@ -360,21 +513,22 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance }) 
                 <CardTitle className="text-sm font-medium">
                   Family Information
                 </CardTitle>
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={() => setIsEditingFamily(!isEditingFamily)}
-                >
-                  {isEditingFamily ? (
-                    <><Save className="h-4 w-4 mr-2" /> Save Changes</>
-                  ) : (
-                    <><Pencil className="h-4 w-4 mr-2" /> Edit Details</>
+                <div className="flex gap-2">
+                  {!showFamilyForm && (
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => setShowFamilyForm(true)}
+                      className="text-[#496E22] hover:text-[#96B54A] hover:bg-[#96B54A]/10"
+                    >
+                      <Plus className="h-4 w-4 mr-2" /> Add Family Member
+                    </Button>
                   )}
-                </Button>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
-              {isEditingFamily && (
+              {showFamilyForm && (
                 <div className="grid grid-cols-2 gap-4 mb-4 p-4 border rounded-lg">
                   <div className="space-y-2">
                     <Label htmlFor="name">Name</Label>
@@ -385,6 +539,7 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance }) 
                         ...newFamilyMember,
                         name: e.target.value
                       })}
+                      placeholder="Enter family member name"
                     />
                   </div>
                   <div className="space-y-2">
@@ -396,6 +551,7 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance }) 
                         ...newFamilyMember,
                         relationship: e.target.value
                       })}
+                      placeholder="Enter relationship"
                     />
                   </div>
                   <div className="space-y-2">
@@ -408,6 +564,7 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance }) 
                         ...newFamilyMember,
                         age: e.target.value
                       })}
+                      placeholder="Enter age"
                     />
                   </div>
                   <div className="space-y-2">
@@ -419,14 +576,32 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance }) 
                         ...newFamilyMember,
                         occupation: e.target.value
                       })}
+                      placeholder="Enter occupation"
                     />
                   </div>
-                  <Button 
-                    className="col-span-2" 
-                    onClick={handleAddFamilyMember}
-                  >
-                    <Plus className="h-4 w-4 mr-2" /> Add Family Member
-                  </Button>
+                  <div className="col-span-2 flex justify-end gap-2">
+                    <Button 
+                      variant="outline" 
+                      onClick={handleCancelFamilyAdd}
+                      disabled={isLoading}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      onClick={handleAddFamilyMember}
+                      disabled={isLoading}
+                    >
+                      {editingFamilyMember ? (
+                        <>
+                          <Save className="h-4 w-4 mr-2" /> Update Family Member
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="h-4 w-4 mr-2" /> Add Family Member
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
               )}
 
@@ -437,7 +612,7 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance }) 
                     <TableHead>Relationship</TableHead>
                     <TableHead>Age</TableHead>
                     <TableHead>Occupation</TableHead>
-                    {isEditingFamily && <TableHead>Actions</TableHead>}
+                    <TableHead>Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -447,8 +622,15 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance }) 
                       <TableCell>{member.relationship}</TableCell>
                       <TableCell>{member.age}</TableCell>
                       <TableCell>{member.occupation}</TableCell>
-                      {isEditingFamily && (
-                        <TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditFamilyMember(member)}
+                          >
+                            <Pencil className="h-4 w-4 text-blue-500" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="sm"
@@ -456,10 +638,17 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance }) 
                           >
                             <Trash className="h-4 w-4 text-red-500" />
                           </Button>
-                        </TableCell>
-                      )}
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))}
+                  {familyMembers.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
+                        No family members added yet
+                      </TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             </CardContent>
@@ -471,55 +660,154 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance }) 
             <CardHeader className="pb-2">
               <div className="flex justify-between items-center">
                 <CardTitle className="text-sm font-medium">
-                  Program History
+                  Member Management
                 </CardTitle>
-                <Button size="sm" onClick={() => onAddAssistance(participant.docId)}>
-                  Add Program
-                </Button>
+                {!editingMember && !showMemberForm && (
+                  <Button 
+                    onClick={() => {
+                      setShowMemberForm(true);
+                      setEditingMember(null);
+                    }}
+                    className="text-[#496E22] hover:text-[#96B54A] hover:bg-[#96B54A]/10"
+                  >
+                    <Plus className="h-4 w-4 mr-2" /> Add Member
+                  </Button>
+                )}
               </div>
             </CardHeader>
             <CardContent>
-              {participant.assistanceHistory &&
-              participant.assistanceHistory.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Date</TableHead>
-                      <TableHead>Program Type</TableHead>
-                      <TableHead>Description</TableHead>
-                      <TableHead className="text-right">Status</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {participant.assistanceHistory.map((program, index) => (
-                      <TableRow key={index}>
-                        <TableCell>{program.date}</TableCell>
-                        <TableCell>{program.type}</TableCell>
-                        <TableCell>{program.description}</TableCell>
-                        <TableCell className="text-right">
-                          <Badge variant="outline" className={
-                            program.status === "Completed" 
-                              ? "bg-green-50 text-green-700" 
-                              : "bg-amber-50 text-amber-700"
-                          }>
-                            {program.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button variant="ghost" size="sm">
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  No program history available
-                </p>
+              {(showMemberForm || editingMember) && (
+                <div className="grid grid-cols-2 gap-4 mb-4 p-4 border rounded-lg">
+                  <div className="space-y-2">
+                    <Label htmlFor="memberName">Name</Label>
+                    <Input
+                      id="memberName"
+                      value={newMember.name || ""}
+                      onChange={(e) => setNewMember({
+                        ...newMember,
+                        name: e.target.value
+                      })}
+                      placeholder="Enter member name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="position">Position</Label>
+                    <Input
+                      id="position"
+                      value={newMember.position || ""}
+                      onChange={(e) => setNewMember({
+                        ...newMember,
+                        position: e.target.value
+                      })}
+                      placeholder="Enter position"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="memberContact">Contact Number</Label>
+                    <Input
+                      id="memberContact"
+                      value={newMember.contactNumber || ""}
+                      onChange={(e) => setNewMember({
+                        ...newMember,
+                        contactNumber: e.target.value
+                      })}
+                      placeholder="Enter contact number"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="address">Address</Label>
+                    <Input
+                      id="address"
+                      value={newMember.address || ""}
+                      onChange={(e) => setNewMember({
+                        ...newMember,
+                        address: e.target.value
+                      })}
+                      placeholder="Enter address"
+                    />
+                  </div>
+                  <div className="col-span-2 flex justify-end gap-2">
+                    <Button 
+                      variant="outline"
+                      onClick={() => {
+                        handleCancelEdit();
+                        setShowMemberForm(false);
+                      }}
+                      disabled={isLoading}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      onClick={async () => {
+                        if (editingMember) {
+                          await handleUpdateMember();
+                        } else {
+                          await handleAddMember();
+                        }
+                        setShowMemberForm(false);
+                      }}
+                      disabled={isLoading}
+                    >
+                      {editingMember ? (
+                        <>
+                          <Save className="h-4 w-4 mr-2" /> Update Member
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="h-4 w-4 mr-2" /> Add Member
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
               )}
+
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Position</TableHead>
+                    <TableHead>Contact Number</TableHead>
+                    <TableHead>Address</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {members.map((member) => (
+                    <TableRow key={member.id}>
+                      <TableCell>{member.name}</TableCell>
+                      <TableCell>{member.position}</TableCell>
+                      <TableCell>{member.contactNumber}</TableCell>
+                      <TableCell>{member.address}</TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditMember(member)}
+                          >
+                            <Pencil className="h-4 w-4 text-blue-500" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveMember(member.id)}
+                          >
+                            <Trash className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {members.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
+                        No members added yet
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </CardContent>
           </Card>
         </TabsContent>

@@ -14,16 +14,55 @@ const firebaseConfig = {
 };
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
+let app;
+let auth;
+let db;
+let storage;
 
-// Initialize services
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const storage = getStorage(app);
+try {
+    // Initialize Firebase
+    app = initializeApp(firebaseConfig);
 
-// Enable logging in development
-if (process.env.NODE_ENV === 'development') {
-  console.log('Firebase Storage Config:', storage);
+    // Initialize services
+    auth = getAuth(app);
+    db = getFirestore(app);
+    storage = getStorage(app);
+
+    // Check for ad blockers or other connection issues
+    const checkFirebaseConnectivity = async () => {
+        try {
+            // Add a very small timeout to test connectivity
+            const testTimeout = setTimeout(() => {
+                console.warn('Firebase connectivity check timed out. Possible ad blocker interference.');
+                localStorage.setItem('firebaseConnectivityIssue', 'true');
+            }, 5000);
+
+            // Try to clear the timeout if the check succeeds
+            clearTimeout(testTimeout);
+            localStorage.removeItem('firebaseConnectivityIssue');
+            console.log('Firebase connection check passed');
+        } catch (error) {
+            console.error('Firebase connectivity check failed:', error);
+            localStorage.setItem('firebaseConnectivityIssue', 'true');
+        }
+    };
+
+    // Run the check
+    checkFirebaseConnectivity();
+
+    // Enable logging in development
+    if (process.env.NODE_ENV === 'development') {
+        console.log('Firebase initialized successfully');
+    }
+} catch (error) {
+    console.error('Error initializing Firebase:', error);
+    localStorage.setItem('firebaseConnectivityIssue', 'true');
 }
 
+// Export a function to check if there are connectivity issues
+export const hasFirebaseConnectivityIssues = () => {
+    return localStorage.getItem('firebaseConnectivityIssue') === 'true';
+};
+
+export { app, auth, db, storage };
 export default app;

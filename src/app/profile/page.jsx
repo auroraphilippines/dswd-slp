@@ -22,6 +22,7 @@ import {
   MapPin,
   Shield,
   Calendar,
+  Camera,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -56,7 +57,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { uploadProfilePhoto } from "@/service/storage";
+import { uploadProfilePhoto, getProfilePhotoFromLocalStorage } from "@/service/storage";
+import { updateUserProfile } from "@/service/user";
+import { hasFirebaseConnectivityIssues } from "@/service/firebase";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { AlertCircle } from "lucide-react";
 
 export default function ProfilePage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -68,6 +73,8 @@ export default function ProfilePage() {
   const [updatingContact, setUpdatingContact] = useState(false);
   const [newPhoneNumber, setNewPhoneNumber] = useState("");
   const fileInputRef = useRef(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [connectivityIssue, setConnectivityIssue] = useState(false);
 
   // Close mobile menu when path changes
   useEffect(() => {
@@ -79,27 +86,45 @@ export default function ProfilePage() {
       try {
         const user = auth.currentUser;
         if (user) {
-          const userDoc = await getDoc(doc(db, "users", user.uid));
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            const rawName = userData.name || "";
-            const displayName = rawName === "255" ? "Admin DSWD" : rawName;
+          let userData = null;
+          let firestoreError = false;
+          
+          try {
+            // Try Firestore first
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            if (userDoc.exists()) {
+              userData = userDoc.data();
+            }
+          } catch (error) {
+            console.error("Error fetching data from Firestore:", error);
+            firestoreError = true;
+          }
+          
+          // If Firestore failed or user doc doesn't exist, use default values
+          const rawName = userData?.name || "";
+          const displayName = rawName === "255" ? "Admin DSWD" : (rawName || "User");
 
-            setCurrentUser({
-              ...userData,
-              uid: user.uid,
-              email: userData.email || "admin@dswd.gov.ph",
-              name: displayName,
-              role: userData.role || "Administrator",
-              phoneNumber: userData.phoneNumber || "+63 XXX XXX XXXX",
-              address: userData.address || "DSWD Office, Manila",
-              joinDate: userData.joinDate || "January 2023",
-              department: userData.department || "Administration",
-            });
+          setCurrentUser({
+            ...userData,
+            uid: user.uid,
+            email: userData?.email || "admin@dswd.gov.ph",
+            name: displayName,
+            role: userData?.role || "Administrator",
+            phoneNumber: userData?.phoneNumber || "+63 XXX XXX XXXX",
+            address: userData?.address || "DSWD Office, Manila",
+            joinDate: userData?.joinDate || "January 2023",
+            department: userData?.department || "Administration",
+          });
 
-            // Add photo URL
-            if (userData.photoURL) {
-              setProfileUrl(userData.photoURL);
+          // Handle photo URL from Firestore or localStorage
+          if (userData?.photoURL) {
+            setProfileUrl(userData.photoURL);
+          } else if (firestoreError) {
+            // Try to get from localStorage if Firestore failed
+            const localPhotoURL = getProfilePhotoFromLocalStorage(user.uid);
+            if (localPhotoURL) {
+              setProfileUrl(localPhotoURL);
+              console.log("Retrieved profile photo from localStorage");
             }
           }
         }
@@ -107,10 +132,38 @@ export default function ProfilePage() {
       } catch (error) {
         console.error("Error fetching user data:", error);
         setLoading(false);
+        
+        // Show an error message to the user
+        toast.error("Failed to load profile data. Some features may be limited.", {
+          autoClose: 5000,
+        });
       }
     };
 
     fetchUserData();
+  }, []);
+
+  // Check for connectivity issues on component mount
+  useEffect(() => {
+    const checkConnectivity = () => {
+      const hasIssues = hasFirebaseConnectivityIssues();
+      setConnectivityIssue(hasIssues);
+      
+      if (hasIssues) {
+        toast.warning(
+          "Connection issue detected. Some features may be limited. If you're using an ad blocker, try disabling it.",
+          { autoClose: false }
+        );
+      }
+    };
+    
+    checkConnectivity();
+    
+    // Check again if user refreshes or opens a new tab
+    window.addEventListener('focus', checkConnectivity);
+    return () => {
+      window.removeEventListener('focus', checkConnectivity);
+    };
   }, []);
 
   // Get user initials from name
@@ -147,33 +200,55 @@ export default function ProfilePage() {
       return;
     }
 
+    setIsUploading(true);
     try {
       // Show loading toast
-      toast.loading("Uploading photo...", { id: "photoUpload" });
+      toast.loading("Processing photo...", { id: "photoUpload" });
 
-      // Upload photo and get URL
-      const photoURL = await uploadProfilePhoto(file, currentUser.uid);
-      console.log("Photo uploaded successfully, URL:", photoURL);
+      // Create a temporary local URL for preview
+      const localUrl = URL.createObjectURL(file);
+      setProfileUrl(localUrl);
 
-      // Update user document in Firestore
-      const userRef = doc(db, "users", currentUser.uid);
-      await updateDoc(userRef, {
-        photoURL: photoURL,
-        lastUpdated: new Date().toISOString()
+      // Create form data for API route
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('userId', currentUser.uid);
+
+      // Use server-side API route to upload - this bypasses ad blockers
+      const response = await fetch('/api/user-profile', {
+        method: 'PUT',
+        body: formData,
       });
 
-      // Update local state
-      setProfileUrl(photoURL);
+      // Parse response
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Upload failed');
+      }
+
+      console.log("Photo processed successfully");
+
+      // Update local state with the photo URL
+      setProfileUrl(result.url);
       setCurrentUser(prev => ({
         ...prev,
-        photoURL: photoURL
+        photoURL: result.url
       }));
 
       // Show success message
-      toast.success("Profile photo updated successfully!", { id: "photoUpload" });
+      toast.success(result.message || "Profile photo updated successfully!", { id: "photoUpload" });
     } catch (error) {
-      console.error("Error uploading photo:", error);
-      toast.error("Failed to upload photo: " + error.message, { id: "photoUpload" });
+      console.error("Error processing photo:", error);
+      // Provide a user-friendly error message
+      toast.error(error.message || "Failed to process photo", { id: "photoUpload" });
+      
+      // Revert to original profile picture if there was an error
+      if (currentUser?.photoURL) {
+        setProfileUrl(currentUser.photoURL);
+      }
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -186,10 +261,25 @@ export default function ProfilePage() {
 
     setUpdatingContact(true);
     try {
-      const userRef = doc(db, "users", currentUser.uid);
-      await updateDoc(userRef, {
-        phoneNumber: newPhoneNumber
+      // Use server-side API to update profile - bypasses ad blockers
+      const response = await fetch('/api/user-profile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: currentUser.uid,
+          profileData: {
+            phoneNumber: newPhoneNumber
+          }
+        }),
       });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.error || 'Update failed');
+      }
 
       setCurrentUser(prev => ({
         ...prev,
@@ -249,11 +339,21 @@ export default function ProfilePage() {
           <div className="flex-shrink-0 flex border-t p-4">
             <div className="flex items-center w-full justify-between">
               <div className="flex items-center">
-                <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                  <span className="text-sm font-medium">
-                    {getUserInitials(currentUser?.name)}
-                  </span>
-                </div>
+                {profileUrl ? (
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage 
+                      src={profileUrl} 
+                      alt={currentUser?.name || "User"}
+                      className="object-cover" 
+                    />
+                  </Avatar>
+                ) : (
+                  <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                    <span className="text-sm font-medium">
+                      {getUserInitials(currentUser?.name)}
+                    </span>
+                  </div>
+                )}
                 <div className="ml-3">
                   <p className="text-sm font-medium">
                     {currentUser?.name || "Admin DSWD"}
@@ -397,11 +497,21 @@ export default function ProfilePage() {
                     className="ml-3 rounded-full"
                   >
                     <span className="sr-only">Open user menu</span>
-                    <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                      <span className="text-sm font-medium">
-                        {getUserInitials(currentUser?.name)}
-                      </span>
-                    </div>
+                    {profileUrl ? (
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage 
+                          src={profileUrl} 
+                          alt={currentUser?.name || "User"}
+                          className="object-cover" 
+                        />
+                      </Avatar>
+                    ) : (
+                      <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                        <span className="text-sm font-medium">
+                          {getUserInitials(currentUser?.name)}
+                        </span>
+                      </div>
+                    )}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -450,6 +560,18 @@ export default function ProfilePage() {
                   </Button>
                 </div>
 
+                {/* Show connectivity warning if issues detected */}
+                {connectivityIssue && (
+                  <Alert variant="warning">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertTitle>Connection Issue Detected</AlertTitle>
+                    <AlertDescription>
+                      Your profile image may not sync with our servers. This could be caused by an ad blocker.
+                      Profile updates will be saved locally but may not persist across devices.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Profile Overview */}
                   <Card className="md:col-span-2">
@@ -463,11 +585,34 @@ export default function ProfilePage() {
                       <div className="flex items-center space-x-4">
                         <div className="relative">
                           <Avatar className="h-20 w-20">
-                            <AvatarImage src={profileUrl} />
-                            <AvatarFallback className="bg-primary text-primary-foreground text-2xl font-bold">
-                              {getUserInitials(currentUser?.name)}
-                            </AvatarFallback>
+                            {profileUrl ? (
+                              <AvatarImage 
+                                src={profileUrl} 
+                                alt={`${currentUser?.name}'s profile`} 
+                                className="object-cover"
+                              />
+                            ) : (
+                              <AvatarFallback className="bg-primary text-primary-foreground text-2xl font-bold">
+                                {getUserInitials(currentUser?.name)}
+                              </AvatarFallback>
+                            )}
                           </Avatar>
+                          <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handlePhotoUpload}
+                            accept="image/*"
+                            className="hidden"
+                          />
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full"
+                            onClick={() => fileInputRef.current?.click()}
+                            disabled={isUploading}
+                          >
+                            <Camera className="h-4 w-4" />
+                          </Button>
                         </div>
                         <div>
                           <h3 className="text-lg font-medium">

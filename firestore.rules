@@ -5,7 +5,15 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if request.auth != null;
       allow create: if request.auth != null && request.auth.uid == userId;
-      allow update: if request.auth != null && request.auth.uid == userId;
+      allow update: if request.auth != null && 
+                     request.auth.uid == userId &&
+                     (
+                       // Allow updating profile fields including photoURL
+                       request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['photoURL', 'phoneNumber', 'address', 'name', 'lastUpdated']) ||
+                       // Allow admins to update any field
+                       resource.data.role == 'admin'
+                     );
       allow delete: if false;
     }
 

@@ -136,7 +136,7 @@ export default function ProgramsPage() {
 
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Vendors", href: "/vendors", icon: Store },
+    { name: "Projects", href: "/vendors", icon: Store },
     { name: "Participants", href: "/participants", icon: Users },
     { name: "Programs", href: "/programs", icon: Building2 },
     { name: "Reports", href: "./reports", icon: FileBarChart },

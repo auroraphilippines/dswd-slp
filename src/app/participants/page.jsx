@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import LoadingPage from "../loading/page";
 import {
   LayoutDashboard,
@@ -23,6 +23,10 @@ import {
   UserCheck,
   UserX,
   User,
+  Edit,
+  Trash2,
+  Power,
+  Eye,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -53,7 +57,7 @@ import {
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ParticipantDetailView } from "./participant-detail-view";
 import { auth, db } from "@/service/firebase";
-import { doc, getDoc, updateDoc, serverTimestamp, collection, query, orderBy, getDocs, arrayUnion } from "firebase/firestore";
+import { doc, getDoc, updateDoc, serverTimestamp, collection, query, orderBy, getDocs, arrayUnion, deleteDoc } from "firebase/firestore";
 import { AddParticipantModal } from "./add-participant-modal";
 import { EditParticipantModal } from "./edit-participant-modal";
 import { AddAssistanceModal } from "./add-assistance-modal";
@@ -72,15 +76,7 @@ export default function ParticipantsPage() {
   const [editingParticipant, setEditingParticipant] = useState(null);
   const [isAssistanceModalOpen, setIsAssistanceModalOpen] = useState(false);
   const [selectedParticipantId, setSelectedParticipantId] = useState(null);
-  const [analytics, setAnalytics] = useState({
-    total: 0,
-    active: 0,
-    pending: 0,
-    graduated: 0,
-    programDistribution: {},
-    barangayDistribution: {},
-    monthlyRegistrations: {}
-  });
+  const router = useRouter();
 
   // Close mobile menu when path changes
   useEffect(() => {
@@ -117,7 +113,6 @@ export default function ParticipantsPage() {
     fetchUserData();
   }, []);
 
-  // Add this useEffect to fetch participants
   useEffect(() => {
     const fetchParticipants = async () => {
       try {
@@ -132,7 +127,6 @@ export default function ParticipantsPage() {
         }));
         
         setParticipants(participantsData);
-        setAnalytics(calculateAnalytics(participantsData));
       } catch (error) {
         console.error("Error fetching participants:", error);
       } finally {
@@ -234,60 +228,28 @@ export default function ParticipantsPage() {
     }
   };
 
-  const calculateAnalytics = (participants) => {
-    const stats = {
-      total: participants.length,
-      active: 0,
-      pending: 0,
-      graduated: 0,
-      programDistribution: {},
-      barangayDistribution: {},
-      monthlyRegistrations: {},
-      inactive: participants.filter(p => p.status === "Inactive").length,
-    };
+  const handleDeleteParticipant = async (participant) => {
+    if (!window.confirm(`Are you sure you want to delete ${participant.name}?`)) {
+      return;
+    }
 
-    // Initialize months in the specific order: April to March
-    const monthOrder = [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3]; // April to March
-    const today = new Date();
-    const currentYear = today.getFullYear();
-    
-    // Create ordered monthly registrations
-    const orderedRegistrations = {};
-    monthOrder.forEach(month => {
-      // If month is January-March (1-3), use next year
-      const year = month <= 3 ? currentYear + 1 : currentYear;
-      const monthYear = `${month}/${year}`;
-      orderedRegistrations[monthYear] = 0;
-    });
+    try {
+      // Delete from Firestore
+      await deleteDoc(doc(db, "participants", participant.docId));
 
-    participants.forEach(participant => {
-      // Status counts
-      if (participant.status === "Active") stats.active++;
-      else if (participant.status === "Pending") stats.pending++;
-      else if (participant.status === "Graduated") stats.graduated++;
-
-      // Program distribution
-      stats.programDistribution[participant.program] = 
-        (stats.programDistribution[participant.program] || 0) + 1;
-
-      // Barangay distribution
-      stats.barangayDistribution[participant.barangay] = 
-        (stats.barangayDistribution[participant.barangay] || 0) + 1;
-
-      // Monthly registrations
-      try {
-        const regDate = new Date(participant.dateRegistered);
-        const monthYear = `${regDate.getMonth() + 1}/${regDate.getFullYear()}`;
-        if (orderedRegistrations.hasOwnProperty(monthYear)) {
-          orderedRegistrations[monthYear]++;
-        }
-      } catch (error) {
-        console.error("Error processing date:", error);
+      // Update local state
+      setParticipants(prev => prev.filter(p => p.docId !== participant.docId));
+      
+      // Close detail view if the deleted participant was selected
+      if (selectedParticipant?.docId === participant.docId) {
+        setSelectedParticipant(null);
       }
-    });
 
-    stats.monthlyRegistrations = orderedRegistrations;
-    return stats;
+      toast.success("Participant deleted successfully");
+    } catch (error) {
+      console.error("Error deleting participant:", error);
+      toast.error("Failed to delete participant");
+    }
   };
 
   if (loading) {
@@ -296,7 +258,7 @@ export default function ParticipantsPage() {
 
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Vendors", href: "/vendors", icon: Store },
+    { name: "Projects", href: "/vendors", icon: Store },
     { name: "Participants", href: "/participants", icon: Users },
     { name: "Programs", href: "/programs", icon: Building2 },
     { name: "Reports", href: "./reports", icon: FileBarChart },
@@ -310,8 +272,8 @@ export default function ParticipantsPage() {
       searchQuery === "" ||
       participant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       participant.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      participant.barangay.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      participant.program.toLowerCase().includes(searchQuery.toLowerCase())
+      participant.address.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (participant.project && participant.project.toLowerCase().includes(searchQuery.toLowerCase()))
     );
   });
 
@@ -321,13 +283,14 @@ export default function ParticipantsPage() {
         position="top-right"
         autoClose={3000}
         hideProgressBar={false}
-        newestOnTop
+        newestOnTop={false}
         closeOnClick
         rtl={false}
         pauseOnFocusLoss
         draggable
         pauseOnHover
         theme="light"
+        limit={3}
       />
 
       <div className="flex h-screen overflow-hidden bg-background">
@@ -569,244 +532,19 @@ export default function ParticipantsPage() {
                       Participant Management
                     </h1>
                     <div className="flex items-center space-x-2">
-                      <Button variant="outline">
-                        <Download className="mr-2 h-4 w-4" />
-                        Export
+                      <Button 
+                        variant="outline"
+                        onClick={() => router.push('/participants/analytics')}
+                        className="bg-green-600 text-white hover:bg-green-700 hover:text-white border-green-600 hover:border-green-700 transition-colors duration-200"
+                      >
+                        <FileBarChart className="mr-2 h-4 w-4" />
+                        View Analytics
                       </Button>
                       <Button onClick={() => setIsAddModalOpen(true)}>
                         <Plus className="mr-2 h-4 w-4" />
                         Add Participant
                       </Button>
                     </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    {/* Total Participants Card */}
-                    <Card className="bg-gradient-to-br from-[#C5D48A] to-[#A6C060] border-0 relative overflow-hidden">
-                      <div className="absolute inset-0 bg-white/5 w-full h-full">
-                        <div className="absolute -inset-2 bg-gradient-to-r from-[#B7CC60]/30 to-transparent blur-3xl"></div>
-                      </div>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-white/90">
-                          Total Participants
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex flex-col">
-                          <div className="text-4xl font-bold text-white/90">{analytics.total}</div>
-                          <p className="text-sm text-white/90 mt-1">Registered members</p>
-                          <div className="mt-2 h-[40px] relative">
-                            <svg className="w-full h-full text-black/20">
-                              <path 
-                                d="M0,20 Q10,10 20,20 T40,20 T60,20 T80,20 T100,20" 
-                                fill="none" 
-                                stroke="currentColor" 
-                                strokeWidth="2"
-                                className="animate-wave"
-                              />
-                            </svg>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Active Participants Card */}
-                    <Card className="bg-gradient-to-br from-[#96B54A] to-[#79A03A] border-0 relative overflow-hidden">
-                      <div className="absolute inset-0 bg-white/5 w-full h-full">
-                        <div className="absolute -inset-2 bg-gradient-to-r from-[#8CAF42]/30 to-transparent blur-3xl"></div>
-                      </div>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-white/90">
-                          Active Participants
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex flex-col">
-                          <div className="text-4xl font-bold text-white/90">{analytics.active}</div>
-                          <p className="text-sm text-white/90 mt-1">Current active</p>
-                          <div className="mt-2 h-[40px]">
-                            <svg className="w-full h-full text-black/20" viewBox="0 0 100 40">
-                              <path 
-                                d="M0,20 C20,10 40,30 60,20 S80,10 100,20" 
-                                fill="none" 
-                                stroke="currentColor" 
-                                strokeWidth="2"
-                                className="animate-wave"
-                              />
-                            </svg>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Inactive Participants Card */}
-                    <Card className="bg-gradient-to-br from-[#5F862C] to-[#496E22] border-0 relative overflow-hidden">
-                      <div className="absolute inset-0 bg-white/5 w-full h-full">
-                        <div className="absolute -inset-2 bg-gradient-to-r from-[#557926]/30 to-transparent blur-3xl"></div>
-                      </div>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-white/90">
-                          Inactive Participants
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex flex-col">
-                          <div className="text-4xl font-bold text-white">{analytics.inactive || 0}</div>
-                          <p className="text-sm text-white/70 mt-1">Total inactive</p>
-                          <div className="mt-2 h-[40px]">
-                            <svg className="w-full h-full text-white/20">
-                              <path 
-                                d="M0,20 Q25,5 50,20 T100,20" 
-                                fill="none" 
-                                stroke="currentColor" 
-                                strokeWidth="2"
-                                className="animate-wave"
-                              />
-                            </svg>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    {/* Pending Participants Card */}
-                    <Card className="bg-gradient-to-br from-[#79A03A] to-[#5F862C] border-0 relative overflow-hidden">
-                      <div className="absolute inset-0 bg-white/5 w-full h-full">
-                        <div className="absolute -inset-2 bg-gradient-to-r from-[#6C9331]/30 to-transparent blur-3xl"></div>
-                      </div>
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-white/90">
-                          Pending Participants
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex flex-col">
-                          <div className="text-4xl font-bold text-white">{analytics.pending}</div>
-                          <p className="text-sm text-white/70 mt-1">Awaiting verification</p>
-                          <div className="mt-2 h-[40px]">
-                            <svg className="w-full h-full text-white/20">
-                              <path 
-                                d="M0,20 L20,10 L40,25 L60,15 L80,25 L100,10" 
-                                fill="none" 
-                                stroke="currentColor" 
-                                strokeWidth="2"
-                                className="animate-wave"
-                              />
-                            </svg>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="md:col-span-2 bg-gradient-to-br from-[#A6C060] to-[#8CAF42] border-0 relative overflow-hidden">
-                      <div className="absolute inset-0 bg-white/5 w-full h-full">
-                        <div className="absolute -inset-2 bg-gradient-to-r from-[#96B54A]/30 to-transparent blur-3xl"></div>
-                      </div>
-                      <CardHeader className="pb-2 relative">
-                        <CardTitle className="text-sm font-medium text-white/90">
-                          Program Distribution
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="relative">
-                        <div className="space-y-3">
-                          {Object.entries(analytics.programDistribution).map(([program, count]) => (
-                            <div key={program} className="flex flex-col group">
-                              <div className="flex justify-between items-center mb-1">
-                                <span className="text-sm text-white/90">{program}</span>
-                                <span className="text-sm font-medium text-white bg-white/10 px-2 py-0.5 rounded-full">
-                                  {count}
-                                </span>
-                              </div>
-                              <div className="h-2 bg-black/10 rounded-full overflow-hidden">
-                                <div 
-                                  className="h-full bg-gradient-to-r from-white/40 to-black/40 rounded-full transition-all duration-500 group-hover:from-black/40 group-hover:to-black/30"
-                                  style={{ width: `${(count / analytics.total) * 100}%` }}
-                                />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="md:col-span-2 bg-gradient-to-br from-[#8CAF42] to-[#6C9331] border-0 relative overflow-hidden">
-                      <div className="absolute inset-0 bg-white/5 w-full h-full">
-                        <div className="absolute -inset-2 bg-gradient-to-r from-[#79A03A]/30 to-transparent blur-3xl"></div>
-                      </div>
-                      <CardHeader className="pb-2 relative">
-                        <CardTitle className="text-sm font-medium text-white/90">
-                          Top Barangays
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="relative">
-                        <div className="space-y-3">
-                          {Object.entries(analytics.barangayDistribution)
-                            .sort(([,a], [,b]) => b - a)
-                            .slice(0, 5)
-                            .map(([barangay, count], index) => (
-                              <div key={barangay} className="flex flex-col group">
-                                <div className="flex justify-between items-center mb-1">
-                                  <div className="flex items-center">
-                                    <span className="w-5 text-xs text-white/70">#{index + 1}</span>
-                                    <span className="text-sm text-white/90">{barangay}</span>
-                                  </div>
-                                  <span className="text-sm font-medium text-white bg-white/10 px-2 py-0.5 rounded-full">
-                                    {count}
-                                  </span>
-                                </div>
-                                <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                                  <div 
-                                    className="h-full bg-gradient-to-r from-white/40 to-black/40 rounded-full transition-all duration-500 group-hover:from-white/50 group-hover:to-white/30"
-                                    style={{ width: `${(count / analytics.total) * 100}%` }}
-                                  />
-                                </div>
-                              </div>
-                            ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="md:col-span-4 bg-gradient-to-br from-[#C5D48A]/10 to-[#A6C060]/10 border-0 rounded-3xl overflow-hidden">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-lg font-semibold bg-gradient-to-r from-[#496E22] to-[#6C9331] bg-clip-text text-transparent">
-                          Monthly Registrations
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="h-[300px] relative">
-                          {/* Chart content remains the same, updating colors */}
-                          <div className="absolute inset-0 flex items-end justify-between px-2">
-                            {Object.entries(analytics.monthlyRegistrations).map(([month, count], index) => {
-                              const maxCount = Math.max(...Object.values(analytics.monthlyRegistrations)) || 1;
-                              const height = `${(count / maxCount) * 100}%`;
-                              const [monthNum, year] = month.split('/');
-                              const date = new Date(year, monthNum - 1);
-                              const monthName = date.toLocaleString('default', { month: 'short' });
-
-                              return (
-                                <div key={month} className="relative group flex-1 mx-1" style={{ height: '100%' }}>
-                                  <div
-                                    className={`w-full absolute bottom-0 rounded-t transition-all duration-200 ${
-                                      index % 2 === 0 
-                                        ? "bg-gradient-to-t from-[#79A03A] to-[#96B54A]" 
-                                        : "bg-gradient-to-t from-[#5F862C] to-[#79A03A]"
-                                    }`}
-                                    style={{ height }}
-                                  />
-                                  
-                                  <div className="absolute -top-6 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 px-2 py-1 rounded text-xs text-[#496E22]">
-                                    {count}
-                                  </div>
-
-                                  <div className="absolute top-full mt-2 left-1/2 -translate-x-1/2 text-xs text-[#496E22]">
-                                    {monthName}
-                                  </div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
                   </div>
 
                   <Card className="bg-gradient-to-br from-[#C5D48A]/10 to-[#A6C060]/10 border-0 rounded-3xl overflow-hidden">
@@ -824,7 +562,7 @@ export default function ParticipantsPage() {
                           <div className="relative">
                             <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#496E22]" />
                             <Input
-                              placeholder="Search by name, ID, barangay..."
+                              placeholder="Search by name, ID, address..."
                               value={searchQuery}
                               onChange={handleSearchChange}
                               className="pl-8 w-full border-[#96B54A]/20 bg-white/50 focus:border-[#96B54A] focus:ring-[#96B54A]/20"
@@ -841,8 +579,8 @@ export default function ParticipantsPage() {
                               <TableRow className="bg-gradient-to-r from-[#C5D48A]/20 to-[#A6C060]/10 hover:bg-[#96B54A]/5">
                                 <TableHead className="text-[#496E22] font-semibold">ID</TableHead>
                                 <TableHead className="text-[#496E22] font-semibold">Name</TableHead>
-                                <TableHead className="text-[#496E22] font-semibold">Barangay</TableHead>
-                                <TableHead className="text-[#496E22] font-semibold">Program</TableHead>
+                                <TableHead className="text-[#496E22] font-semibold">Address</TableHead>
+                                <TableHead className="text-[#496E22] font-semibold">Project</TableHead>
                                 <TableHead className="text-[#496E22] font-semibold">Status</TableHead>
                                 <TableHead className="text-right text-[#496E22] font-semibold">Actions</TableHead>
                               </TableRow>
@@ -865,21 +603,104 @@ export default function ParticipantsPage() {
                                       <div className="font-medium text-black">{participant.name}</div>
                                     </div>
                                   </TableCell>
-                                  <TableCell className="text-black/90">{participant.barangay}</TableCell>
-                                  <TableCell className="text-black/90">{participant.program}</TableCell>
+                                  <TableCell className="text-black/90">{participant.address}</TableCell>
+                                  <TableCell className="text-black/90">{participant.project}</TableCell>
                                   <TableCell>
                                     <ParticipantStatusBadge status={participant.status} />
                                   </TableCell>
                                   <TableCell className="text-right">
-                                    <Button variant="ghost" size="icon" className="text-[#496E22] hover:text-[#96B54A] hover:bg-[#96B54A]/10">
-                                      <MoreHorizontal className="h-4 w-4" />
-                                    </Button>
+                                    <DropdownMenu>
+                                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                        <Button variant="ghost" size="icon" className="text-[#496E22] hover:text-[#96B54A] hover:bg-[#96B54A]/10">
+                                          <MoreHorizontal className="h-4 w-4" />
+                                          <span className="sr-only">Open menu</span>
+                                        </Button>
+                                      </DropdownMenuTrigger>
+                                      <DropdownMenuContent align="end" className="bg-white/95 backdrop-blur-sm border-[#96B54A]/20">
+                                        <DropdownMenuLabel className="text-[#496E22]">Actions</DropdownMenuLabel>
+                                        <DropdownMenuItem
+                                          className="text-[#496E22] focus:text-[#496E22] focus:bg-[#96B54A]/10"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleViewDetails(participant);
+                                          }}
+                                        >
+                                          <Eye className="mr-2 h-4 w-4" />
+                                          View Details
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                          className="text-[#496E22] focus:text-[#496E22] focus:bg-[#96B54A]/10"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setEditingParticipant(participant);
+                                          }}
+                                        >
+                                          <Edit className="mr-2 h-4 w-4" />
+                                          Edit Participant
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                          className="text-[#496E22] focus:text-[#496E22] focus:bg-[#96B54A]/10"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setSelectedParticipantId(participant.docId);
+                                            setIsAssistanceModalOpen(true);
+                                          }}
+                                        >
+                                          <Plus className="mr-2 h-4 w-4" />
+                                          Add Program
+                                        </DropdownMenuItem>
+                                        <DropdownMenuSeparator className="bg-[#96B54A]/10" />
+                                        <DropdownMenuItem
+                                          className="text-red-500 focus:text-red-500 focus:bg-red-50 flex items-center"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleStatusChange(participant);
+                                          }}
+                                        >
+                                          <Power className="mr-2 h-4 w-4" />
+                                          {participant.status === "Active" ? "Deactivate" : "Activate"} Participant
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem
+                                          className="text-red-500 focus:text-red-500 focus:bg-red-50 flex items-center"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleDeleteParticipant(participant);
+                                          }}
+                                        >
+                                          <Trash2 className="mr-2 h-4 w-4" />
+                                          Delete Participant
+                                        </DropdownMenuItem>
+                                      </DropdownMenuContent>
+                                    </DropdownMenu>
                                   </TableCell>
                                 </TableRow>
                               ))}
                             </TableBody>
                           </Table>
                         </div>
+                        {selectedParticipant && (
+                          <div className="p-6 bg-white/50">
+                            <div className="flex items-center justify-between mb-6">
+                              <h3 className="text-lg font-semibold text-[#496E22]">Participant Details</h3>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={handleCloseDetails}
+                                className="text-[#496E22] hover:text-[#96B54A] hover:bg-[#96B54A]/10"
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                            <ParticipantDetailView
+                              participant={selectedParticipant}
+                              onEdit={handleEditParticipant}
+                              onAddAssistance={(participantId) => {
+                                setSelectedParticipantId(participantId);
+                                setIsAssistanceModalOpen(true);
+                              }}
+                            />
+                          </div>
+                        )}
                       </div>
                     </CardContent>
                   </Card>
