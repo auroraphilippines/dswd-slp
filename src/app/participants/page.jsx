@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import LoadingPage from "../loading/page";
-import { 
+import {
   LayoutDashboard,
   FileBarChart,
   Settings,
@@ -28,6 +28,7 @@ import {
   Power,
   Eye,
   Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -64,6 +65,7 @@ import { EditParticipantModal } from "./edit-participant-modal";
 import { AddAssistanceModal } from "./add-assistance-modal";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"
 
 export default function ParticipantsPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -78,6 +80,9 @@ export default function ParticipantsPage() {
   const [editingParticipant, setEditingParticipant] = useState(null);
   const [isAssistanceModalOpen, setIsAssistanceModalOpen] = useState(false);
   const [selectedParticipantId, setSelectedParticipantId] = useState(null);
+  const [selectedItems, setSelectedItems] = useState([]);
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [itemsToDelete, setItemsToDelete] = useState([]);
 
   const pathname = usePathname();
   const router = useRouter();
@@ -187,9 +192,9 @@ export default function ParticipantsPage() {
         let fetchedFamilyData = [];
 
         // Fetch participants with error handling
-        try {
-          const participantsRef = collection(db, "participants");
-          const q = query(participantsRef, orderBy("createdAt", "desc"));
+      try {
+        const participantsRef = collection(db, "participants");
+        const q = query(participantsRef, orderBy("createdAt", "desc"));
           const participantsSnapshot = await getDocs(q);
           
           fetchedParticipantsData = participantsSnapshot.docs.map(doc => ({
@@ -212,8 +217,8 @@ export default function ParticipantsPage() {
           const familySnapshot = await getDocs(familyQuery);
           
           fetchedFamilyData = familySnapshot.docs.map(doc => ({
-            ...doc.data(),
-            docId: doc.id,
+          ...doc.data(),
+          docId: doc.id,
             dateRegistered: doc.data().dateRegistered?.toDate().toLocaleDateString() || new Date().toLocaleDateString(),
             type: 'family'
           }));
@@ -369,35 +374,109 @@ export default function ParticipantsPage() {
     }
   };
 
-  if (loading) {
-    return <LoadingPage />;
-  }
+  // Add select all function
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedItems(filteredParticipants.map(item => item.docId));
+    } else {
+      setSelectedItems([]);
+    }
+  };
 
-  const navigation = [
-    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Projects", href: "/vendors", icon: Store },
-    { name: "Participants", href: "/participants", icon: Users },
-    { name: "Programs", href: "/programs", icon: Building2 },
-    { name: "Reports", href: "./reports", icon: FileBarChart },
-    { name: "Analytics", href: "./analytics", icon: FileBarChart },
-    { name: "Settings", href: "./settings", icon: Settings },
-  ];
+  // Add individual select function
+  const handleSelectItem = (docId) => {
+    setSelectedItems(prev => {
+      if (prev.includes(docId)) {
+        return prev.filter(id => id !== docId);
+      } else {
+        return [...prev, docId];
+      }
+    });
+  };
 
-  // Update the table to handle both types of results
+  // Update bulk delete to use modal
+  const handleBulkDelete = () => {
+    setItemsToDelete(selectedItems);
+    setShowDeleteConfirmation(true);
+  };
+
+  // Actual delete function
+  const confirmBulkDelete = async () => {
+    try {
+      // Delete all selected items
+      await Promise.all(
+        itemsToDelete.map(async (docId) => {
+          await deleteDoc(doc(db, "participants", docId));
+        })
+      );
+
+      // Update local state
+      setParticipants(prev => prev.filter(p => !itemsToDelete.includes(p.docId)));
+      
+      // Clear selection
+      setSelectedItems([]);
+      setItemsToDelete([]);
+      
+      // Show success message
+      toast.success(`Successfully deleted ${itemsToDelete.length} item(s)`);
+      
+      // Close detail view if selected participant was deleted
+      if (selectedParticipant && itemsToDelete.includes(selectedParticipant.docId)) {
+        setSelectedParticipant(null);
+      }
+    } catch (error) {
+      console.error("Error deleting items:", error);
+      toast.error("Failed to delete some items");
+    } finally {
+      setShowDeleteConfirmation(false);
+    }
+  };
+
+  // Modify the table header to include checkbox
+  const renderTableHeader = () => (
+    <TableRow className="bg-gradient-to-r from-[#C5D48A]/20 to-[#A6C060]/10 hover:bg-[#96B54A]/5">
+      <TableHead className="w-12">
+        <input
+          type="checkbox"
+          className="rounded border-gray-300 text-[#496E22] focus:ring-[#496E22]"
+          checked={selectedItems.length === filteredParticipants.length && filteredParticipants.length > 0}
+          onChange={handleSelectAll}
+        />
+      </TableHead>
+      <TableHead className="text-[#496E22] font-semibold">ID</TableHead>
+      <TableHead className="text-[#496E22] font-semibold">Name</TableHead>
+      <TableHead className="text-[#496E22] font-semibold">Address</TableHead>
+      <TableHead className="text-[#496E22] font-semibold">Project</TableHead>
+      <TableHead className="text-[#496E22] font-semibold">Status</TableHead>
+      <TableHead className="text-right text-[#496E22] font-semibold">Actions</TableHead>
+    </TableRow>
+  );
+
+  // Modify the renderTableRow function to include checkbox
   const renderTableRow = (item) => {
     const isFamily = item.type === 'family';
     return (
       <TableRow
         key={item.docId}
-        className={`cursor-pointer transition-colors hover:bg-[#96B54A]/5 ${
+        className={`group transition-colors hover:bg-[#96B54A]/5 ${
           selectedParticipant?.docId === item.docId ? "bg-[#96B54A]/10" : ""
         }`}
-        onClick={() => handleViewDetails(item)}
       >
-        <TableCell className="font-medium text-black">
+        <TableCell className="w-12">
+          <input
+            type="checkbox"
+            className="rounded border-gray-300 text-[#496E22] focus:ring-[#496E22]"
+            checked={selectedItems.includes(item.docId)}
+            onChange={(e) => {
+              e.stopPropagation();
+              handleSelectItem(item.docId);
+            }}
+          />
+        </TableCell>
+        <TableCell className="font-medium text-black" onClick={() => handleViewDetails(item)}>
           {isFamily ? item.familyId : item.id}
         </TableCell>
-        <TableCell>
+        <TableCell onClick={() => handleViewDetails(item)}>
           <div className="flex items-center space-x-2">
             <div className="h-10 w-10 rounded-full bg-[#96B54A]/10 flex items-center justify-center">
               {isFamily ? <Users className="h-5 w-5 text-[#496E22]" /> : <User className="h-5 w-5 text-[#496E22]" />}
@@ -407,13 +486,13 @@ export default function ParticipantsPage() {
             </div>
           </div>
         </TableCell>
-        <TableCell className="text-black/90">
+        <TableCell className="text-black/90" onClick={() => handleViewDetails(item)}>
           {isFamily ? item.familyAddress : item.address}
         </TableCell>
-        <TableCell className="text-black/90">
+        <TableCell className="text-black/90" onClick={() => handleViewDetails(item)}>
           {isFamily ? 'Family' : item.project}
         </TableCell>
-        <TableCell>
+        <TableCell onClick={() => handleViewDetails(item)}>
           <ParticipantStatusBadge status={item.status || 'Active'} />
         </TableCell>
         <TableCell className="text-right">
@@ -489,6 +568,55 @@ export default function ParticipantsPage() {
     );
   };
 
+  // Update the renderSelectedActions function to include delete button
+  const renderSelectedActions = () => {
+    if (selectedItems.length > 0) {
+      return (
+        <div className="flex items-center justify-between mb-4 p-4 bg-[#496E22]/5 rounded-lg">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-[#496E22]">
+              {selectedItems.length} item{selectedItems.length > 1 ? 's' : ''} selected
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-[#496E22] border-[#496E22] hover:bg-[#496E22]/10"
+              onClick={() => setSelectedItems([])}
+            >
+              Clear Selection
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="destructive"
+              size="sm"
+              className="bg-red-500 hover:bg-red-600 text-white"
+              onClick={handleBulkDelete}
+            >
+              <Trash2 className="h-4 w-4 mr-2" />
+              Delete Selected
+            </Button>
+          </div>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  if (loading) {
+    return <LoadingPage />;
+  }
+
+  const navigation = [
+    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { name: "Projects", href: "/vendors", icon: Store },
+    { name: "Participants", href: "/participants", icon: Users },
+    { name: "Programs", href: "/programs", icon: Building2 },
+    { name: "Reports", href: "./reports", icon: FileBarChart },
+    { name: "Analytics", href: "./analytics", icon: FileBarChart },
+    { name: "Settings", href: "./settings", icon: Settings },
+  ];
+
   return (
     <>
       <ToastContainer
@@ -537,7 +665,7 @@ export default function ParticipantsPage() {
                         className={`${
                           isActive
                             ? "text-primary"
-                            : "text-muted-foreground group-hover:text-foreground" 
+                            : "text-muted-foreground group-hover:text-foreground"
                         } mr-3 flex-shrink-0 h-5 w-5`}
                         aria-hidden="true"
                       />
@@ -784,23 +912,17 @@ export default function ParticipantsPage() {
                       </div>
                     </CardHeader>
                     <CardContent className="p-0">
+                      {renderSelectedActions()}
                       <div className={`grid ${selectedParticipant ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1"} gap-0`}>
                         <div className={`${selectedParticipant ? "border-r border-[#96B54A]/10" : ""}`}>
                           <Table>
                             <TableHeader>
-                              <TableRow className="bg-gradient-to-r from-[#C5D48A]/20 to-[#A6C060]/10 hover:bg-[#96B54A]/5">
-                                <TableHead className="text-[#496E22] font-semibold">ID</TableHead>
-                                <TableHead className="text-[#496E22] font-semibold">Name</TableHead>
-                                <TableHead className="text-[#496E22] font-semibold">Address</TableHead>
-                                <TableHead className="text-[#496E22] font-semibold">Project</TableHead>
-                                <TableHead className="text-[#496E22] font-semibold">Status</TableHead>
-                                <TableHead className="text-right text-[#496E22] font-semibold">Actions</TableHead>
-                              </TableRow>
+                              {renderTableHeader()}
                             </TableHeader>
                             <TableBody>
                               {loading ? (
                                 <TableRow>
-                                  <TableCell colSpan={6} className="h-24 text-center">
+                                  <TableCell colSpan={7} className="h-24 text-center">
                                     <div className="flex items-center justify-center">
                                       <Loader2 className="h-6 w-6 animate-spin text-[#496E22]" />
                                       <span className="ml-2">Loading...</span>
@@ -809,7 +931,7 @@ export default function ParticipantsPage() {
                                 </TableRow>
                               ) : filteredParticipants.length === 0 ? (
                                 <TableRow>
-                                  <TableCell colSpan={6} className="h-24 text-center">
+                                  <TableCell colSpan={7} className="h-24 text-center">
                                     No {searchQuery ? "matching" : ""} participants found.
                                   </TableCell>
                                 </TableRow>
@@ -869,6 +991,15 @@ export default function ParticipantsPage() {
           onClose={() => setIsAssistanceModalOpen(false)}
           onSubmit={handleAddAssistance}
           participantId={selectedParticipantId}
+        />
+
+        {/* Add Delete Confirmation Modal */}
+        <ConfirmationDialog
+          open={showDeleteConfirmation}
+          onOpenChange={setShowDeleteConfirmation}
+          onConfirm={confirmBulkDelete}
+          title="Confirm Deletion"
+          description={`Are you sure you want to delete ${itemsToDelete.length} selected item(s)? This process cannot be undone.`}
         />
       </div>
     </>

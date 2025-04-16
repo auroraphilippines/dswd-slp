@@ -234,9 +234,10 @@ export default function ManPowerPage() {
                         id={`worker-task-${index}`}
                         value={worker.task}
                         onChange={(e) =>
-                          handleInputChange(index, "task", e.target.value)
+                          handleInputChange(index, "task", e.target.value.toUpperCase())
                         }
                         placeholder="Enter worker's specific task"
+                        className="uppercase"
                       />
                     </div>
 

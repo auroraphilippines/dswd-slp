@@ -22,6 +22,7 @@ import {
   MoreHorizontal,
   User,
   LogOut,
+  Trash2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -81,6 +82,7 @@ import {
   Legend
 } from 'chart.js';
 import { Chart } from 'react-chartjs-2';
+import { Checkbox } from "@/components/ui/checkbox";
 
 // Register ChartJS components
 ChartJS.register(
@@ -115,6 +117,7 @@ export default function VendorsPage() {
     totalMaterialsCost: 0,
     totalEquipmentCost: 0
   });
+  const [selectedVendors, setSelectedVendors] = useState([]);
 
   // Close mobile menu when path changes
   useEffect(() => {
@@ -733,6 +736,40 @@ export default function VendorsPage() {
     return name.substring(0, 2).toUpperCase();
   };
 
+  // Add this function to handle checkbox selection
+  const handleSelectVendor = (vendor, checked) => {
+    if (checked) {
+      setSelectedVendors([...selectedVendors, vendor]);
+    } else {
+      setSelectedVendors(selectedVendors.filter(v => v.id !== vendor.id));
+    }
+  };
+
+  // Add this function to handle multiple delete
+  const handleMultipleDelete = async () => {
+    if (!selectedVendors.length || !currentUser) {
+      toast.error("Please select vendors to delete");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const deletePromises = selectedVendors.map(vendor => deleteVendor(vendor.id));
+      await Promise.all(deletePromises);
+      
+      toast.success("Selected vendors deleted successfully!");
+      setSelectedVendors([]);
+      if (selectedVendor && selectedVendors.some(v => v.id === selectedVendor.id)) {
+        setSelectedVendor(null);
+      }
+    } catch (error) {
+      console.error("Error deleting vendors:", error);
+      toast.error("An error occurred while deleting vendors");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   if (loading) {
     return <LoadingPage />;
   }
@@ -1234,6 +1271,32 @@ export default function VendorsPage() {
                           <Table>
                             <TableHeader>
                               <TableRow className="bg-gradient-to-r from-[#C5D48A]/20 to-[#A6C060]/10 hover:bg-[#96B54A]/5">
+                                <TableHead className="w-[100px]">
+                                  <div className="flex items-center gap-2">
+                                    <Checkbox
+                                      checked={selectedVendors.length === filteredVendors.length}
+                                      onCheckedChange={(checked) => {
+                                        if (checked) {
+                                          setSelectedVendors(filteredVendors);
+                                        } else {
+                                          setSelectedVendors([]);
+                                        }
+                                      }}
+                                    />
+                                    {selectedVendors.length > 0 && (
+                                      <Button
+                                        variant="destructive"
+                                        size="sm"
+                                        onClick={handleMultipleDelete}
+                                        disabled={isSubmitting}
+                                        className="h-6 px-2"
+                                      >
+                                        <Trash2 className="h-3 w-3 mr-1" />
+                                        Delete ({selectedVendors.length})
+                                      </Button>
+                                    )}
+                                  </div>
+                                </TableHead>
                                 <TableHead className="w-[100px] text-black font-semibold">
                                   Project Code
                                 </TableHead>
@@ -1258,6 +1321,15 @@ export default function VendorsPage() {
                                     }`}
                                     onClick={() => handleViewDetails(vendor)}
                                   >
+                                    <TableCell>
+                                      <Checkbox
+                                        checked={selectedVendors.some(v => v.id === vendor.id)}
+                                        onCheckedChange={(checked) => {
+                                          handleSelectVendor(vendor, checked);
+                                        }}
+                                        onClick={(e) => e.stopPropagation()}
+                                      />
+                                    </TableCell>
                                     <TableCell className="font-medium text-black">
                                       <div className="flex items-center gap-2">
                                         <span>{vendor.projectCode}</span>
@@ -1446,10 +1518,10 @@ export default function VendorsPage() {
                           onChange={(e) =>
                             setEditingVendor({
                               ...editingVendor,
-                              programName: e.target.value,
+                              programName: e.target.value.toUpperCase(),
                             })
                           }
-                          className="col-span-3"
+                          className="col-span-3 uppercase"
                         />
                       </div>
                       <div className="grid grid-cols-4 items-center gap-4">
@@ -1466,8 +1538,9 @@ export default function VendorsPage() {
                             })
                           }
                           className="col-span-3"
+                          readOnly
                         />
-                      </div>
+                      </div>  
                       <div className="grid grid-cols-4 items-center gap-4">
                         <label htmlFor="email" className="text-right">
                           Email
@@ -1483,6 +1556,7 @@ export default function VendorsPage() {
                             })
                           }
                           className="col-span-3"
+                          readOnly
                         />
                       </div>
                     </div>

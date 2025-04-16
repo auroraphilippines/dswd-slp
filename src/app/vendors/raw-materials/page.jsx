@@ -242,10 +242,11 @@ export default function RawMaterialsPage() {
                         id={`name-${index}`}
                         value={material.name}
                         onChange={(e) =>
-                          handleInputChange(index, "name", e.target.value)
+                          handleInputChange(index, "name", e.target.value.toUpperCase())
                         }
                         onKeyDown={(e) => handleKeyPress(e, index, "name")}
                         placeholder="Enter material name"
+                        className="uppercase"
                       />
                     </div>
 
@@ -297,10 +298,11 @@ export default function RawMaterialsPage() {
                         id={`unit-${index}`}
                         value={material.unit}
                         onChange={(e) =>
-                          handleInputChange(index, "unit", e.target.value)
+                          handleInputChange(index, "unit", e.target.value.toUpperCase())
                         }
                         onKeyDown={(e) => handleKeyPress(e, index, "unit")}
                         placeholder="e.g., Pcs, Liter, Kg"
+                        className="uppercase"
                       />
                     </div>
 
@@ -352,10 +354,11 @@ export default function RawMaterialsPage() {
                         id={`frequency-${index}`}
                         value={material.frequency}
                         onChange={(e) =>
-                          handleInputChange(index, "frequency", e.target.value)
+                          handleInputChange(index, "frequency", e.target.value.toUpperCase())
                         }
                         onKeyDown={(e) => handleKeyPress(e, index, "frequency")}
                         placeholder="e.g., Once, Monthly, Quarterly"
+                        className="uppercase"
                       />
                     </div>
 

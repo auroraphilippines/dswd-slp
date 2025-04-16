@@ -428,10 +428,11 @@ export default function ToolsEquipmentPage() {
                         id={`tool-name-${index}`}
                         value={tool.name}
                         onChange={(e) =>
-                          handleInputChange(index, "name", e.target.value)
+                          handleInputChange(index, "name", e.target.value.toUpperCase())
                         }
                         onKeyDown={(e) => handleKeyPress(e, index, "name")}
                         placeholder="Enter tool/equipment name"
+                        className="uppercase"
                       />
                     </div>
 
@@ -481,10 +482,11 @@ export default function ToolsEquipmentPage() {
                         id={`unit-${index}`}
                         value={tool.unit}
                         onChange={(e) =>
-                          handleInputChange(index, "unit", e.target.value)
+                          handleInputChange(index, "unit", e.target.value.toUpperCase())
                         }
                         onKeyDown={(e) => handleKeyPress(e, index, "unit")}
                         placeholder="e.g., Pcs, Set, Unit"
+                        className="uppercase"
                       />
                     </div>
 

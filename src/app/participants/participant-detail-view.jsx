@@ -421,15 +421,15 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance }) 
                 </div>
                 <div className="flex justify-between sm:block">
                   <dt className="text-sm font-medium text-muted-foreground">
-                    Age:
+                    Birthday:
                   </dt>
-                  <dd className="text-sm font-medium">{participant.age}</dd>
+                  <dd className="text-sm font-medium">{participant.birthday}</dd>
                 </div>
                 <div className="flex justify-between sm:block">
                   <dt className="text-sm font-medium text-muted-foreground">
-                    Project:
+                    Age:
                   </dt>
-                  <dd className="text-sm font-medium">{participant.project}</dd>
+                  <dd className="text-sm font-medium">{participant.age}</dd>
                 </div>
                 <div className="flex justify-between sm:block">
                   <dt className="text-sm font-medium text-muted-foreground">
@@ -458,20 +458,38 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance }) 
                     {participant.dateRegistered}
                   </dd>
                 </div>
+              </dl>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">
+                Project & Category Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
                 <div className="flex justify-between sm:block">
                   <dt className="text-sm font-medium text-muted-foreground">
-                    Valid ID Type:
+                    Project:
                   </dt>
-                  <dd className="text-sm font-medium">{participant.validID}</dd>
+                  <dd className="text-sm font-medium">{participant.project}</dd>
                 </div>
                 <div className="flex justify-between sm:block">
                   <dt className="text-sm font-medium text-muted-foreground">
-                    Valid ID Number:
+                    Category:
                   </dt>
-                  <dd className="text-sm font-medium">
-                    {participant.validIDNumber}
-                  </dd>
+                  <dd className="text-sm font-medium">{participant.category}</dd>
                 </div>
+                {participant.category === "GROUP" && (
+                  <div className="flex justify-between sm:block">
+                    <dt className="text-sm font-medium text-muted-foreground">
+                      SLPA Name:
+                    </dt>
+                    <dd className="text-sm font-medium">{participant.slpaName}</dd>
+                  </div>
+                )}
               </dl>
             </CardContent>
           </Card>
@@ -497,13 +515,80 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance }) 
                     Address:
                   </dt>
                   <dd className="text-sm font-medium">
-                    {participant.address}</dd>
+                    {participant.address}
+                  </dd>
                 </div>
-              
               </dl>
             </CardContent>
           </Card>
 
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">
+                Identification Information
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
+                <div className="flex justify-between sm:block">
+                  <dt className="text-sm font-medium text-muted-foreground">
+                    Valid ID Type:
+                  </dt>
+                  <dd className="text-sm font-medium">{participant.validID}</dd>
+                </div>
+                <div className="flex justify-between sm:block">
+                  <dt className="text-sm font-medium text-muted-foreground">
+                    Valid ID Number:
+                  </dt>
+                  <dd className="text-sm font-medium">
+                    {participant.validIDNumber}
+                  </dd>
+                </div>
+              </dl>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium">
+                Program Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
+                <div className="flex justify-between sm:block">
+                  <dt className="text-sm font-medium text-muted-foreground">
+                    Type of Participant:
+                  </dt>
+                  <dd className="text-sm font-medium">{participant.participantType}</dd>
+                </div>
+                <div className="flex justify-between sm:block">
+                  <dt className="text-sm font-medium text-muted-foreground">
+                    Sector:
+                  </dt>
+                  <dd className="text-sm font-medium">{participant.sector}</dd>
+                </div>
+                {(participant.participantType === "Poor - Exiting 4Ps" || participant.participantType === "Poor - 4Ps") && (
+                  <>
+                    <div className="flex justify-between sm:block">
+                      <dt className="text-sm font-medium text-muted-foreground">
+                        4Ps Household Member:
+                      </dt>
+                      <dd className="text-sm font-medium">{participant.is4PsHouseholdMember}</dd>
+                    </div>
+                    {participant.is4PsHouseholdMember === "Yes" && (
+                      <div className="flex justify-between sm:block">
+                        <dt className="text-sm font-medium text-muted-foreground">
+                          Household ID:
+                        </dt>
+                        <dd className="text-sm font-medium">{participant.householdId}</dd>
+                      </div>
+                    )}
+                  </>
+                )}
+              </dl>
+            </CardContent>
+          </Card>
         </TabsContent>
 
         <TabsContent value="family" className="space-y-4">

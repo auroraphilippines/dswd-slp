@@ -310,7 +310,8 @@ export function VendorDetailView({ vendor, onUpdate }) {
                           <label className="text-sm text-muted-foreground">Task:</label>
                           <Input
                             value={worker.task}
-                            onChange={(e) => handleManpowerChange(index, 'task', e.target.value)}
+                            onChange={(e) => handleManpowerChange(index, 'task', e.target.value.toUpperCase())}
+                            className="uppercase"
                           />
                         </div>
                         <div>
@@ -410,7 +411,8 @@ export function VendorDetailView({ vendor, onUpdate }) {
                           <label className="text-sm text-muted-foreground">Material Name:</label>
                           <Input
                             value={material.name}
-                            onChange={(e) => handleMaterialChange(index, 'name', e.target.value)}
+                            onChange={(e) => handleMaterialChange(index, 'name', e.target.value.toUpperCase())}
+                            className="uppercase"
                           />
                         </div>
                         <div>
@@ -425,7 +427,8 @@ export function VendorDetailView({ vendor, onUpdate }) {
                           <label className="text-sm text-muted-foreground">Unit:</label>
                           <Input
                             value={material.unit}
-                            onChange={(e) => handleMaterialChange(index, 'unit', e.target.value)}
+                            onChange={(e) => handleMaterialChange(index, 'unit', e.target.value.toUpperCase())}
+                            className="uppercase"
                           />
                         </div>
                         <div>
@@ -440,7 +443,8 @@ export function VendorDetailView({ vendor, onUpdate }) {
                           <label className="text-sm text-muted-foreground">Frequency:</label>
                           <Input
                             value={material.frequency}
-                            onChange={(e) => handleMaterialChange(index, 'frequency', e.target.value)}
+                            onChange={(e) => handleMaterialChange(index, 'frequency', e.target.value.toUpperCase())}
+                            className="uppercase"
                           />
                         </div>
                         <div>
@@ -529,7 +533,8 @@ export function VendorDetailView({ vendor, onUpdate }) {
                           <label className="text-sm text-muted-foreground">Item Name:</label>
                           <Input
                             value={item.name}
-                            onChange={(e) => handleToolChange(index, 'name', e.target.value)}
+                            onChange={(e) => handleToolChange(index, 'name', e.target.value.toUpperCase())}
+                            className="uppercase"
                           />
                         </div>
                         <div>
@@ -544,7 +549,8 @@ export function VendorDetailView({ vendor, onUpdate }) {
                           <label className="text-sm text-muted-foreground">Unit:</label>
                           <Input
                             value={item.unit}
-                            onChange={(e) => handleToolChange(index, 'unit', e.target.value)}
+                            onChange={(e) => handleToolChange(index, 'unit', e.target.value.toUpperCase())}
+                            className="uppercase"
                           />
                         </div>
                         <div>

@@ -254,10 +254,11 @@ export default function AddVendorPage() {
                   placeholder="Enter program name (e.g., Goat Raising, Rice Store)"
                   value={formData.programName}
                   onChange={(e) =>
-                    setFormData({ ...formData, programName: e.target.value })
+                    setFormData({ ...formData, programName: e.target.value.toUpperCase() })
                   }
                   onKeyPress={handleKeyPress}
                   required
+                  className="uppercase"
                 />
               </div>
 
