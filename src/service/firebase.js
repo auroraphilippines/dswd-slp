@@ -34,21 +34,29 @@ try {
             // Add a very small timeout to test connectivity
             const testTimeout = setTimeout(() => {
                 console.warn('Firebase connectivity check timed out. Possible ad blocker interference.');
-                localStorage.setItem('firebaseConnectivityIssue', 'true');
+                if (typeof window !== 'undefined') {
+                    localStorage.setItem('firebaseConnectivityIssue', 'true');
+                }
             }, 5000);
 
             // Try to clear the timeout if the check succeeds
             clearTimeout(testTimeout);
-            localStorage.removeItem('firebaseConnectivityIssue');
+            if (typeof window !== 'undefined') {
+                localStorage.removeItem('firebaseConnectivityIssue');
+            }
             console.log('Firebase connection check passed');
         } catch (error) {
             console.error('Firebase connectivity check failed:', error);
-            localStorage.setItem('firebaseConnectivityIssue', 'true');
+            if (typeof window !== 'undefined') {
+                localStorage.setItem('firebaseConnectivityIssue', 'true');
+            }
         }
     };
 
-    // Run the check
-    checkFirebaseConnectivity();
+    // Run the check only on client side
+    if (typeof window !== 'undefined') {
+        checkFirebaseConnectivity();
+    }
 
     // Enable logging in development
     if (process.env.NODE_ENV === 'development') {
@@ -56,11 +64,16 @@ try {
     }
 } catch (error) {
     console.error('Error initializing Firebase:', error);
-    localStorage.setItem('firebaseConnectivityIssue', 'true');
+    if (typeof window !== 'undefined') {
+        localStorage.setItem('firebaseConnectivityIssue', 'true');
+    }
 }
 
 // Export a function to check if there are connectivity issues
 export const hasFirebaseConnectivityIssues = () => {
+    if (typeof window === 'undefined') {
+        return false;
+    }
     return localStorage.getItem('firebaseConnectivityIssue') === 'true';
 };
 

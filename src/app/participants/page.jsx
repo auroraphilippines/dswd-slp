@@ -66,6 +66,7 @@ import { AddAssistanceModal } from "./add-assistance-modal";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 
 export default function ParticipantsPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -83,6 +84,7 @@ export default function ParticipantsPage() {
   const [selectedItems, setSelectedItems] = useState([]);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [itemsToDelete, setItemsToDelete] = useState([]);
+  const [showExportDialog, setShowExportDialog] = useState(false);
 
   const pathname = usePathname();
   const router = useRouter();
@@ -432,6 +434,108 @@ export default function ParticipantsPage() {
     } finally {
       setShowDeleteConfirmation(false);
     }
+  };
+
+  // Add export function
+  const exportToExcel = () => {
+    const headers = [
+      "ID",
+      "Name", 
+      "Gender",
+      "Age",
+      "Birthday",
+      "Project",
+      "Contact Number",
+      "Address",
+      "Valid ID Type",
+      "Valid ID Number",
+      "Participant Type",
+      "4Ps Household",
+      "Household ID",
+      "Sector",
+      "Category",
+      "SLPA Name",
+      "SLPA Position",
+      "Status",
+      "Date Registered"
+    ];
+
+    const csvContent = [
+      headers,
+      ...filteredParticipants.map((participant) => {
+        const isFamily = participant.type === 'family';
+        
+        // Format birthday to ensure it displays correctly in Excel
+        let formattedBirthday = '';
+        if (participant.birthday) {
+          if (participant.birthday.includes('/')) {
+            formattedBirthday = participant.birthday;
+          } else {
+            const date = new Date(participant.birthday);
+            if (!isNaN(date)) {
+              formattedBirthday = date.toLocaleDateString('en-GB');
+            }
+          }
+        }
+
+        // Format Valid ID Type and Number
+        const validIDType = participant.validID || 'NATIONAL ID';
+        // Format Valid ID Number as text by adding a leading apostrophe
+        const validIDNumber = participant.validIDNumber ? `="'${participant.validIDNumber}"` : '';
+
+        // Format Household ID as text
+        const householdId = participant.householdId ? `="'${participant.householdId}"` : '';
+        const is4PsHousehold = participant.is4PsHouseholdMember || '';
+
+        return [
+          isFamily ? participant.familyId : participant.id,
+          isFamily ? participant.familyName : participant.name,
+          participant.gender || '',
+          participant.age || '',
+          formattedBirthday,
+          participant.project || '',
+          participant.contactNumber || '',
+          participant.address || '',
+          validIDType,
+          validIDNumber,
+          participant.participantType || '',
+          is4PsHousehold,
+          householdId,
+          participant.sector || 'N/A',
+          participant.category || 'N/A',
+          participant.slpaName || '',
+          participant.slpaPosition || '',
+          participant.status || 'Active',
+          participant.dateRegistered || new Date().toLocaleDateString()
+        ];
+      }),
+    ]
+      .map(row => row.map(cell => {
+        if (cell === null || cell === undefined) {
+          return '';
+        }
+        // If the cell contains commas or quotes, wrap it in quotes and escape existing quotes
+        if (typeof cell === 'string' && (cell.includes(',') || cell.includes('"'))) {
+          return `"${cell.replace(/"/g, '""')}"`;
+        }
+        return cell;
+      }).join(","))
+      .join("\n");
+
+    // Create a Blob and URL with UTF-8 encoding and BOM for Excel
+    const blob = new Blob(["\ufeff" + csvContent], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+
+    // Create a temporary link to download the CSV
+    const link = document.createElement("a");
+    link.href = url;
+    const date = new Date().toLocaleDateString().replace(/\//g, '-');
+    link.download = `participants_data_${date}.csv`;
+    link.click();
+
+    // Clean up
+    URL.revokeObjectURL(url);
+    setShowExportDialog(false);
   };
 
   // Modify the table header to include checkbox
@@ -882,6 +986,14 @@ export default function ParticipantsPage() {
                         <FileBarChart className="mr-2 h-4 w-4" />
                         View Analytics
                       </Button>
+                      <Button 
+                        variant="outline"
+                        onClick={() => setShowExportDialog(true)}
+                        className="bg-blue-600 text-white hover:bg-blue-700 hover:text-white border-blue-600 hover:border-blue-700 transition-colors duration-200"
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        Export to Excel
+                      </Button>
                       <Button onClick={() => setIsAddModalOpen(true)}>
                         <Plus className="mr-2 h-4 w-4" />
                         Add Participant
@@ -1003,6 +1115,31 @@ export default function ParticipantsPage() {
           title="Confirm Deletion"
           description={`Are you sure you want to delete ${itemsToDelete.length} selected item(s)? This process cannot be undone.`}
         />
+
+        {/* Add Export Dialog */}
+        <Dialog
+          open={showExportDialog}
+          onOpenChange={setShowExportDialog}
+        >
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Export Participants Data</DialogTitle>
+              <DialogDescription>
+                Export the current participants list to Excel format.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col gap-4 py-4">
+              <Button
+                className="flex items-center justify-start gap-2"
+                variant="outline"
+                onClick={exportToExcel}
+              >
+                <Download className="h-5 w-5" />
+                Export as CSV
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </>
   );

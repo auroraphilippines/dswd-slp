@@ -83,6 +83,7 @@ import {
 } from 'chart.js';
 import { Chart } from 'react-chartjs-2';
 import { Checkbox } from "@/components/ui/checkbox";
+import XLSX from 'xlsx';
 
 // Register ChartJS components
 ChartJS.register(
@@ -210,9 +211,9 @@ export default function VendorsPage() {
         (stats.programDistribution[vendor.programName] || 0) + 1;
 
       // Calculate costs
-      stats.totalManpowerCost += vendor.workers?.reduce((sum, worker) => sum + (Number(worker.wage) || 0), 0) || 0;
+      stats.totalManpowerCost += vendor.manpower?.reduce((sum, worker) => sum + (Number(worker.wage) || 0), 0) || 0;
       stats.totalMaterialsCost += vendor.rawMaterials?.reduce((sum, material) => sum + (Number(material.totalCost) || 0), 0) || 0;
-      stats.totalEquipmentCost += vendor.toolsAndEquipment?.reduce((sum, item) => sum + (Number(item.totalCost) || 0), 0) || 0;
+      stats.totalEquipmentCost += vendor.tools?.reduce((sum, item) => sum + (Number(item.totalCost) || 0), 0) || 0;
     });
 
     return stats;
@@ -244,369 +245,139 @@ export default function VendorsPage() {
     router.push("./vendors/add");
   };
 
-  const exportToGoogleSheets = () => {
+  const exportToCSV = () => {
+    let csvContent = "";
+    const BOM = "\uFEFF";
+
+    // Headers for all sections in one line
     const headers = [
-      "Project Code",
-      "Program Name",
-      "Name",
-      "Email",
-      "Created At",
+      // Vendor Info
+      "ID", "Project Code", "Program Name", "Email",
       // Manpower Headers
-      "Total Manpower Cost",
-      "Number of Workers",
-      // Materials Headers
-      "Total Materials Cost",
-      "Number of Materials",
-      // Equipment Headers
-      "Total Equipment Cost",
-      "Number of Equipment",
-      "Total Depreciation Cost",
-    ];
+      "MANPOWER Number", "MANPOWER Task", "MANPOWER Daily Wage", "MANPOWER Total Daily Wage",
+      // Raw Materials Headers
+      "RAW MATERIALS Name", "RAW MATERIALS Quantity", "RAW MATERIALS Unit", "RAW MATERIALS Unit Price", "RAW MATERIALS Frequency", "RAW MATERIALS Total Cost",
+      // Tools & Equipment Headers
+      "TOOLS & EQUIPMENT Name", "TOOLS & EQUIPMENT Quantity", "TOOLS & EQUIPMENT Unit", "TOOLS & EQUIPMENT Unit Price", 
+      "TOOLS & EQUIPMENT Life Span", "TOOLS & EQUIPMENT Production Cycle", "TOOLS & EQUIPMENT Total Cost", "TOOLS & EQUIPMENT Depreciation",
+      // Status and Date
+      "Status", "Date Registered"
+    ].join(",") + "\n";
 
-    const csvContent = [
-      headers,
-      ...vendors.map((vendor) => {
-        // Calculate totals
-        const totalManpowerCost =
-          vendor.workers?.reduce(
-            (sum, worker) => sum + (Number(worker.wage) || 0),
-            0
-          ) || 0;
-        const totalMaterialsCost =
-          vendor.rawMaterials?.reduce(
-            (sum, material) => sum + (Number(material.totalCost) || 0),
-            0
-          ) || 0;
-        const totalEquipmentCost =
-          vendor.toolsAndEquipment?.reduce(
-            (sum, item) => sum + (Number(item.totalCost) || 0),
-            0
-          ) || 0;
-        const totalDepreciationCost =
-          vendor.toolsAndEquipment?.reduce(
-            (sum, item) => sum + (Number(item.depreciationCost) || 0),
-            0
-          ) || 0;
+    csvContent += headers;
 
-        return [
+    vendors.forEach((vendor) => {
+      // Get the maximum number of items in any category for this vendor
+      const maxItems = Math.max(
+        vendor.manpower?.length || 0,
+        vendor.rawMaterials?.length || 0,
+        vendor.tools?.length || 0
+      );
+
+      // If there are no items in any category, create one row with just vendor info
+      if (maxItems === 0) {
+        const emptyRow = [
+          vendor.id || "",
           vendor.projectCode || "",
           vendor.programName || "",
-          vendor.name || "",
           vendor.email || "",
-          vendor.createdAt?.toDate().toLocaleDateString() || "",
-          totalManpowerCost.toFixed(2),
-          vendor.workers?.length || 0,
-          totalMaterialsCost.toFixed(2),
-          vendor.rawMaterials?.length || 0,
-          totalEquipmentCost.toFixed(2),
-          vendor.toolsAndEquipment?.length || 0,
-          totalDepreciationCost.toFixed(2),
+          // Empty cells for all categories
+          ...Array(18).fill(""),
+          "Active",
+          vendor.createdAt?.toDate().toLocaleDateString() || ""
         ];
-      }),
-    ]
-      .map((row) => row.join(","))
-      .join("\n");
-
-    // Create a Blob and URL
-    const blob = new Blob([csvContent], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-
-    // Create a temporary link to download the CSV
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "vendors_data.csv";
-    link.click();
-
-    // Clean up
-    URL.revokeObjectURL(url);
-    setShowExportDialog(false);
-  };
-
-  const exportToExcelOnline = () => {
-    // Create workbook data with multiple sheets
-    let csvContent = "";
-
-    // Main Vendors Sheet
-    const mainHeaders = [
-      "Project Code",
-      "Program Name",
-      "Name",
-      "Email",
-      "Created At",
-      "Total Manpower Cost",
-      "Total Materials Cost",
-      "Total Equipment Cost",
-      "Total Depreciation Cost",
-    ];
-
-    csvContent += "Vendors Summary\n";
-    csvContent += mainHeaders.join(",") + "\n";
-
-    vendors.forEach((vendor) => {
-      const totalManpowerCost =
-        vendor.workers?.reduce(
-          (sum, worker) => sum + (Number(worker.wage) || 0),
-          0
-        ) || 0;
-      const totalMaterialsCost =
-        vendor.rawMaterials?.reduce(
-          (sum, material) => sum + (Number(material.totalCost) || 0),
-          0
-        ) || 0;
-      const totalEquipmentCost =
-        vendor.toolsAndEquipment?.reduce(
-          (sum, item) => sum + (Number(item.totalCost) || 0),
-          0
-        ) || 0;
-      const totalDepreciationCost =
-        vendor.toolsAndEquipment?.reduce(
-          (sum, item) => sum + (Number(item.depreciationCost) || 0),
-          0
-        ) || 0;
-
-      const row = [
-        vendor.projectCode || "",
-        vendor.programName || "",
-        vendor.name || "",
-        vendor.email || "",
-        vendor.createdAt?.toDate().toLocaleDateString() || "",
-        totalManpowerCost.toFixed(2),
-        totalMaterialsCost.toFixed(2),
-        totalEquipmentCost.toFixed(2),
-        totalDepreciationCost.toFixed(2),
-      ];
-      csvContent += row.join(",") + "\n";
-    });
-
-    // Add a blank line between sheets
-    csvContent += "\n\nManpower Details\n";
-
-    // Manpower Sheet
-    const manpowerHeaders = [
-      "Project Code",
-      "Program Name",
-      "Worker Name",
-      "Task",
-      "Daily Wage",
-    ];
-    csvContent += manpowerHeaders.join(",") + "\n";
-
-    vendors.forEach((vendor) => {
-      if (vendor.workers && vendor.workers.length > 0) {
-        vendor.workers.forEach((worker) => {
-          const row = [
-            vendor.projectCode || "",
-            vendor.programName || "",
-            worker.name || "",
-            worker.task || "",
-            (worker.wage || 0).toFixed(2),
-          ];
-          csvContent += row.join(",") + "\n";
-        });
+        csvContent += emptyRow.join(",") + "\n";
+        return;
       }
-    });
 
-    // Materials Sheet
-    csvContent += "\n\nRaw Materials Details\n";
-    const materialsHeaders = [
-      "Project Code",
-      "Program Name",
-      "Material Name",
-      "Quantity",
-      "Unit",
-      "Unit Price",
-      "Total Cost",
-      "Frequency",
-    ];
-    csvContent += materialsHeaders.join(",") + "\n";
+      // Create rows for each index up to maxItems
+      for (let i = 0; i < maxItems; i++) {
+        const row = [];
 
-    vendors.forEach((vendor) => {
-      if (vendor.rawMaterials && vendor.rawMaterials.length > 0) {
-        vendor.rawMaterials.forEach((material) => {
-          const row = [
+        // Vendor info (only on first row)
+        if (i === 0) {
+          row.push(
+            vendor.id || "",
             vendor.projectCode || "",
             vendor.programName || "",
+            vendor.email || ""
+          );
+        } else {
+          row.push("", "", "", "");
+        }
+
+        // Manpower data
+        const manpower = vendor.manpower?.[i];
+        if (manpower) {
+          const totalDailyWage = (Number(manpower.wage) * Number(manpower.numberOfWorkers)) || 0;
+          row.push(
+            manpower.numberOfWorkers || "",
+            manpower.task || "",
+            manpower.wage || "",
+            totalDailyWage || ""
+          );
+        } else {
+          row.push("", "", "", "");
+        }
+
+        // Raw Materials data
+        const material = vendor.rawMaterials?.[i];
+        if (material) {
+          row.push(
             material.name || "",
-            material.quantity || "0",
+            material.quantity || "",
             material.unit || "",
-            (material.unitPrice || 0).toFixed(2),
-            (material.totalCost || 0).toFixed(2),
+            material.unitPrice || "",
             material.frequency || "",
-          ];
-          csvContent += row.join(",") + "\n";
-        });
+            material.totalCost || ""
+          );
+        } else {
+          row.push("", "", "", "", "", "");
+        }
+
+        // Tools & Equipment data
+        const tool = vendor.tools?.[i];
+        if (tool) {
+          row.push(
+            tool.name || "",
+            tool.quantity || "",
+            tool.unit || "",
+            tool.unitPrice || "",
+            tool.lifeSpan || "",
+            tool.productionCycle || "",
+            tool.totalCost || "",
+            tool.depreciationCost || ""
+          );
+        } else {
+          row.push("", "", "", "", "", "", "", "");
+        }
+
+        // Status and Date (only on first row)
+        if (i === 0) {
+          row.push(
+            "Active",
+            vendor.createdAt?.toDate().toLocaleDateString() || ""
+          );
+        } else {
+          row.push("", "");
+        }
+
+        csvContent += row.join(",") + "\n";
       }
     });
 
-    // Equipment Sheet
-    csvContent += "\n\nTools and Equipment Details\n";
-    const equipmentHeaders = [
-      "Project Code",
-      "Program Name",
-      "Item Name",
-      "Quantity",
-      "Unit",
-      "Unit Cost",
-      "Life Span (Years)",
-      "Production Cycle (Months)",
-      "Total Cost",
-      "Depreciation Cost",
-    ];
-    csvContent += equipmentHeaders.join(",") + "\n";
-
-    vendors.forEach((vendor) => {
-      if (vendor.toolsAndEquipment && vendor.toolsAndEquipment.length > 0) {
-        vendor.toolsAndEquipment.forEach((item) => {
-          const row = [
-            vendor.projectCode || "",
-            vendor.programName || "",
-            item.name || "",
-            item.quantity || "0",
-            item.unit || "",
-            (item.unitCost || 0).toFixed(2),
-            item.lifeSpan || "0",
-            item.productionCycle || "0",
-            (item.totalCost || 0).toFixed(2),
-            (item.depreciationCost || 0).toFixed(2),
-          ];
-          csvContent += row.join(",") + "\n";
-        });
-      }
-    });
-
-    // Create Blob with UTF-8 BOM for Excel compatibility
-    const BOM = "\uFEFF";
-    const blob = new Blob([BOM + csvContent], {
-      type: "text/csv;charset=UTF-8",
-    });
-    const url = URL.createObjectURL(blob);
-
-    // Create a temporary link and trigger download
+    // Create and download the file
+    const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
     const link = document.createElement("a");
-    link.href = url;
-    link.download = "vendors_detailed.csv";
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", "vendors_report.csv");
+    link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-
-    // Clean up
     URL.revokeObjectURL(url);
     setShowExportDialog(false);
-  };
-
-  const exportVendorToExcel = (vendor) => {
-    let csvContent = "";
-
-    // Vendor Basic Information
-    csvContent += "Basic Information\n";
-    csvContent += "Vendor ID," + (vendor.vendorId || "") + "\n";
-    csvContent += "Project Code," + (vendor.projectCode || "") + "\n";
-    csvContent += "Program Name," + (vendor.programName || "") + "\n";
-    csvContent += "Name," + (vendor.name || "") + "\n";
-    csvContent += "Email," + (vendor.email || "") + "\n";
-    csvContent +=
-      "Registration Date," +
-      (vendor.createdAt?.toDate().toLocaleDateString() || "") +
-      "\n\n";
-
-    // Manpower Details
-    csvContent += "\nManpower Details\n";
-    csvContent += "Worker Name,Task,Daily Wage\n";
-    if (vendor.workers && vendor.workers.length > 0) {
-      vendor.workers.forEach((worker) => {
-        csvContent += `${worker.name || ""},${worker.task || ""},${(
-          worker.wage || 0
-        ).toFixed(2)}\n`;
-      });
-    }
-    const totalManpowerCost =
-      vendor.workers?.reduce(
-        (sum, worker) => sum + (Number(worker.wage) || 0),
-        0
-      ) || 0;
-    csvContent += `Total Manpower Cost,${totalManpowerCost.toFixed(2)}\n\n`;
-
-    // Raw Materials Details
-    csvContent += "\nRaw Materials Details\n";
-    csvContent +=
-      "Material Name,Quantity,Unit,Unit Price,Total Cost,Frequency\n";
-    if (vendor.rawMaterials && vendor.rawMaterials.length > 0) {
-      vendor.rawMaterials.forEach((material) => {
-        csvContent += `${material.name || ""},${material.quantity || "0"},${
-          material.unit || ""
-        },${(material.unitPrice || 0).toFixed(2)},${(
-          material.totalCost || 0
-        ).toFixed(2)},${material.frequency || ""}\n`;
-      });
-    }
-    const totalMaterialsCost =
-      vendor.rawMaterials?.reduce(
-        (sum, material) => sum + (Number(material.totalCost) || 0),
-        0
-      ) || 0;
-    csvContent += `Total Materials Cost,${totalMaterialsCost.toFixed(2)}\n\n`;
-
-    // Tools and Equipment Details
-    csvContent += "\nTools and Equipment Details\n";
-    csvContent +=
-      "Item Name,Quantity,Unit,Unit Cost,Life Span (Years),Production Cycle (Months),Total Cost,Depreciation Cost\n";
-    if (vendor.toolsAndEquipment && vendor.toolsAndEquipment.length > 0) {
-      vendor.toolsAndEquipment.forEach((item) => {
-        csvContent += `${item.name || ""},${item.quantity || "0"},${
-          item.unit || ""
-        },${(item.unitCost || 0).toFixed(2)},${item.lifeSpan || "0"},${
-          item.productionCycle || "0"
-        },${(item.totalCost || 0).toFixed(2)},${(
-          item.depreciationCost || 0
-        ).toFixed(2)}\n`;
-      });
-    }
-    const totalEquipmentCost =
-      vendor.toolsAndEquipment?.reduce(
-        (sum, item) => sum + (Number(item.totalCost) || 0),
-        0
-      ) || 0;
-    const totalDepreciationCost =
-      vendor.toolsAndEquipment?.reduce(
-        (sum, item) => sum + (Number(item.depreciationCost) || 0),
-        0
-      ) || 0;
-    csvContent += `Total Equipment Cost,${totalEquipmentCost.toFixed(2)}\n`;
-    csvContent += `Total Depreciation Cost,${totalDepreciationCost.toFixed(
-      2
-    )}\n\n`;
-
-    // Summary of Costs
-    csvContent += "\nTotal Costs Summary\n";
-    csvContent += `Total Manpower Cost,${totalManpowerCost.toFixed(2)}\n`;
-    csvContent += `Total Materials Cost,${totalMaterialsCost.toFixed(2)}\n`;
-    csvContent += `Total Equipment Cost,${totalEquipmentCost.toFixed(2)}\n`;
-    csvContent += `Total Depreciation Cost,${totalDepreciationCost.toFixed(
-      2
-    )}\n`;
-    csvContent += `Grand Total,${(
-      totalManpowerCost +
-      totalMaterialsCost +
-      totalEquipmentCost
-    ).toFixed(2)}\n`;
-
-    // Create Blob with UTF-8 BOM for Excel compatibility
-    const BOM = "\uFEFF";
-    const blob = new Blob([BOM + csvContent], {
-      type: "text/csv;charset=UTF-8",
-    });
-    const url = URL.createObjectURL(blob);
-
-    // Create a temporary link and trigger download
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `vendor_${vendor.vendorId || vendor.id}_details.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    // Clean up
-    URL.revokeObjectURL(url);
   };
 
   const handleEditVendor = (vendor) => {
@@ -768,6 +539,217 @@ export default function VendorsPage() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const exportManpower = () => {
+    let csvContent = "";
+    const BOM = "\uFEFF"; // For Excel compatibility
+    const headers = [
+      "ID",
+      "Project Code",
+      "Program Name",
+      "Email",
+      "Number of Workers",
+      "Task",
+      "Daily Wage",
+      "Total Daily Wage",
+      "Status",
+      "Date Registered"
+    ].join(",") + "\n";
+
+    csvContent += headers;
+
+    vendors.forEach((vendor) => {
+      let isFirstRow = true;
+      
+      if (vendor.manpower && vendor.manpower.length > 0) {
+        vendor.manpower.forEach((worker) => {
+          const row = [];
+          
+          // Basic vendor info - only on first row or if it's the only row
+          if (isFirstRow) {
+            row.push(
+              vendor.id || "",
+              vendor.projectCode || "",
+              vendor.programName || "",
+              vendor.email || ""
+            );
+            isFirstRow = false;
+          } else {
+            row.push("", "", "", "");
+          }
+
+          const totalDailyWage = (Number(worker.wage) * Number(worker.numberOfWorkers)) || 0;
+          row.push(
+            worker.numberOfWorkers || "0",
+            worker.task || "",
+            worker.wage || "0",
+            totalDailyWage.toString(),
+            isFirstRow ? "Active" : "",
+            isFirstRow ? (vendor.createdAt?.toDate().toLocaleDateString() || "") : ""
+          );
+
+          csvContent += row.join(",") + "\n";
+        });
+      }
+    });
+
+    // Create and download the file
+    const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", "manpower_list.csv");
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    setShowExportDialog(false);
+  };
+
+  const exportRawMaterials = () => {
+    let csvContent = "";
+    const BOM = "\uFEFF"; // For Excel compatibility
+    const headers = [
+      "ID",
+      "Project Code",
+      "Program Name",
+      "Email",
+      "Material Name",
+      "Quantity",
+      "Unit",
+      "Unit Price",
+      "Frequency",
+      "Total Cost",
+      "Status",
+      "Date Registered"
+    ].join(",") + "\n";
+
+    csvContent += headers;
+
+    vendors.forEach((vendor) => {
+      let isFirstRow = true;
+      
+      if (vendor.rawMaterials && vendor.rawMaterials.length > 0) {
+        vendor.rawMaterials.forEach((material) => {
+          const row = [];
+          
+          // Basic vendor info - only on first row or if it's the only row
+          if (isFirstRow) {
+            row.push(
+              vendor.id || "",
+              vendor.projectCode || "",
+              vendor.programName || "",
+              vendor.email || ""
+            );
+            isFirstRow = false;
+          } else {
+            row.push("", "", "", "");
+          }
+
+          row.push(
+            material.name || "",
+            material.quantity || "0",
+            material.unit || "",
+            material.unitPrice || "0",
+            material.frequency || "",
+            material.totalCost || "0",
+            isFirstRow ? "Active" : "",
+            isFirstRow ? (vendor.createdAt?.toDate().toLocaleDateString() || "") : ""
+          );
+
+          csvContent += row.join(",") + "\n";
+        });
+      }
+    });
+
+    // Create and download the file
+    const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", "raw_materials_list.csv");
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    setShowExportDialog(false);
+  };
+
+  const exportToolsEquipment = () => {
+    let csvContent = "";
+    const BOM = "\uFEFF"; // For Excel compatibility
+    const headers = [
+      "ID",
+      "Project Code",
+      "Program Name",
+      "Email",
+      "Tool/Equipment Name",
+      "Quantity",
+      "Unit",
+      "Unit Price",
+      "Life Span",
+      "Production Cycle",
+      "Total Cost",
+      "Depreciation Cost",
+      "Status",
+      "Date Registered"
+    ].join(",") + "\n";
+
+    csvContent += headers;
+
+    vendors.forEach((vendor) => {
+      let isFirstRow = true;
+      
+      if (vendor.tools && vendor.tools.length > 0) {
+        vendor.tools.forEach((item) => {
+          const row = [];
+          
+          // Basic vendor info - only on first row or if it's the only row
+          if (isFirstRow) {
+            row.push(
+              vendor.id || "",
+              vendor.projectCode || "",
+              vendor.programName || "",
+              vendor.email || ""
+            );
+            isFirstRow = false;
+          } else {
+            row.push("", "", "", "");
+          }
+
+          row.push(
+            item.name || "",
+            item.quantity || "0",
+            item.unit || "",
+            item.unitPrice || "0",
+            item.lifeSpan || "0",
+            item.productionCycle || "0",
+            item.totalCost || "0",
+            item.depreciationCost || "0",
+            isFirstRow ? "Active" : "",
+            isFirstRow ? (vendor.createdAt?.toDate().toLocaleDateString() || "") : ""
+          );
+
+          csvContent += row.join(",") + "\n";
+        });
+      }
+    });
+
+    // Create and download the file
+    const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", "tools_equipment_list.csv");
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    setShowExportDialog(false);
   };
 
   if (loading) {
@@ -1012,43 +994,47 @@ export default function VendorsPage() {
         </div>
 
         <main className="flex-1 relative overflow-y-auto focus:outline-none">
-          <div className="py-6">
+          <div className="py-0">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex flex-col space-y-4">
-                <div className="flex items-center justify-between">
+              <div className="flex flex-col space-y-6">
+                <div className="flex items-center justify-between pt-4">
                   <h1 className="text-2xl font-bold tracking-tight">
                     Vendor Management
                   </h1>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex items-center gap-4">
                     <Button
                       variant="outline"
                       onClick={() => setShowExportDialog(true)}
+                      className="px-4 py-2 h-10 text-sm font-medium bg-blue-500 hover:bg-blue-600 text-white border-blue-500 hover:border-blue-600 rounded-md"
                     >
                       <Download className="mr-2 h-4 w-4" />
-                      Export
+                      Export to Excel
                     </Button>
-                    <Button onClick={handleAddVendor}>
+                    <Button 
+                      onClick={handleAddVendor} 
+                      className="px-4 py-2 h-10 text-sm font-medium bg-black hover:bg-black/90 rounded-md"
+                    >
                       <Plus className="mr-2 h-4 w-4" />
                       Add Vendor
                     </Button>
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
                   {/* Total Vendors Card */}
-                  <Card className="bg-gradient-to-br from-[#C5D48A] to-[#A6C060] border-0 relative overflow-hidden h-[240px] rounded-3xl">
+                  <Card className="bg-gradient-to-br from-[#C5D48A] to-[#A6C060] border-0 relative overflow-hidden h-[220px] rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200">
                     <div className="absolute inset-0 bg-white/5 w-full h-full">
                       <div className="absolute -inset-2 bg-gradient-to-r from-[#B7CC60]/20 to-transparent blur-3xl"></div>
                     </div>
-                    <CardHeader className="pb-2">
+                    <CardHeader className="pb-2 pt-6">
                       <CardTitle className="text-2xl font-medium text-white">
                         Total Vendors
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="flex flex-col justify-center h-full pt-4">
-                        <div className="text-[45px] font-bold text-white leading-none tracking-tight">{analytics.total}</div>
-                        <p className="text-xl text-white/90 mt-2">Registered vendors</p>
+                        <div className="text-[52px] font-bold text-white leading-none tracking-tight">{analytics.total}</div>
+                        <p className="text-xl text-white/90 mt-3">Registered vendors</p>
                         <div className="absolute bottom-6 left-0 right-0 h-[60px]">
                           <svg className="w-full h-full text-white/10" viewBox="0 0 400 100" preserveAspectRatio="none">
                             <path 
@@ -1064,21 +1050,21 @@ export default function VendorsPage() {
                   </Card>
 
                   {/* Total Investment Card */}
-                  <Card className="bg-gradient-to-br from-[#96B54A] to-[#496E22] border-0 relative overflow-hidden h-[240px] rounded-3xl">
+                  <Card className="bg-gradient-to-br from-[#96B54A] to-[#496E22] border-0 relative overflow-hidden h-[220px] rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200">
                     <div className="absolute inset-0 bg-white/5 w-full h-full">
                       <div className="absolute -inset-2 bg-gradient-to-r from-[#5F862C]/20 to-transparent blur-3xl"></div>
                     </div>
-                    <CardHeader className="pb-2">
+                    <CardHeader className="pb-2 pt-6">
                       <CardTitle className="text-2xl font-medium text-white">
                         Total Investment
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
                       <div className="flex flex-col justify-center h-full pt-4">
-                        <div className="text-[45px] font-bold text-white leading-none tracking-tight">
+                        <div className="text-[52px] font-bold text-white leading-none tracking-tight">
                           ₱{(analytics.totalManpowerCost + analytics.totalMaterialsCost + analytics.totalEquipmentCost).toLocaleString()}
                         </div>
-                        <p className="text-xl text-white/90 mt-2">Combined costs</p>
+                        <p className="text-xl text-white/90 mt-3">Combined costs</p>
                         <div className="absolute bottom-6 left-0 right-0 h-[60px]">
                           <svg className="w-full h-full text-white/10" viewBox="0 0 400 100" preserveAspectRatio="none">
                             <path 
@@ -1095,12 +1081,12 @@ export default function VendorsPage() {
                 </div>
 
                 {/* Program Distribution Chart */}
-                <Card className="mb-6 bg-gradient-to-br from-[#1E3B0C] to-[#2C4A1B] border-0">
-                  <CardHeader className="pb-2">
+                <Card className="mb-8 bg-gradient-to-br from-[#1E3B0C] to-[#2C4A1B] border-0 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200">
+                  <CardHeader className="pb-2 pt-6">
                     <CardTitle className="text-lg font-semibold text-white">Program Distribution</CardTitle>
                     <CardDescription className="text-white/70">Distribution of vendors across different programs</CardDescription>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-6">
                     <div className="h-[300px] relative">
                       <Chart
                         type="bar"
@@ -1236,7 +1222,7 @@ export default function VendorsPage() {
                 </Card>
 
                 {/* Vendors Table */}
-                <Card className="border-0 rounded-3xl overflow-hidden bg-gradient-to-br from-[#C5D48A]/10 to-[#A6C060]/10">
+                <Card className="border-0 rounded-2xl overflow-hidden bg-gradient-to-br from-[#C5D48A]/10 to-[#A6C060]/10">
                   <CardHeader className="pb-3 relative">
                     <div className="absolute inset-0 bg-gradient-to-r from-[#B7CC60]/5 to-transparent"></div>
                     <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -1333,17 +1319,6 @@ export default function VendorsPage() {
                                     <TableCell className="font-medium text-black">
                                       <div className="flex items-center gap-2">
                                         <span>{vendor.projectCode}</span>
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="h-6 w-6 p-0 text-black hover:text-[#96B54A] hover:bg-[#96B54A]/10"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            exportVendorToExcel(vendor);
-                                          }}
-                                        >
-                                          <Download className="h-4 w-4" />
-                                        </Button>
                                       </div>
                                     </TableCell>
                                     <TableCell>
@@ -1470,10 +1445,10 @@ export default function VendorsPage() {
                     <Button
                       className="flex items-center justify-start gap-2"
                       variant="outline"
-                      onClick={exportToGoogleSheets}
+                      onClick={exportToCSV}
                     >
                       <Download className="h-5 w-5" />
-                      Export as CSV Files
+                      Export Complete Report
                     </Button>
                   </div>
                 </DialogContent>
