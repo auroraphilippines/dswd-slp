@@ -102,6 +102,7 @@ export default function ParticipantsPage() {
         participant.id,
         participant.address,
         participant.project,
+        participant.slpaName,
         // Add family members search if they exist
         ...(participant.familyMembers?.map(member => 
           `${member.name} ${member.relationship} ${member.occupation}`
@@ -123,6 +124,7 @@ export default function ParticipantsPage() {
         family.familyAddress,
         family.barangay,
         family.municipality,
+        family.slpaName,
         // Add family members if they exist
         ...(family.members?.map(member => 
           `${member.name} ${member.relationship} ${member.occupation}`

@@ -45,10 +45,11 @@ export function AddParticipantModal({ isOpen, onClose, onSubmit }) {
     householdId: "",
     sector: "",
     category: "",
-    slpaName: ""
+    slpaName: "",
+    slpaPosition: ""
   });
 
-  const fieldsToUpperCase = ['name', 'address', 'project', 'validID'];
+  const fieldsToUpperCase = ['name', 'address', 'project', 'validID', 'slpaName', 'slpaPosition', 'category'];
 
   const calculateAge = (birthday) => {
     if (!birthday) return "";
@@ -72,9 +73,18 @@ export function AddParticipantModal({ isOpen, onClose, onSubmit }) {
     if (name === "category") {
       setFormData(prev => ({
         ...prev,
-        category: value,
-        // Only clear SLPA name when switching to INDIVIDUAL
-        ...(value === "INDIVIDUAL" && { slpaName: "" })
+        category: processedValue,
+        // Only clear SLPA name and position when switching to INDIVIDUAL
+        ...(processedValue === "INDIVIDUAL" && { slpaName: "", slpaPosition: "" })
+      }));
+    } else if (name === "slpaName") {
+      // Add SLPA- prefix and ensure it's uppercase
+      const slpaValue = processedValue.startsWith("SLPA-") 
+        ? processedValue 
+        : `SLPA-${processedValue}`;
+      setFormData(prev => ({
+        ...prev,
+        [name]: slpaValue
       }));
     } else if (name === "birthday") {
       const age = calculateAge(value);
@@ -346,7 +356,7 @@ export function AddParticipantModal({ isOpen, onClose, onSubmit }) {
                       name="category"
                       value={formData.category}
                       onValueChange={(value) =>
-                        handleChange({ target: { name: "category", value } })
+                        handleChange({ target: { name: "category", value: value.toUpperCase() } })
                       }
                       required
                     >
@@ -370,24 +380,40 @@ export function AddParticipantModal({ isOpen, onClose, onSubmit }) {
                       onChange={handleChange}
                       required
                       placeholder="Enter project name"
-                      className="border-input/50 focus:border-primary h-10 w-full"
+                      className="border-input/50 focus:border-primary h-10 w-full uppercase"
                     />
                   </div>
                 </div>
                 {formData.category === "GROUP" && (
-                  <div className="w-full space-y-2">
-                    <Label htmlFor="slpaName" className="text-sm">
-                      SLPA Name *
-                    </Label>
-                    <Input
-                      id="slpaName"
-                      name="slpaName"
-                      value={formData.slpaName}
-                      onChange={handleChange}
-                      required
-                      placeholder="Enter SLPA name"
-                      className="border-input/50 focus:border-primary h-10 w-full"
-                    />
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="slpaName" className="text-sm">
+                        SLPA Name *
+                      </Label>
+                      <Input
+                        id="slpaName"
+                        name="slpaName"
+                        value={formData.slpaName}
+                        onChange={handleChange}
+                        required
+                        placeholder="Enter SLPA name (e.g., SLPA-NAME)"
+                        className="border-input/50 focus:border-primary h-10 w-full uppercase"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="slpaPosition" className="text-sm">
+                        Position *
+                      </Label>
+                      <Input
+                        id="slpaPosition"
+                        name="slpaPosition"
+                        value={formData.slpaPosition}
+                        onChange={handleChange}
+                        required
+                        placeholder="Enter position"
+                        className="border-input/50 focus:border-primary h-10 w-full uppercase"
+                      />
+                    </div>
                   </div>
                 )}
               </div>
