@@ -86,6 +86,6 @@
     "recharts": "^2.15.1",
     "sonner": "^2.0.3",
     "tailwindcss-animate": "^1.0.7",
-    "xlsx": "^0.18.5"
+    "xlsx": "^0.20.2"
   }
 }
