@@ -23,6 +23,15 @@ import {
   User,
   LogOut,
   Trash2,
+  Folder,
+  FolderOpen,
+  Upload,
+  File,
+  Edit2,
+  Filter,
+  SortAsc,
+  Grid,
+  List,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -223,7 +232,7 @@ export default function VendorsPage() {
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Projects", href: "/vendors", icon: Building2 },
     { name: "Participants", href: "/participants", icon: Users },
-    { name: "Programs", href: "/programs", icon: Building2 },
+    { name: "File Storage", href: "/programs", icon: FolderOpen },
     { name: "Reports", href: "./reports", icon: FileBarChart },
     { name: "Analytics", href: "./analytics", icon: FileBarChart },
     { name: "Settings", href: "./settings", icon: Settings },

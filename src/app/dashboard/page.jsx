@@ -24,6 +24,7 @@ import {
   ArrowDownRight,
   User,
   LogOut,
+  FolderOpen,
   ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -113,7 +114,7 @@ export default function DashboardPage() {
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Projects", href: "/vendors", icon: Store },
     { name: "Participants", href: "/participants", icon: Users },
-    { name: "Programs", href: "/programs", icon: Building2 },
+    { name: "File Storage", href: "/programs", icon: FolderOpen },
     { name: "Reports", href: "/reports", icon: FileBarChart },
     { name: "Analytics", href: "/analytics", icon: TrendingUp },
     { name: "Settings", href: "/settings", icon: Settings },
