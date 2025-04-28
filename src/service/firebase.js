@@ -3,6 +3,7 @@ import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import { initializeDefaultData } from './initializeData';
 
 const firebaseConfig = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -24,6 +25,15 @@ const db = getFirestore(app);
 
 // Initialize Storage with settings
 const storage = getStorage(app);
+
+// Initialize default data in development
+if (process.env.NODE_ENV === 'development') {
+    initializeDefaultData().then(() => {
+        console.log('Default data initialization completed');
+    }).catch(error => {
+        console.error('Error initializing default data:', error);
+    });
+}
 
 // Enable Firestore persistence for offline support
 if (typeof window !== 'undefined') {

@@ -65,8 +65,9 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
+  DialogDescription,
   DialogFooter,
+  DialogTrigger,
 } from "@/components/ui/dialog";
 import { ThemeToggle } from "@/components/theme-toggle";
 import {
@@ -128,6 +129,12 @@ export default function VendorsPage() {
     totalEquipmentCost: 0
   });
   const [selectedVendors, setSelectedVendors] = useState([]);
+  const [userPermissions, setUserPermissions] = useState({
+    readOnly: true,
+    accessProject: false,
+    accessParticipant: false,
+    accessFileStorage: false
+  });
 
   // Close mobile menu when path changes
   useEffect(() => {
@@ -205,6 +212,31 @@ export default function VendorsPage() {
     fetchUserData();
   }, []);
 
+  useEffect(() => {
+    const fetchUserPermissions = async () => {
+      try {
+        const user = auth.currentUser;
+        if (user) {
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            setUserPermissions({
+              readOnly: userData.permissions?.readOnly ?? true,
+              accessProject: userData.permissions?.accessProject ?? false,
+              accessParticipant: userData.permissions?.accessParticipant ?? false,
+              accessFileStorage: userData.permissions?.accessFileStorage ?? false
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user permissions:", error);
+        toast.error("Error loading user permissions");
+      }
+    };
+
+    fetchUserPermissions();
+  }, []);
+
   const calculateVendorAnalytics = (vendors) => {
     const stats = {
       total: vendors.length,
@@ -228,15 +260,43 @@ export default function VendorsPage() {
     return stats;
   };
 
+  // Helper function to check if user has access to a specific module
+  const hasModuleAccess = (moduleName) => {
+    switch (moduleName.toLowerCase()) {
+      case 'projects':
+        return userPermissions.accessProject;
+      case 'participants':
+        return userPermissions.accessParticipant;
+      case 'filestorage':
+        return userPermissions.accessFileStorage;
+      default:
+        return true; // Default modules like Dashboard, Reports, etc. are always accessible
+    }
+  };
+
+  // Helper function to check if user has write permissions
+  const hasWritePermissions = () => {
+    return !userPermissions.readOnly && userPermissions.accessProject;
+  };
+
+  // Helper function to show permission denied message
+  const showPermissionDenied = (action) => {
+    toast.error(`Permission denied: You don't have access to ${action}`);
+  };
+
+  // Update the navigation array to include access checks
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Projects", href: "/vendors", icon: Building2 },
-    { name: "Participants", href: "/participants", icon: Users },
-    { name: "File Storage", href: "/programs", icon: FolderOpen },
+    { name: "Projects", href: "/vendors", icon: Store, requiresAccess: true },
+    { name: "Participants", href: "/participants", icon: Users, requiresAccess: true },
+    { name: "File Storage", href: "/programs", icon: FolderOpen, requiresAccess: true },
     { name: "Reports", href: "./reports", icon: FileBarChart },
     { name: "Analytics", href: "./analytics", icon: FileBarChart },
     { name: "Settings", href: "./settings", icon: Settings },
-  ];
+  ].map(item => ({
+    ...item,
+    disabled: item.requiresAccess && !hasModuleAccess(item.name)
+  }));
 
   const handleViewDetails = (vendor) => {
     setSelectedVendor(vendor);
@@ -251,6 +311,10 @@ export default function VendorsPage() {
   };
 
   const handleAddVendor = () => {
+    if (!hasWritePermissions()) {
+      showPermissionDenied('add new projects');
+      return;
+    }
     router.push("./vendors/add");
   };
 
@@ -390,6 +454,10 @@ export default function VendorsPage() {
   };
 
   const handleEditVendor = (vendor) => {
+    if (!hasWritePermissions()) {
+      showPermissionDenied('edit projects');
+      return;
+    }
     setEditingVendor({
       id: vendor.id,
       projectCode: vendor.projectCode || "",
@@ -434,6 +502,10 @@ export default function VendorsPage() {
   };
 
   const handleDeleteClick = (vendor) => {
+    if (!hasWritePermissions()) {
+      showPermissionDenied('delete projects');
+      return;
+    }
     setVendorToDelete(vendor);
     setShowDeleteDialog(true);
   };
@@ -1011,21 +1083,30 @@ export default function VendorsPage() {
                     Vendor Management
                   </h1>
                   <div className="flex items-center gap-4">
-                    <Button
-                      variant="outline"
-                      onClick={() => setShowExportDialog(true)}
-                      className="px-4 py-2 h-10 text-sm font-medium bg-blue-500 hover:bg-blue-600 text-white border-blue-500 hover:border-blue-600 rounded-md"
-                    >
-                      <Download className="mr-2 h-4 w-4" />
-                      Export to Excel
-                    </Button>
-                    <Button 
-                      onClick={handleAddVendor} 
-                      className="px-4 py-2 h-10 text-sm font-medium bg-black hover:bg-black/90 rounded-md"
-                    >
-                      <Plus className="mr-2 h-4 w-4" />
-                      Add Vendor
-                    </Button>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="outline"
+                        onClick={() => router.push('/vendors/analytics')}
+                        className="bg-green-600 text-white hover:bg-green-700 hover:text-white border-green-600 hover:border-green-700 transition-colors duration-200"
+                      >
+                        <FileBarChart className="mr-2 h-4 w-4" />
+                        View Analytics
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={exportToCSV}
+                        className="bg-blue-600 text-white hover:bg-blue-700 hover:text-white border-blue-600 hover:border-blue-700 transition-colors duration-200"
+                      >
+                        <Download className="mr-2 h-4 w-4" />
+                        Export to Excel
+                      </Button>
+                    </div>
+                    {hasWritePermissions() && (
+                      <Button onClick={handleAddVendor}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Add Project
+                      </Button>
+                    )}
                   </div>
                 </div>
 
@@ -1323,6 +1404,7 @@ export default function VendorsPage() {
                                           handleSelectVendor(vendor, checked);
                                         }}
                                         onClick={(e) => e.stopPropagation()}
+                                        disabled={userPermissions.readOnly}
                                       />
                                     </TableCell>
                                     <TableCell className="font-medium text-black">
@@ -1353,7 +1435,7 @@ export default function VendorsPage() {
                                           asChild
                                           onClick={(e) => e.stopPropagation()}
                                         >
-                                          <Button variant="ghost" size="icon" className="text-black hover:text-[#96B54A] hover:bg-[#96B54A]/10">
+                                          <Button variant="ghost" size="icon" className="text-black hover:text-[#96B54A] hover:bg-[#96B54A]/10" disabled={userPermissions.readOnly}>
                                             <MoreHorizontal className="h-4 w-4" />
                                             <span className="sr-only">
                                               Open menu
@@ -1373,25 +1455,29 @@ export default function VendorsPage() {
                                           >
                                             View Details
                                           </DropdownMenuItem>
-                                          <DropdownMenuItem
-                                            className="text-black focus:text-black focus:bg-[#96B54A]/10"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleEditVendor(vendor);
-                                            }}
-                                          >
-                                            Edit Vendor
-                                          </DropdownMenuItem>
-                                          <DropdownMenuSeparator className="bg-[#96B54A]/10" />
-                                          <DropdownMenuItem
-                                            className="text-red-500 focus:text-red-500 focus:bg-red-50"
-                                            onClick={(e) => {
-                                              e.stopPropagation();
-                                              handleDeleteClick(vendor);
-                                            }}
-                                          >
-                                            Delete Vendor
-                                          </DropdownMenuItem>
+                                          {!userPermissions.readOnly && (
+                                            <>
+                                              <DropdownMenuItem
+                                                className="text-black focus:text-black focus:bg-[#96B54A]/10"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handleEditVendor(vendor);
+                                                }}
+                                              >
+                                                Edit Vendor
+                                              </DropdownMenuItem>
+                                              <DropdownMenuSeparator className="bg-[#96B54A]/10" />
+                                              <DropdownMenuItem
+                                                className="text-red-500 focus:text-red-500 focus:bg-red-50"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  handleDeleteClick(vendor);
+                                                }}
+                                              >
+                                                Delete Vendor
+                                              </DropdownMenuItem>
+                                            </>
+                                          )}
                                         </DropdownMenuContent>
                                       </DropdownMenu>
                                     </TableCell>
@@ -1434,6 +1520,7 @@ export default function VendorsPage() {
                           <VendorDetailView
                             vendor={selectedVendor}
                             onUpdate={handleDetailUpdate}
+                            readOnly={userPermissions.readOnly}
                           />
                         </div>
                       )}
@@ -1462,7 +1549,6 @@ export default function VendorsPage() {
                   </div>
                 </DialogContent>
               </Dialog>
-
               {/* Add Edit Dialog */}
               <Dialog
                 open={!!editingVendor}

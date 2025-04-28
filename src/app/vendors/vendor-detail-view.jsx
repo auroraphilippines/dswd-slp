@@ -16,7 +16,7 @@ import { Edit2, Plus, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "react-toastify";
 
-export function VendorDetailView({ vendor, onUpdate }) {
+export function VendorDetailView({ vendor, onUpdate, readOnly }) {
   const [editingSection, setEditingSection] = useState(null);
   const [editedManpower, setEditedManpower] = useState([]);
   const [editedTools, setEditedTools] = useState([]);
@@ -271,18 +271,20 @@ export function VendorDetailView({ vendor, onUpdate }) {
                 <h3 className="text-lg font-semibold">Man Power Details</h3>
                 <div className="flex gap-2">
                   <Badge variant="outline">Total: ₱ {totalManpowerCost.toLocaleString()}</Badge>
-                  {editingSection === 'manpower' ? (
-                    <>
-                      <Button onClick={() => handleSave('manpower')} size="sm">Save</Button>
-                      <Button onClick={handleCancel} variant="outline" size="sm">Cancel</Button>
-                      <Button onClick={handleAddManpower} variant="outline" size="sm">
-                        <Plus className="h-4 w-4 mr-1" />Add Worker
+                  {!readOnly && (
+                    editingSection === 'manpower' ? (
+                      <>
+                        <Button onClick={() => handleSave('manpower')} size="sm">Save</Button>
+                        <Button onClick={handleCancel} variant="outline" size="sm">Cancel</Button>
+                        <Button onClick={handleAddManpower} variant="outline" size="sm">
+                          <Plus className="h-4 w-4 mr-1" />Add Worker
+                        </Button>
+                      </>
+                    ) : (
+                      <Button onClick={() => handleEdit('manpower', vendor?.manpower || [])} variant="outline" size="sm">
+                        <Edit2 className="h-4 w-4 mr-1" />Edit
                       </Button>
-                    </>
-                  ) : (
-                    <Button onClick={() => handleEdit('manpower', vendor?.manpower || [])} variant="outline" size="sm">
-                      <Edit2 className="h-4 w-4 mr-1" />Edit
-                    </Button>
+                    )
                   )}
                 </div>
               </div>
@@ -380,18 +382,20 @@ export function VendorDetailView({ vendor, onUpdate }) {
                 <h3 className="text-lg font-semibold">Raw Materials</h3>
                 <div className="flex gap-2">
                   <Badge variant="outline">Total: ₱ {totalMaterialsCost.toLocaleString()}</Badge>
-                  {editingSection === 'materials' ? (
-                    <>
-                      <Button onClick={() => handleSave('materials')} size="sm">Save</Button>
-                      <Button onClick={handleCancel} variant="outline" size="sm">Cancel</Button>
-                      <Button onClick={handleAddMaterial} variant="outline" size="sm">
-                        <Plus className="h-4 w-4 mr-1" />Add Material
+                  {!readOnly && (
+                    editingSection === 'materials' ? (
+                      <>
+                        <Button onClick={() => handleSave('materials')} size="sm">Save</Button>
+                        <Button onClick={handleCancel} variant="outline" size="sm">Cancel</Button>
+                        <Button onClick={handleAddMaterial} variant="outline" size="sm">
+                          <Plus className="h-4 w-4 mr-1" />Add Material
+                        </Button>
+                      </>
+                    ) : (
+                      <Button onClick={() => handleEdit('materials', vendor?.rawMaterials || [])} variant="outline" size="sm">
+                        <Edit2 className="h-4 w-4 mr-1" />Edit
                       </Button>
-                    </>
-                  ) : (
-                    <Button onClick={() => handleEdit('materials', vendor?.rawMaterials || [])} variant="outline" size="sm">
-                      <Edit2 className="h-4 w-4 mr-1" />Edit
-                    </Button>
+                    )
                   )}
                 </div>
               </div>
@@ -502,18 +506,20 @@ export function VendorDetailView({ vendor, onUpdate }) {
                 <h3 className="text-lg font-semibold">Tools and Equipment</h3>
                 <div className="flex gap-2">
                   <Badge variant="outline">Total: ₱ {totalEquipmentCost.toLocaleString()}</Badge>
-                  {editingSection === 'tools' ? (
-                    <>
-                      <Button onClick={() => handleSave('tools')} size="sm">Save</Button>
-                      <Button onClick={handleCancel} variant="outline" size="sm">Cancel</Button>
-                      <Button onClick={handleAddTool} variant="outline" size="sm">
-                        <Plus className="h-4 w-4 mr-1" />Add Tool
+                  {!readOnly && (
+                    editingSection === 'tools' ? (
+                      <>
+                        <Button onClick={() => handleSave('tools')} size="sm">Save</Button>
+                        <Button onClick={handleCancel} variant="outline" size="sm">Cancel</Button>
+                        <Button onClick={handleAddTool} variant="outline" size="sm">
+                          <Plus className="h-4 w-4 mr-1" />Add Tool
+                        </Button>
+                      </>
+                    ) : (
+                      <Button onClick={() => handleEdit('tools', vendor?.tools || [])} variant="outline" size="sm">
+                        <Edit2 className="h-4 w-4 mr-1" />Edit
                       </Button>
-                    </>
-                  ) : (
-                    <Button onClick={() => handleEdit('tools', vendor?.tools || [])} variant="outline" size="sm">
-                      <Edit2 className="h-4 w-4 mr-1" />Edit
-                    </Button>
+                    )
                   )}
                 </div>
               </div>

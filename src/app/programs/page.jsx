@@ -34,6 +34,10 @@ import {
   FileIcon as FilePdf,
   FileImage,
   Clock,
+  FolderPlus,
+  Pencil,
+  Trash,
+  MoreVertical,
 } from "lucide-react"
 // Rename the imported Button to DefaultButton
 import { Button as DefaultButton } from "@/components/ui/button"
@@ -58,7 +62,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { db, auth } from "@/service/firebase"
-import { doc, collection, addDoc, updateDoc, deleteDoc, getDocs, query, orderBy } from "firebase/firestore"
+import { doc, collection, addDoc, updateDoc, deleteDoc, getDocs, query, orderBy, getDoc } from "firebase/firestore"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import {
   Breadcrumb,
@@ -70,6 +74,7 @@ import {
 import { Progress } from "@/components/ui/progress"
 import { cn } from "@/lib/utils"
 import { debounce } from "lodash"
+import { toast } from "react-toastify"
 
 // Add a subtle variant to the Button component
 const Button = ({ variant, className, ...props }) => {
@@ -173,6 +178,12 @@ export default function ProgramsPage() {
   const pathname = usePathname()
   const [uploadProgress, setUploadProgress] = useState(0)
   const [isUploading, setIsUploading] = useState(false)
+  const [userPermissions, setUserPermissions] = useState({
+    readOnly: true, // Default to read-only
+    accessProject: false,
+    accessParticipant: false,
+    accessFileStorage: false
+  });
 
   const filterOptions = [
     { label: "All Files", value: "all", icon: File },
@@ -312,20 +323,81 @@ export default function ProgramsPage() {
     initializeData()
   }, [])
 
-  if (loading) {
-    return <LoadingPage />
-  }
+  useEffect(() => {
+    const fetchUserPermissions = async () => {
+      try {
+        const user = auth.currentUser;
+        if (user) {
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            setUserPermissions({
+              readOnly: userData.permissions?.readOnly ?? true,
+              accessProject: userData.permissions?.accessProject ?? false,
+              accessParticipant: userData.permissions?.accessParticipant ?? false,
+              accessFileStorage: userData.permissions?.accessFileStorage ?? false
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user permissions:", error);
+        toast.error("Error loading user permissions");
+      }
+    };
+
+    fetchUserPermissions();
+  }, []);
+
+  // Add helper functions for permission checks
+  const hasModuleAccess = (moduleName) => {
+    switch (moduleName.toLowerCase()) {
+      case 'projects':
+        return userPermissions.accessProject;
+      case 'participants':
+        return userPermissions.accessParticipant;
+      case 'filestorage':
+        return userPermissions.accessFileStorage;
+      default:
+        return true; // Default modules like Dashboard, Reports, etc. are always accessible
+    }
+  };
+
+  const hasWritePermissions = () => {
+    return !userPermissions.readOnly && userPermissions.accessFileStorage;
+  };
+
+  const showPermissionDenied = (action) => {
+    toast.error(`Permission denied: You don't have access to ${action}`);
+  };
+
+  // Update the navigation array to include access checks
+  const navigation = [
+    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { name: "Projects", href: "/vendors", icon: Store, requiresAccess: true },
+    { name: "Participants", href: "/participants", icon: Users, requiresAccess: true },
+    { name: "File Storage", href: "/programs", icon: FolderOpen, requiresAccess: true },
+    { name: "Reports", href: "./reports", icon: FileBarChart },
+    { name: "Analytics", href: "./analytics", icon: FileBarChart },
+    { name: "Settings", href: "./settings", icon: Settings },
+  ].map(item => ({
+    ...item,
+    disabled: item.requiresAccess && !hasModuleAccess(item.name)
+  }));
 
   const handleCreateFolder = async () => {
-    if (!newFolderName.trim()) return
-
+    if (!hasWritePermissions()) {
+      showPermissionDenied('create new folders');
+      return;
+    }
+    if (!newFolderName.trim()) return;
+    
     try {
       const folderRef = await addDoc(collection(db, "programs"), {
         name: newFolderName,
         createdAt: new Date(),
         files: [],
         parentId: currentFolder?.id || null,
-      })
+      });
 
       setFolders((prev) => [
         ...prev,
@@ -335,24 +407,28 @@ export default function ProgramsPage() {
           type: "folder",
           files: [],
         },
-      ])
+      ]);
 
-      setIsCreateFolderOpen(false)
-      setNewFolderName("")
+      setIsCreateFolderOpen(false);
+      setNewFolderName("");
     } catch (error) {
-      console.error("Error creating folder:", error)
+      console.error("Error creating folder:", error);
     }
-  }
+  };
 
   const handleUploadFile = async () => {
-    if (!selectedFile) return
+    if (!hasWritePermissions()) {
+      showPermissionDenied('upload files');
+      return;
+    }
+    if (!selectedFile) return;
     if (!currentFolder) {
-      alert("Please select a folder first")
-      return
+      alert("Please select a folder first");
+      return;
     }
 
-    setIsUploading(true)
-    setUploadProgress(0)
+    setIsUploading(true);
+    setUploadProgress(0);
 
     try {
       // Check if user is authenticated
@@ -520,6 +596,10 @@ export default function ProgramsPage() {
   }
 
   const handleRenameFolder = async (folderId, newName) => {
+    if (!hasWritePermissions()) {
+      showPermissionDenied('rename folders');
+      return;
+    }
     try {
       const folderRef = doc(db, "programs", folderId)
       await updateDoc(folderRef, { name: newName })
@@ -531,6 +611,11 @@ export default function ProgramsPage() {
   }
 
   const handleDeleteFolder = async (folderId) => {
+    if (!hasWritePermissions()) {
+      showPermissionDenied('delete folders');
+      return;
+    }
+
     if (!window.confirm("Are you sure you want to delete this folder?")) return
 
     try {
@@ -542,6 +627,11 @@ export default function ProgramsPage() {
   }
 
   const handleDeleteFile = async (file) => {
+    if (!hasWritePermissions()) {
+      showPermissionDenied('delete files');
+      return;
+    }
+
     if (!window.confirm("Are you sure you want to delete this file?")) return
 
     // Check if user is authenticated
@@ -885,28 +975,48 @@ export default function ProgramsPage() {
 
                     {/* Enhanced quick action buttons */}
                     <div className="absolute -bottom-12 left-0 right-0 group-hover:bottom-0 transition-all duration-300 flex justify-center gap-1.5 p-1.5 bg-background/95 backdrop-blur-sm border-t border-border/40">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary transition-colors duration-200"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleFileDownload(file)
-                        }}
-                      >
-                        <Download className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 rounded-full hover:bg-destructive/10 hover:text-destructive transition-colors duration-200"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          handleDeleteFile(file)
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary transition-colors duration-200"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleFileDownload(file);
+                              }}
+                            >
+                              <Download className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom">
+                            <p>Download file</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      {hasWritePermissions() && (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 rounded-full hover:bg-destructive/10 hover:text-destructive transition-colors duration-200"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteFile(file);
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom">
+                              <p>Delete file</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      )}
                     </div>
                   </div>
 
@@ -979,10 +1089,12 @@ export default function ProgramsPage() {
                         <Download className="mr-2 h-4 w-4" />
                         Download
                       </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => handleDeleteFile(file)}>
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </DropdownMenuItem>
+                      {hasWritePermissions() && (
+                        <DropdownMenuItem onClick={() => handleDeleteFile(file)}>
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Delete
+                        </DropdownMenuItem>
+                      )}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -1001,16 +1113,6 @@ export default function ProgramsPage() {
     const i = Math.floor(Math.log(bytes) / Math.log(k))
     return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
   }
-
-  const navigation = [
-    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Projects", href: "/vendors", icon: Store },
-    { name: "Participants", href: "/participants", icon: Users },
-    { name: "File Storage", href: "/programs", icon: FolderOpen },
-    { name: "Reports", href: "./reports", icon: FileBarChart },
-    { name: "Analytics", href: "./analytics", icon: FileBarChart },
-    { name: "Settings", href: "./settings", icon: Settings },
-  ]
 
   // Get user initials from name
   const getUserInitials = (name) => {
@@ -1281,23 +1383,18 @@ export default function ProgramsPage() {
                         : "Manage and organize migration documents and files"}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {currentFolder ? (
-                      <Button
-                        onClick={() => setIsUploadFileOpen(true)}
-                        className="shadow-sm bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
-                      >
-                        <Upload className="mr-2 h-4 w-4" />
-                        Upload File
-                      </Button>
-                    ) : (
-                      <Button
-                        onClick={() => setIsCreateFolderOpen(true)}
-                        className="shadow-sm bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70"
-                      >
-                        <Plus className="mr-2 h-4 w-4" />
-                        New Folder
-                      </Button>
+                  <div className="flex items-center space-x-2">
+                    {hasWritePermissions() && (
+                      <>
+                        <Button onClick={handleCreateFolder}>
+                          <FolderPlus className="mr-2 h-4 w-4" />
+                          New Folder
+                        </Button>
+                        <Button onClick={handleUploadFile}>
+                          <Upload className="mr-2 h-4 w-4" />
+                          Upload File
+                        </Button>
+                      </>
                     )}
                   </div>
                 </div>
@@ -1450,17 +1547,21 @@ export default function ProgramsPage() {
                       </div>
                       <h3 className="text-xl font-medium">No files in this folder</h3>
                       <p className="text-muted-foreground text-sm mt-2 max-w-md text-center">
-                        Upload files to "{currentFolder?.name}" to start organizing your documents
+                        {hasWritePermissions() 
+                          ? `Upload files to "${currentFolder?.name}" to start organizing your documents`
+                          : "This folder is currently empty"}
                       </p>
                       <div className="flex gap-3 mt-6">
-                        <Button
-                          onClick={() => setIsUploadFileOpen(true)}
-                          className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-md hover:shadow-lg transition-all duration-200"
-                          size="lg"
-                        >
-                          <Upload className="mr-2 h-5 w-5" />
-                          Upload File
-                        </Button>
+                        {hasWritePermissions() && (
+                          <Button
+                            onClick={() => setIsUploadFileOpen(true)}
+                            className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-md hover:shadow-lg transition-all duration-200"
+                            size="lg"
+                          >
+                            <Upload className="mr-2 h-5 w-5" />
+                            Upload File
+                          </Button>
+                        )}
                         <Button onClick={() => setCurrentFolder(null)} variant="outline" size="lg">
                           <FolderOpen className="mr-2 h-5 w-5" />
                           Back to Folders

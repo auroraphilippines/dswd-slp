@@ -8,23 +8,31 @@ service cloud.firestore {
     
     function isAdmin() {
       return isAuthenticated() && 
-             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+             (request.auth.token.role == 'admin' ||
+              get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+    }
+
+    function hasPermission(permission) {
+      let user = get(/databases/$(database)/documents/users/$(request.auth.uid));
+      return isAuthenticated() && 
+             (user.data.permissions[permission] == true || isAdmin());
     }
 
     // Users collection
     match /users/{userId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && request.auth.uid == userId;
-      allow update: if isAuthenticated() && 
-                   request.auth.uid == userId &&
-                   (
-                     // Allow updating profile fields including photoURL and lastLogin
-                     request.resource.data.diff(resource.data).affectedKeys()
-                       .hasOnly(['photoURL', 'phoneNumber', 'address', 'name', 'lastUpdated', 'lastLogin']) ||
-                     // Allow admins to update any field
-                     isAdmin()
-                   );
-      allow delete: if false;
+      // Allow listing users for authenticated users
+      allow list: if isAuthenticated();
+      // Allow reading own profile
+      allow get: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      // Allow creating own profile or if admin
+      allow create: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+      // Allow updating own profile or if admin
+      allow update: if isAuthenticated() && (
+        request.auth.uid == userId || 
+        isAdmin()
+      );
+      // Only admin can delete users
+      allow delete: if isAdmin();
     }
 
     // Participants collection - optimized for large datasets
@@ -113,9 +121,16 @@ service cloud.firestore {
       }
     }
 
-    // Default deny 
-    match /{document=**} {
-      allow read, write: if false;
+    // Roles collection
+    match /roles/{roleId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Other collections should check for specific permissions
+    match /{collection}/{document=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
     }
   }
 }

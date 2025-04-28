@@ -29,6 +29,8 @@ import {
   Eye,
   Loader2,
   AlertCircle,
+  Pencil,
+  Trash
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,7 +61,7 @@ import {
 import { ThemeToggle } from "@/components/theme-toggle";
 import { ParticipantDetailView } from "./participant-detail-view";
 import { auth, db } from "@/service/firebase";
-import { doc, getDoc, updateDoc, serverTimestamp, collection, query, orderBy, getDocs, arrayUnion, deleteDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, serverTimestamp, collection, query, orderBy, getDocs, arrayUnion, deleteDoc, writeBatch } from "firebase/firestore";
 import { AddParticipantModal } from "./add-participant-modal";
 import { EditParticipantModal } from "./edit-participant-modal";
 import { AddAssistanceModal } from "./add-assistance-modal";
@@ -67,11 +69,18 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Checkbox } from "@/components/ui/checkbox";
 
 export default function ParticipantsPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [userPermissions, setUserPermissions] = useState({
+    readOnly: true,
+    accessProject: false,
+    accessParticipant: false,
+    accessFileStorage: false
+  });
   const [selectedParticipant, setSelectedParticipant] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -176,6 +185,31 @@ export default function ParticipantsPage() {
     };
 
     fetchUserData();
+  }, []);
+
+  useEffect(() => {
+    const fetchUserPermissions = async () => {
+      try {
+        const user = auth.currentUser;
+        if (user) {
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            setUserPermissions({
+              readOnly: userData.permissions?.readOnly ?? true,
+              accessProject: userData.permissions?.accessProject ?? false,
+              accessParticipant: userData.permissions?.accessParticipant ?? false,
+              accessFileStorage: userData.permissions?.accessFileStorage ?? false
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user permissions:", error);
+        toast.error("Error loading user permissions");
+      }
+    };
+
+    fetchUserPermissions();
   }, []);
 
   useEffect(() => {
@@ -287,29 +321,29 @@ export default function ParticipantsPage() {
     setSearchQuery(e.target.value);
   };
 
-  const handleAddParticipant = (newParticipant) => {
-    setParticipants((prev) => [newParticipant, ...prev]);
+  const handleAddParticipant = () => {
+    if (!hasWritePermissions()) {
+      showPermissionDenied('add new participants');
+      return;
+    }
+    setSelectedParticipant(null);
+    setIsAddModalOpen(true);
   };
 
-  const handleEditParticipant = async (participantId, updatedData) => {
-    try {
-      const participantRef = doc(db, "participants", participantId);
-      await updateDoc(participantRef, {
-        ...updatedData,
-        updatedAt: serverTimestamp()
-      });
-
-      setParticipants(prev => 
-        prev.map(p => p.docId === participantId ? { ...p, ...updatedData } : p)
-      );
-      toast.success("Participant updated successfully");
-    } catch (error) {
-      console.error("Error updating participant:", error);
-      toast.error("Failed to update participant");
+  const handleEditParticipant = (participant) => {
+    if (!hasWritePermissions()) {
+      showPermissionDenied('edit participants');
+      return;
     }
+    setSelectedParticipant(participant);
+    setIsAddModalOpen(true);
   };
 
   const handleStatusChange = async (participant) => {
+    if (!hasWritePermissions()) {
+      showPermissionDenied('change participant status');
+      return;
+    }
     const newStatus = participant.status === "Active" ? "Inactive" : "Active";
     try {
       const participantRef = doc(db, "participants", participant.docId);
@@ -329,6 +363,10 @@ export default function ParticipantsPage() {
   };
 
   const handleAddAssistance = async (participantId, assistanceData) => {
+    if (!hasWritePermissions()) {
+      showPermissionDenied('add program assistance');
+      return;
+    }
     try {
       const participantRef = doc(db, "participants", participantId);
       const newAssistance = {
@@ -355,26 +393,22 @@ export default function ParticipantsPage() {
   };
 
   const handleDeleteParticipant = async (participant) => {
-    if (!window.confirm(`Are you sure you want to delete ${participant.name}?`)) {
+    if (!hasWritePermissions()) {
+      showPermissionDenied('delete participants');
       return;
     }
-
-    try {
-      // Delete from Firestore
-      await deleteDoc(doc(db, "participants", participant.docId));
-
-      // Update local state
-      setParticipants(prev => prev.filter(p => p.docId !== participant.docId));
-      
-      // Close detail view if the deleted participant was selected
-      if (selectedParticipant?.docId === participant.docId) {
-        setSelectedParticipant(null);
+    if (window.confirm("Are you sure you want to delete this participant?")) {
+      try {
+        await deleteDoc(doc(db, "participants", participant.docId));
+        toast.success("Participant deleted successfully");
+        setParticipants(prev => prev.filter(p => p.docId !== participant.docId));
+        if (selectedParticipant?.docId === participant.docId) {
+          setSelectedParticipant(null);
+        }
+      } catch (error) {
+        console.error("Error deleting participant:", error);
+        toast.error("Error deleting participant");
       }
-
-      toast.success("Participant deleted successfully");
-    } catch (error) {
-      console.error("Error deleting participant:", error);
-      toast.error("Failed to delete participant");
     }
   };
 
@@ -400,31 +434,37 @@ export default function ParticipantsPage() {
 
   // Update bulk delete to use modal
   const handleBulkDelete = () => {
+    if (!hasWritePermissions()) {
+      showPermissionDenied('delete multiple participants');
+      return;
+    }
+    if (selectedItems.length === 0) {
+      toast.error("Please select participants to delete");
+      return;
+    }
+
     setItemsToDelete(selectedItems);
     setShowDeleteConfirmation(true);
   };
 
   // Actual delete function
   const confirmBulkDelete = async () => {
+    if (!hasWritePermissions()) {
+      showPermissionDenied('delete multiple participants');
+      return;
+    }
     try {
-      // Delete all selected items
-      await Promise.all(
-        itemsToDelete.map(async (docId) => {
-          await deleteDoc(doc(db, "participants", docId));
-        })
-      );
-
-      // Update local state
+      setLoading(true);
+      const batch = writeBatch(db);
+      itemsToDelete.forEach((docId) => {
+        const participantRef = doc(db, "participants", docId);
+        batch.delete(participantRef);
+      });
+      await batch.commit();
       setParticipants(prev => prev.filter(p => !itemsToDelete.includes(p.docId)));
-      
-      // Clear selection
       setSelectedItems([]);
       setItemsToDelete([]);
-      
-      // Show success message
       toast.success(`Successfully deleted ${itemsToDelete.length} item(s)`);
-      
-      // Close detail view if selected participant was deleted
       if (selectedParticipant && itemsToDelete.includes(selectedParticipant.docId)) {
         setSelectedParticipant(null);
       }
@@ -433,6 +473,7 @@ export default function ParticipantsPage() {
       toast.error("Failed to delete some items");
     } finally {
       setShowDeleteConfirmation(false);
+      setLoading(false);
     }
   };
 
@@ -713,15 +754,41 @@ export default function ParticipantsPage() {
     return <LoadingPage />;
   }
 
+  // Add helper functions for permission checks
+  const hasModuleAccess = (moduleName) => {
+    switch (moduleName.toLowerCase()) {
+      case 'projects':
+        return userPermissions.accessProject;
+      case 'participants':
+        return userPermissions.accessParticipant;
+      case 'filestorage':
+        return userPermissions.accessFileStorage;
+      default:
+        return true; // Default modules like Dashboard, Reports, etc. are always accessible
+    }
+  };
+
+  const hasWritePermissions = () => {
+    return !userPermissions.readOnly && userPermissions.accessParticipant;
+  };
+
+  const showPermissionDenied = (action) => {
+    toast.error(`Permission denied: You don't have access to ${action}`);
+  };
+
+  // Update the navigation array to include access checks
   const navigation = [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Projects", href: "/vendors", icon: Store },
-    { name: "Participants", href: "/participants", icon: Users },
-    { name: "File Storage", href: "/programs", icon: FolderOpen },
+    { name: "Projects", href: "/vendors", icon: Store, requiresAccess: true },
+    { name: "Participants", href: "/participants", icon: Users, requiresAccess: true },
+    { name: "File Storage", href: "/programs", icon: FolderOpen, requiresAccess: true },
     { name: "Reports", href: "./reports", icon: FileBarChart },
     { name: "Analytics", href: "./analytics", icon: FileBarChart },
     { name: "Settings", href: "./settings", icon: Settings },
-  ];
+  ].map(item => ({
+    ...item,
+    disabled: item.requiresAccess && !hasModuleAccess(item.name)
+  }));
 
   return (
     <>
@@ -757,6 +824,9 @@ export default function ParticipantsPage() {
                   const isActive =
                     pathname === item.href ||
                     pathname.startsWith(`${item.href}/`);
+                  if (item.disabled) {
+                    return null; // Don't show disabled navigation items
+                  }
                   return (
                     <Link
                       key={item.name}
@@ -973,12 +1043,10 @@ export default function ParticipantsPage() {
               {/* Participants Content */}
               <div className="container mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="flex flex-col space-y-4">
-                  <div className="flex items-center justify-between">
-                    <h1 className="text-2xl font-bold tracking-tight">
-                      Participant Management
-                    </h1>
-                    <div className="flex items-center space-x-2">
-                      <Button 
+                  <div className="flex justify-between items-center mb-4">
+                    <h1 className="text-2xl font-bold">Participants</h1>
+                    <div className="flex gap-2">
+                      <Button
                         variant="outline"
                         onClick={() => router.push('/participants/analytics')}
                         className="bg-green-600 text-white hover:bg-green-700 hover:text-white border-green-600 hover:border-green-700 transition-colors duration-200"
@@ -994,10 +1062,12 @@ export default function ParticipantsPage() {
                         <Download className="mr-2 h-4 w-4" />
                         Export to Excel
                       </Button>
-                      <Button onClick={() => setIsAddModalOpen(true)}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Participant
-                      </Button>
+                      {hasWritePermissions() && (
+                        <Button onClick={handleAddParticipant}>
+                          <Plus className="mr-2 h-4 w-4" />
+                          Add Participant
+                        </Button>
+                      )}
                     </div>
                   </div>
 
@@ -1075,6 +1145,7 @@ export default function ParticipantsPage() {
                                 setSelectedParticipantId(participantId);
                                 setIsAssistanceModalOpen(true);
                               }}
+                              userPermissions={userPermissions}
                             />
                           </div>
                         )}

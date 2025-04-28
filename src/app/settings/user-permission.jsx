@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -15,13 +15,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Table,
   TableBody,
   TableCell,
@@ -29,529 +22,985 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
+import { toast, Toaster } from "sonner";
 import {
   Search,
   Plus,
   Edit,
   Trash2,
-  Shield,
   Users,
-  UserPlus,
   Key,
+  Loader2,
+  FolderOpen,
 } from "lucide-react";
+import { auth, db } from "@/service/firebase";
+import { 
+  collection, 
+  getDocs, 
+  query, 
+  orderBy,
+  doc,
+  updateDoc,
+  where,
+} from "firebase/firestore";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { createUserWithEmailAndPassword } from "firebase/auth";
+import { setDoc } from "firebase/firestore";
 
 export function UsersPermissionsSettings() {
-  const [users, setUsers] = useState([
-    {
-      id: 1,
-      name: "John Doe",
-      email: "john.doe@example.com",
-      role: "Admin",
-      status: "Active",
-      lastActive: "2 hours ago",
-      avatar: "/placeholder.svg?height=40&width=40",
-    },
-    {
-      id: 2,
-      name: "Jane Smith",
-      email: "jane.smith@example.com",
-      role: "Manager",
-      status: "Active",
-      lastActive: "1 day ago",
-      avatar: "/placeholder.svg?height=40&width=40",
-    },
-    {
-      id: 3,
-      name: "Robert Johnson",
-      email: "robert.johnson@example.com",
-      role: "Editor",
-      status: "Inactive",
-      lastActive: "1 week ago",
-      avatar: "/placeholder.svg?height=40&width=40",
-    },
-    {
-      id: 4,
-      name: "Emily Davis",
-      email: "emily.davis@example.com",
-      role: "Viewer",
-      status: "Active",
-      lastActive: "3 days ago",
-      avatar: "/placeholder.svg?height=40&width=40",
-    },
-  ]);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filteredUsers, setFilteredUsers] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [editingPermissions, setEditingPermissions] = useState(false);
+  const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+  const [newUserData, setNewUserData] = useState({
+    name: "",
+    email: "",
+    role: "SLP Member",
+    password: "",
+    permissions: {
+      readOnly: true,
+      accessProject: false,
+      accessParticipant: false,
+      accessFileStorage: false
+    }
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isEditUserOpen, setIsEditUserOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [editUserData, setEditUserData] = useState({
+    name: "",
+    email: "",
+    role: "SLP Member",
+    permissions: {
+      readOnly: true,
+      accessProject: false,
+      accessParticipant: false,
+      accessFileStorage: false
+    }
+  });
 
-  const [roles, setRoles] = useState([
-    {
-      id: 1,
-      name: "Admin",
-      description: "Full access to all features and settings",
-      userCount: 1,
-      permissions: {
-        create: true,
-        read: true,
-        update: true,
-        delete: true,
-        manage_users: true,
-        manage_billing: true,
-      },
-    },
-    {
-      id: 2,
-      name: "Manager",
-      description: "Can manage content and some settings",
-      userCount: 1,
-      permissions: {
-        create: true,
-        read: true,
-        update: true,
-        delete: false,
-        manage_users: false,
-        manage_billing: false,
-      },
-    },
-    {
-      id: 3,
-      name: "Editor",
-      description: "Can create and edit content",
-      userCount: 1,
-      permissions: {
-        create: true,
-        read: true,
-        update: true,
-        delete: false,
-        manage_users: false,
-        manage_billing: false,
-      },
-    },
-    {
-      id: 4,
-      name: "Viewer",
-      description: "Read-only access to content",
-      userCount: 1,
-      permissions: {
-        create: false,
-        read: true,
-        update: false,
-        delete: false,
-        manage_users: false,
-        manage_billing: false,
-      },
-    },
-  ]);
+  // Add auth state listener
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      console.log("Auth state changed:", user?.email);
+      setCurrentUser(user);
+    });
 
-  const togglePermission = (roleId, permission) => {
-    setRoles(
-      roles.map((role) =>
-        role.id === roleId
-          ? {
-              ...role,
-              permissions: {
-                ...role.permissions,
-                [permission]: !role.permissions[permission],
-              },
-            }
-          : role
-      )
+    return () => unsubscribe();
+  }, []);
+
+  // Fetch users from Firestore with debug logging
+  const fetchUsers = async () => {
+    try {
+      console.log("Fetching users...");
+      setLoading(true);
+      const usersRef = collection(db, "users");
+      const q = query(usersRef, orderBy("createdAt", "desc"));
+      const querySnapshot = await getDocs(q);
+      
+      console.log("Users query result size:", querySnapshot.size);
+      
+      const fetchedUsers = querySnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          name: data.name || "No Name",
+          email: data.email || "No Email",
+          role: data.role || "User",
+          status: data.status || "Active",
+          lastActive: data.lastActive ? new Date(data.lastActive.toDate()).toLocaleString() : "Never",
+          avatar: data.photoURL || "/placeholder.svg?height=40&width=40",
+          createdAt: data.createdAt ? data.createdAt.toDate() : new Date(),
+          permissions: data.permissions || {
+            readOnly: true,
+            accessProject: false,
+            accessParticipant: false,
+            accessFileStorage: false
+          }
+        };
+      });
+
+      console.log("Processed users:", fetchedUsers.length);
+      setUsers(fetchedUsers);
+      setFilteredUsers(fetchedUsers);
+      toast.success("Users loaded successfully");
+    } catch (error) {
+      console.error("Error fetching users:", error);
+      toast.error("Failed to load users");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Search functionality
+  const handleSearch = (query) => {
+    setSearchQuery(query);
+    const lowercaseQuery = query.toLowerCase();
+    const filtered = users.filter(user => 
+      user.name.toLowerCase().includes(lowercaseQuery) ||
+      user.email.toLowerCase().includes(lowercaseQuery) ||
+      user.role.toLowerCase().includes(lowercaseQuery)
+    );
+    setFilteredUsers(filtered);
+  };
+
+  // Load initial data when authenticated
+  useEffect(() => {
+    if (currentUser) {
+      console.log("User is authenticated, fetching data...");
+      fetchUsers();
+    } else {
+      console.log("Waiting for authentication...");
+    }
+  }, [currentUser]);
+
+  // Update user permissions
+  const updateUserPermissions = async (userId, permissions) => {
+    try {
+      const userRef = doc(db, "users", userId);
+      await updateDoc(userRef, {
+        permissions: permissions
+      });
+      toast.success("User permissions updated successfully");
+      fetchUsers();
+    } catch (error) {
+      console.error("Error updating user permissions:", error);
+      toast.error("Failed to update user permissions");
+    }
+  };
+
+  // User Permissions Dialog Component
+  const UserPermissionsDialog = ({ user, open, onOpenChange }) => {
+    const [permissions, setPermissions] = useState(user?.permissions || {
+      readOnly: true,
+      accessProject: false,
+      accessParticipant: false,
+      accessFileStorage: false
+    });
+
+    const handleTogglePermission = (permission) => {
+      if (permission === 'readOnly') {
+        // When enabling readOnly, disable all other permissions
+        if (!permissions.readOnly) {
+          setPermissions({
+            readOnly: true,
+            accessProject: false,
+            accessParticipant: false,
+            accessFileStorage: false
+          });
+        } else {
+          // When disabling readOnly, keep other permissions as they are
+          setPermissions(prev => ({
+            ...prev,
+            readOnly: false
+          }));
+        }
+      } else {
+        // When enabling any other permission, disable readOnly
+        setPermissions(prev => ({
+          ...prev,
+          [permission]: !prev[permission],
+          readOnly: false
+        }));
+      }
+    };
+
+    const handleSave = async () => {
+      await updateUserPermissions(user.id, permissions);
+      onOpenChange(false);
+    };
+
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit User Permissions - {user?.name}</DialogTitle>
+            <DialogDescription>
+              Manage individual permissions for this user
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label htmlFor={`readonly-${user?.id}`} className="flex items-center">
+                  <Search className="h-4 w-4 mr-2 text-muted-foreground" />
+                  Read Only
+                </Label>
+                <Switch
+                  id={`readonly-${user?.id}`}
+                  checked={permissions.readOnly}
+                  onCheckedChange={() => handleTogglePermission('readOnly')}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor={`project-${user?.id}`} className="flex items-center">
+                  <Edit className="h-4 w-4 mr-2 text-muted-foreground" />
+                  Access Project
+                </Label>
+                <Switch
+                  id={`project-${user?.id}`}
+                  checked={permissions.accessProject}
+                  onCheckedChange={() => handleTogglePermission('accessProject')}
+                  disabled={permissions.readOnly}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor={`participant-${user?.id}`} className="flex items-center">
+                  <Users className="h-4 w-4 mr-2 text-muted-foreground" />
+                  Access Participant
+                </Label>
+                <Switch
+                  id={`participant-${user?.id}`}
+                  checked={permissions.accessParticipant}
+                  onCheckedChange={() => handleTogglePermission('accessParticipant')}
+                  disabled={permissions.readOnly}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor={`storage-${user?.id}`} className="flex items-center">
+                  <FolderOpen className="h-4 w-4 mr-2 text-muted-foreground" />
+                  Access File Storage
+                </Label>
+                <Switch
+                  id={`storage-${user?.id}`}
+                  checked={permissions.accessFileStorage}
+                  onCheckedChange={() => handleTogglePermission('accessFileStorage')}
+                  disabled={permissions.readOnly}
+                />
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSave}>
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  };
+
+  // User Table Row Component
+  const UserTableRow = ({ user }) => (
+    <TableRow key={user.id}>
+      <TableCell>
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+            <span className="text-sm font-medium">
+              {user.name.split(" ").map(n => n[0]).join("").toUpperCase()}
+            </span>
+          </div>
+          <div>
+            <div className="font-medium">{user.name}</div>
+            <div className="text-sm text-muted-foreground">
+              {user.email}
+            </div>
+          </div>
+        </div>
+      </TableCell>
+      <TableCell>
+        <Badge variant="outline">
+          {user.role}
+        </Badge>
+      </TableCell>
+      <TableCell>
+        <Badge
+          variant={user.status === "Active" ? "outline" : "secondary"}
+          className={
+            user.status === "Active"
+              ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
+              : "bg-muted text-muted-foreground"
+          }
+        >
+          {user.status}
+        </Badge>
+      </TableCell>
+      <TableCell>{user.lastActive}</TableCell>
+      <TableCell className="text-right">
+        <div className="flex justify-end gap-2">
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={() => {
+              setSelectedUser(user);
+              setEditingPermissions(true);
+            }}
+          >
+            <Key className="h-4 w-4" />
+            <span className="sr-only">Edit Permissions</span>
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={() => {
+              setEditingUser(user);
+              setIsEditUserOpen(true);
+            }}
+          >
+            <Edit className="h-4 w-4" />
+            <span className="sr-only">Edit</span>
+          </Button>
+          <Button variant="ghost" size="icon">
+            <Trash2 className="h-4 w-4" />
+            <span className="sr-only">Delete</span>
+          </Button>
+        </div>
+      </TableCell>
+    </TableRow>
+  );
+
+  // Add function to handle user creation
+  const handleCreateUser = async () => {
+    if (!newUserData.email || !newUserData.password || !newUserData.name) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Create user in Firebase Auth
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        newUserData.email,
+        newUserData.password
+      );
+
+      // Add user data to Firestore
+      await setDoc(doc(db, "users", userCredential.user.uid), {
+        name: newUserData.name,
+        email: newUserData.email,
+        role: newUserData.role,
+        status: "Active",
+        createdAt: new Date(),
+        lastActive: new Date(),
+        permissions: newUserData.permissions
+      });
+
+      toast.success("User created successfully");
+      setIsAddUserOpen(false);
+      setNewUserData({
+        name: "",
+        email: "",
+        role: "SLP Member",
+        password: "",
+        permissions: {
+          readOnly: true,
+          accessProject: false,
+          accessParticipant: false,
+          accessFileStorage: false
+        }
+      });
+      fetchUsers(); // Refresh the users list
+    } catch (error) {
+      console.error("Error creating user:", error);
+      toast.error(error.message || "Failed to create user");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Add User Dialog Component
+  const AddUserDialog = ({ open, onOpenChange }) => {
+    const [localUserData, setLocalUserData] = useState({
+      name: "",
+      email: "",
+      role: "SLP Member",
+      password: "",
+      permissions: {
+        readOnly: true,
+        accessProject: false,
+        accessParticipant: false,
+        accessFileStorage: false
+      }
+    });
+
+    const handleSubmit = async () => {
+      if (!localUserData.email || !localUserData.password || !localUserData.name) {
+        toast.error("Please fill in all required fields");
+        return;
+      }
+
+      setIsSubmitting(true);
+      try {
+        // Create user in Firebase Auth
+        const userCredential = await createUserWithEmailAndPassword(
+          auth,
+          localUserData.email,
+          localUserData.password
+        );
+
+        // Add user data to Firestore
+        await setDoc(doc(db, "users", userCredential.user.uid), {
+          name: localUserData.name,
+          email: localUserData.email,
+          role: localUserData.role,
+          status: "Active",
+          createdAt: new Date(),
+          lastActive: new Date(),
+          permissions: localUserData.permissions
+        });
+
+        toast.success("User created successfully");
+        onOpenChange(false);
+        setLocalUserData({
+          name: "",
+          email: "",
+          role: "SLP Member",
+          password: "",
+          permissions: {
+            readOnly: true,
+            accessProject: false,
+            accessParticipant: false,
+            accessFileStorage: false
+          }
+        });
+        fetchUsers(); // Refresh the users list
+      } catch (error) {
+        console.error("Error creating user:", error);
+        toast.error(error.message || "Failed to create user");
+      } finally {
+        setIsSubmitting(false);
+      }
+    };
+
+    // Reset form when dialog closes
+    useEffect(() => {
+      if (!open) {
+        setLocalUserData({
+          name: "",
+          email: "",
+          role: "SLP Member",
+          password: "",
+          permissions: {
+            readOnly: true,
+            accessProject: false,
+            accessParticipant: false,
+            accessFileStorage: false
+          }
+        });
+      }
+    }, [open]);
+
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Add New User</DialogTitle>
+            <DialogDescription>
+              Create a new user account with specific permissions
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name">Full Name</Label>
+              <Input
+                id="name"
+                placeholder="Enter full name"
+                value={localUserData.name}
+                onChange={(e) => setLocalUserData(prev => ({ ...prev, name: e.target.value }))}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="Enter email address"
+                value={localUserData.email}
+                onChange={(e) => setLocalUserData(prev => ({ ...prev, email: e.target.value }))}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                placeholder="Enter password"
+                value={localUserData.password}
+                onChange={(e) => setLocalUserData(prev => ({ ...prev, password: e.target.value }))}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="role">Role</Label>
+              <Select
+                value={localUserData.role}
+                onValueChange={(value) => {
+                  setLocalUserData(prev => ({
+                    ...prev,
+                    role: value,
+                    permissions: value === "SLP Administrator" ? {
+                      readOnly: false,
+                      accessProject: true,
+                      accessParticipant: true,
+                      accessFileStorage: true
+                    } : {
+                      readOnly: true,
+                      accessProject: false,
+                      accessParticipant: false,
+                      accessFileStorage: false
+                    }
+                  }));
+                }}  
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="SLP Administrator">SLP ADMINISTRATOR</SelectItem>
+                  <SelectItem value="SLP Member">SLP MEMBER</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-4">
+              <Label>Initial Permissions</Label>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="readonly" className="flex items-center">
+                    <Search className="h-4 w-4 mr-2 text-muted-foreground" />
+                    Read Only
+                  </Label>
+                  <Switch
+                    id="readonly"
+                    checked={localUserData.permissions.readOnly}
+                    onCheckedChange={(checked) => {
+                      setLocalUserData(prev => ({
+                        ...prev,
+                        permissions: checked ? {
+                          readOnly: true,
+                          accessProject: false,
+                          accessParticipant: false,
+                          accessFileStorage: false
+                        } : {
+                          ...prev.permissions,
+                          readOnly: false
+                        }
+                      }));
+                    }}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="accessProject" className="flex items-center">
+                    <Edit className="h-4 w-4 mr-2 text-muted-foreground" />
+                    Access Project
+                  </Label>
+                  <Switch
+                    id="accessProject"
+                    checked={localUserData.permissions.accessProject}
+                    onCheckedChange={(checked) => {
+                      setLocalUserData(prev => ({
+                        ...prev,
+                        permissions: {
+                          ...prev.permissions,
+                          readOnly: false,
+                          accessProject: checked
+                        }
+                      }));
+                    }}
+                    disabled={localUserData.permissions.readOnly}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="accessParticipant" className="flex items-center">
+                    <Users className="h-4 w-4 mr-2 text-muted-foreground" />
+                    Access Participant
+                  </Label>
+                  <Switch
+                    id="accessParticipant"
+                    checked={localUserData.permissions.accessParticipant}
+                    onCheckedChange={(checked) => {
+                      setLocalUserData(prev => ({
+                        ...prev,
+                        permissions: {
+                          ...prev.permissions,
+                          readOnly: false,
+                          accessParticipant: checked
+                        }
+                      }));
+                    }}
+                    disabled={localUserData.permissions.readOnly}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="accessFileStorage" className="flex items-center">
+                    <FolderOpen className="h-4 w-4 mr-2 text-muted-foreground" />
+                    Access File Storage
+                  </Label>
+                  <Switch
+                    id="accessFileStorage"
+                    checked={localUserData.permissions.accessFileStorage}
+                    onCheckedChange={(checked) => {
+                      setLocalUserData(prev => ({
+                        ...prev,
+                        permissions: {
+                          ...prev.permissions,
+                          readOnly: false,
+                          accessFileStorage: checked
+                        }
+                      }));
+                    }}
+                    disabled={localUserData.permissions.readOnly}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                'Create User'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  };
+
+  // Update the Add User button click handler
+  const handleAddUserClick = () => {
+    setIsAddUserOpen(true);
+  };
+
+  // Add function to handle user updates
+  const handleUpdateUser = async () => {
+    if (!editingUser || !editUserData.name || !editUserData.email) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      // Update user data in Firestore
+      const userRef = doc(db, "users", editingUser.id);
+      await updateDoc(userRef, {
+        name: editUserData.name,
+        email: editUserData.email,
+        role: editUserData.role,
+        permissions: editUserData.permissions,
+        updatedAt: new Date()
+      });
+
+      toast.success("User updated successfully");
+      setIsEditUserOpen(false);
+      setEditingUser(null);
+      fetchUsers(); // Refresh the users list
+    } catch (error) {
+      console.error("Error updating user:", error);
+      toast.error(error.message || "Failed to update user");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Add Edit User Dialog Component
+  const EditUserDialog = ({ user, open, onOpenChange }) => {
+    const [localUserData, setLocalUserData] = useState({
+      name: "",
+      email: "",
+      role: "SLP Member",
+      permissions: {
+        readOnly: true,
+        accessProject: false,
+        accessParticipant: false,
+        accessFileStorage: false
+      }
+    });
+
+    // Initialize form with user data when opened
+    useEffect(() => {
+      if (user && open) {
+        setLocalUserData({
+          name: user.name,
+          email: user.email,
+          role: user.role,
+          permissions: user.permissions
+        });
+      }
+    }, [user, open]);
+
+    const handleSubmit = async () => {
+      if (!user || !localUserData.name || !localUserData.email) {
+        toast.error("Please fill in all required fields");
+        return;
+      }
+
+      setIsSubmitting(true);
+      try {
+        const userRef = doc(db, "users", user.id);
+        await updateDoc(userRef, {
+          name: localUserData.name,
+          role: localUserData.role,
+          permissions: localUserData.permissions,
+          updatedAt: new Date()
+        });
+
+        toast.success("User updated successfully");
+        onOpenChange(false);
+        fetchUsers(); // Refresh the users list
+      } catch (error) {
+        console.error("Error updating user:", error);
+        toast.error(error.message || "Failed to update user");
+      } finally {
+        setIsSubmitting(false);
+      }
+    };
+
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>
+              Modify user details and permissions
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="edit-name">Full Name</Label>
+              <Input
+                id="edit-name"
+                placeholder="Enter full name"
+                value={localUserData.name}
+                onChange={(e) => setLocalUserData({ ...localUserData, name: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-email">Email</Label>
+              <Input
+                id="edit-email"
+                type="email"
+                placeholder="Enter email address"
+                value={localUserData.email}
+                onChange={(e) => setLocalUserData({ ...localUserData, email: e.target.value })}
+                disabled // Email cannot be changed
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-role">Role</Label>
+              <Select
+                value={localUserData.role}
+                onValueChange={(value) => {
+                  setLocalUserData({ 
+                    ...localUserData, 
+                    role: value,
+                    permissions: value === "SLP Administrator" ? {
+                      readOnly: false,
+                      accessProject: true,
+                      accessParticipant: true,
+                      accessFileStorage: true
+                    } : {
+                      readOnly: true,
+                      accessProject: false,
+                      accessParticipant: false,
+                      accessFileStorage: false
+                    }
+                  });
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select role" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="SLP Administrator">SLP ADMINISTRATOR</SelectItem>
+                  <SelectItem value="SLP Member">SLP MEMBER</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-4">
+           
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleSubmit}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Updating...
+                </>
+              ) : (
+                'Save Changes'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     );
   };
 
   return (
-    <Tabs defaultValue="users" className="space-y-6">
-      <TabsList>
-        <TabsTrigger value="users" className="flex items-center">
-          <Users className="h-4 w-4 mr-2" />
-          Users
-        </TabsTrigger>
-        <TabsTrigger value="roles" className="flex items-center">
-          <Shield className="h-4 w-4 mr-2" />
-          Roles
-        </TabsTrigger>
-        <TabsTrigger value="invitations" className="flex items-center">
-          <UserPlus className="h-4 w-4 mr-2" />
-          Invitations
-        </TabsTrigger>
-      </TabsList>
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight">Users & Permissions</h2>
+        <p className="text-muted-foreground">
+          Manage users and their permissions
+        </p>
+      </div>
 
-      <TabsContent value="users" className="space-y-4">
-        <div className="flex justify-between items-center">
-          <div className="relative w-full max-w-sm">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search users..."
-              className="pl-8"
-            />
-          </div>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Add User
-          </Button>
+      <div className="flex justify-between items-center">
+        <div className="relative w-full max-w-sm">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            type="search"
+            placeholder="Search users..."
+            className="pl-8"
+            value={searchQuery}
+            onChange={(e) => handleSearch(e.target.value)}
+          />
         </div>
+        <Button onClick={handleAddUserClick}>
+          <Plus className="h-4 w-4 mr-2" />
+          Add User
+        </Button>
+      </div>
 
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
+      <Card>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>User</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Last Active</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
                 <TableRow>
-                  <TableHead>User</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Last Active</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableCell colSpan={5} className="text-center py-8">
+                    <div className="flex items-center justify-center">
+                      <Loader2 className="h-6 w-6 animate-spin mr-2" />
+                      <span>Loading users...</span>
+                    </div>
+                  </TableCell>
                 </TableRow>
-              </TableHeader>
-              <TableBody>
-                {users.map((user) => (
-                  <TableRow key={user.id}>
-                    <TableCell>
-                      <div className="flex items-center gap-3">
-                        <Avatar>
-                          <AvatarImage src={user.avatar} alt={user.name} />
-                          <AvatarFallback>
-                            {user.name
-                              .split(" ")
-                              .map((n) => n[0])
-                              .join("")}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium">{user.name}</div>
-                          <div className="text-sm text-muted-foreground">
-                            {user.email}
-                          </div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          user.role === "Admin"
-                            ? "default"
-                            : user.role === "Manager"
-                            ? "secondary"
-                            : user.role === "Editor"
-                            ? "outline"
-                            : "secondary"
-                        }
-                      >
-                        {user.role}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          user.status === "Active" ? "outline" : "secondary"
-                        }
-                        className={
-                          user.status === "Active"
-                            ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
-                            : "bg-muted text-muted-foreground"
-                        }
-                      >
-                        {user.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>{user.lastActive}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="icon">
-                          <Edit className="h-4 w-4" />
-                          <span className="sr-only">Edit</span>
-                        </Button>
-                        <Button variant="ghost" size="icon">
-                          <Trash2 className="h-4 w-4" />
-                          <span className="sr-only">Delete</span>
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-          <CardFooter className="flex justify-between border-t p-4">
-            <div className="text-sm text-muted-foreground">
-              Showing {users.length} of {users.length} users
-            </div>
-            <div className="flex gap-1">
-              <Button variant="outline" size="sm" disabled>
-                Previous
-              </Button>
-              <Button variant="outline" size="sm" disabled>
-                Next
-              </Button>
-            </div>
-          </CardFooter>
-        </Card>
-      </TabsContent>
-
-      <TabsContent value="roles" className="space-y-4">
-        <div className="flex justify-between items-center">
-          <div>
-            <h3 className="text-lg font-medium">Role Management</h3>
-            <p className="text-sm text-muted-foreground">
-              Define roles and their permissions
-            </p>
+              ) : filteredUsers.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8">
+                    {searchQuery ? "No users found matching your search" : "No users found"}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredUsers.map((user) => (
+                  <UserTableRow key={user.id} user={user} />
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+        <CardFooter className="flex justify-between border-t p-4">
+          <div className="text-sm text-muted-foreground">
+            Showing {filteredUsers.length} of {users.length} users
           </div>
-          <Button>
-            <Plus className="h-4 w-4 mr-2" />
-            Create Role
-          </Button>
-        </div>
-
-        {roles.map((role) => (
-          <Card key={role.id} className="mb-4">
-            <CardHeader className="pb-2">
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle className="text-lg">{role.name}</CardTitle>
-                  <CardDescription>{role.description}</CardDescription>
-                </div>
-                <Badge variant="outline">
-                  {role.userCount} {role.userCount === 1 ? "User" : "Users"}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="flex items-center justify-between">
-                  <Label
-                    htmlFor={`create-${role.id}`}
-                    className="flex items-center"
-                  >
-                    <Plus className="h-4 w-4 mr-2 text-muted-foreground" />
-                    Create
-                  </Label>
-                  <Switch
-                    id={`create-${role.id}`}
-                    checked={role.permissions.create}
-                    onCheckedChange={() => togglePermission(role.id, "create")}
-                    disabled={role.name === "Admin"}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label
-                    htmlFor={`read-${role.id}`}
-                    className="flex items-center"
-                  >
-                    <Search className="h-4 w-4 mr-2 text-muted-foreground" />
-                    Read
-                  </Label>
-                  <Switch
-                    id={`read-${role.id}`}
-                    checked={role.permissions.read}
-                    onCheckedChange={() => togglePermission(role.id, "read")}
-                    disabled={role.name === "Admin"}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label
-                    htmlFor={`update-${role.id}`}
-                    className="flex items-center"
-                  >
-                    <Edit className="h-4 w-4 mr-2 text-muted-foreground" />
-                    Update
-                  </Label>
-                  <Switch
-                    id={`update-${role.id}`}
-                    checked={role.permissions.update}
-                    onCheckedChange={() => togglePermission(role.id, "update")}
-                    disabled={role.name === "Admin"}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label
-                    htmlFor={`delete-${role.id}`}
-                    className="flex items-center"
-                  >
-                    <Trash2 className="h-4 w-4 mr-2 text-muted-foreground" />
-                    Delete
-                  </Label>
-                  <Switch
-                    id={`delete-${role.id}`}
-                    checked={role.permissions.delete}
-                    onCheckedChange={() => togglePermission(role.id, "delete")}
-                    disabled={role.name === "Admin"}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label
-                    htmlFor={`manage-users-${role.id}`}
-                    className="flex items-center"
-                  >
-                    <Users className="h-4 w-4 mr-2 text-muted-foreground" />
-                    Manage Users
-                  </Label>
-                  <Switch
-                    id={`manage-users-${role.id}`}
-                    checked={role.permissions.manage_users}
-                    onCheckedChange={() =>
-                      togglePermission(role.id, "manage_users")
-                    }
-                    disabled={role.name === "Admin"}
-                  />
-                </div>
-                <div className="flex items-center justify-between">
-                  <Label
-                    htmlFor={`manage-billing-${role.id}`}
-                    className="flex items-center"
-                  >
-                    <Key className="h-4 w-4 mr-2 text-muted-foreground" />
-                    Manage Billing
-                  </Label>
-                  <Switch
-                    id={`manage-billing-${role.id}`}
-                    checked={role.permissions.manage_billing}
-                    onCheckedChange={() =>
-                      togglePermission(role.id, "manage_billing")
-                    }
-                    disabled={role.name === "Admin"}
-                  />
-                </div>
-              </div>
-            </CardContent>
-            <CardFooter className="flex justify-between border-t">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={role.name === "Admin"}
-              >
-                Edit Role
-              </Button>
-              <Button
-                variant="destructive"
-                size="sm"
-                disabled={role.name === "Admin"}
-              >
-                Delete Role
-              </Button>
-            </CardFooter>
-          </Card>
-        ))}
-      </TabsContent>
-
-      <TabsContent value="invitations" className="space-y-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>Invite New Users</CardTitle>
-            <CardDescription>
-              Send invitations to new team members
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email-invites">Email Addresses</Label>
-              <Input
-                id="email-invites"
-                placeholder="Enter email addresses separated by commas"
-              />
-              <p className="text-sm text-muted-foreground">
-                You can invite multiple users at once by separating email
-                addresses with commas.
-              </p>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="role-select">Role</Label>
-              <Select defaultValue="viewer">
-                <SelectTrigger id="role-select">
-                  <SelectValue placeholder="Select role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="manager">Manager</SelectItem>
-                  <SelectItem value="editor">Editor</SelectItem>
-                  <SelectItem value="viewer">Viewer</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="invite-message">
-                Personal Message (Optional)
-              </Label>
-              <Input
-                id="invite-message"
-                placeholder="Add a personal message to your invitation"
-              />
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button>
-              <UserPlus className="h-4 w-4 mr-2" />
-              Send Invitations
+          <div className="flex gap-1">
+            <Button variant="outline" size="sm" disabled>
+              Previous
             </Button>
-          </CardFooter>
-        </Card>
+            <Button variant="outline" size="sm" disabled>
+              Next
+            </Button>
+          </div>
+        </CardFooter>
+      </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Pending Invitations</CardTitle>
-            <CardDescription>Track and manage sent invitations</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead>Sent</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow>
-                  <TableCell>michael.brown@example.com</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">Editor</Badge>
-                  </TableCell>
-                  <TableCell>2 days ago</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className="bg-amber-50 text-amber-700 border-amber-200"
-                    >
-                      Pending
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm">
-                      Resend
-                    </Button>
-                    <Button variant="ghost" size="sm">
-                      Cancel
-                    </Button>
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell>sarah.wilson@example.com</TableCell>
-                  <TableCell>
-                    <Badge variant="outline">Viewer</Badge>
-                  </TableCell>
-                  <TableCell>5 days ago</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className="bg-amber-50 text-amber-700 border-amber-200"
-                    >
-                      Pending
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm">
-                      Resend
-                    </Button>
-                    <Button variant="ghost" size="sm">
-                      Cancel
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </TabsContent>
-    </Tabs>
+      {/* User Permissions Dialog */}
+      {selectedUser && (
+        <UserPermissionsDialog
+          user={selectedUser}
+          open={editingPermissions}
+          onOpenChange={(open) => {
+            setEditingPermissions(open);
+            if (!open) setSelectedUser(null);
+          }}
+        />
+      )}
+      
+      {/* Add User Dialog */}
+      <AddUserDialog
+        open={isAddUserOpen}
+        onOpenChange={(open) => {
+          setIsAddUserOpen(open);
+          if (!open) {
+            setNewUserData({
+              name: "",
+              email: "",
+              role: "SLP Member",
+              password: "",
+              permissions: {
+                readOnly: true,
+                accessProject: false,
+                accessParticipant: false,
+                accessFileStorage: false
+              }
+            });
+          }
+        }}
+      />
+      
+      {/* Edit User Dialog */}
+      <EditUserDialog
+        user={editingUser}
+        open={isEditUserOpen}
+        onOpenChange={(open) => {
+          setIsEditUserOpen(open);
+          if (!open) {
+            setEditingUser(null);
+            setEditUserData({
+              name: "",
+              email: "",
+              role: "SLP Member",
+              permissions: {
+                readOnly: true,
+                accessProject: false,
+                accessParticipant: false,
+                accessFileStorage: false
+              }
+            });
+          }
+        }}
+      />
+      
+      <Toaster position="top-right" expand={false} richColors closeButton />
+    </div>
   );
 }
