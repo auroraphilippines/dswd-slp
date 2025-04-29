@@ -1,14 +1,25 @@
 "use client";
 
-
-
-import { useState } from "react";
-import { Facebook, Linkedin, Twitter, Home, User, Mail, Lock } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Facebook, Linkedin, Twitter, Home, User, Mail, Lock, Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { registerUser, loginUser } from "@/service/auth";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { auth } from "@/service/firebase";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function LoginPage() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -246,6 +257,12 @@ export default function LoginPage() {
           border-bottom: 1px solid var(--gray);
           line-height: 2;
           cursor: pointer;
+          transition: all 0.3s ease;
+        }
+
+        .form__link:hover {
+          color: var(--green-primary);
+          border-bottom-color: var(--green-primary);
         }
 
         .title {
@@ -488,6 +505,57 @@ export default function LoginPage() {
         .Toastify__toast--error {
           background: #d32f2f;
         }
+
+        /* Add these new styles for the dialog */
+        [data-dialog-overlay] {
+          background-color: rgba(0, 0, 0, 0.5);
+          position: fixed;
+          inset: 0;
+          z-index: 50;
+        }
+
+        [data-dialog-content] {
+          position: relative;
+          width: 90vw;
+          max-width: 450px;
+          margin: 1.5rem auto;
+          background: white;
+          border-radius: 0.5rem;
+          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+          z-index: 51;
+        }
+
+        [data-dialog-overlay][data-state="open"],
+        [data-dialog-content][data-state="open"] {
+          animation: fadeIn 0.2s ease-out;
+        }
+
+        [data-dialog-overlay][data-state="closed"],
+        [data-dialog-content][data-state="closed"] {
+          animation: fadeOut 0.2s ease-in;
+        }
+
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        @keyframes fadeOut {
+          from {
+            opacity: 1;
+            transform: scale(1);
+          }
+          to {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+        }
       `}</style>
 
       <div className="main">
@@ -618,7 +686,6 @@ export default function LoginPage() {
               />
             </div>
             {error && <div className="error-message">{error}</div>}
-            <a className="form__link">Forgot your password?</a>
             <button
               className="form__button button submit"
               type="submit"

@@ -113,7 +113,8 @@ export default function VendorsAnalyticsPage() {
     programDistribution: {},
     totalManpowerCost: 0,
     totalMaterialsCost: 0,
-    totalEquipmentCost: 0
+    totalEquipmentCost: 0,
+    monthlyInvestments: []
   });
 
   useEffect(() => {
@@ -237,19 +238,44 @@ export default function VendorsAnalyticsPage() {
       programDistribution: {},
       totalManpowerCost: 0,
       totalMaterialsCost: 0,
-      totalEquipmentCost: 0
+      totalEquipmentCost: 0,
+      monthlyInvestments: []
     };
 
+    // Create a map to store monthly totals
+    const monthlyTotals = new Map();
+    
     vendors.forEach(vendor => {
       // Program distribution
       stats.programDistribution[vendor.programName] = 
         (stats.programDistribution[vendor.programName] || 0) + 1;
 
       // Calculate costs
-      stats.totalManpowerCost += vendor.manpower?.reduce((sum, worker) => sum + (Number(worker.wage) || 0), 0) || 0;
-      stats.totalMaterialsCost += vendor.rawMaterials?.reduce((sum, material) => sum + (Number(material.totalCost) || 0), 0) || 0;
-      stats.totalEquipmentCost += vendor.tools?.reduce((sum, item) => sum + (Number(item.totalCost) || 0), 0) || 0;
+      const manpowerCost = vendor.manpower?.reduce((sum, worker) => sum + (Number(worker.wage) || 0), 0) || 0;
+      const materialsCost = vendor.rawMaterials?.reduce((sum, material) => sum + (Number(material.totalCost) || 0), 0) || 0;
+      const equipmentCost = vendor.tools?.reduce((sum, item) => sum + (Number(item.totalCost) || 0), 0) || 0;
+      
+      stats.totalManpowerCost += manpowerCost;
+      stats.totalMaterialsCost += materialsCost;
+      stats.totalEquipmentCost += equipmentCost;
+
+      // Calculate monthly totals
+      if (vendor.createdAt) {
+        const date = vendor.createdAt.toDate();
+        const monthKey = new Date(date.getFullYear(), date.getMonth(), 1).toISOString();
+        const monthTotal = monthlyTotals.get(monthKey) || 0;
+        monthlyTotals.set(monthKey, monthTotal + manpowerCost + materialsCost + equipmentCost);
+      }
     });
+
+    // Convert monthly totals to sorted array
+    stats.monthlyInvestments = Array.from(monthlyTotals.entries())
+      .map(([date, total]) => ({
+        month: new Date(date),
+        total: total
+      }))
+      .sort((a, b) => a.month - b.month)
+      .slice(-6); // Get last 6 months
 
     return stats;
   };
@@ -568,6 +594,132 @@ export default function VendorsAnalyticsPage() {
                   </CardContent>
                 </Card>
               </div>
+
+              {/* Monthly Investment Chart */}
+              <Card className="mb-8 bg-white border-0 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200">
+                <CardHeader className="pb-2 pt-6">
+                  <CardTitle className="text-2xl font-medium text-gray-900">Monthly Investments</CardTitle>
+                  <CardDescription className="text-gray-500 text-base">Investment trends over time</CardDescription>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div className="h-[400px] relative">
+                    <Chart
+                      type="line"
+                      data={{
+                        labels: [
+                          'Mar 1', 'Mar 8', 'Mar 15', 'Mar 22', 'Mar 29',
+                          'Apr 1'
+                        ],
+                        datasets: [
+                          {
+                            label: 'Upper Range',
+                            data: [5571.43, 4642.86, 3714.29, 2785.71, 1857.14, 928.57],
+                            borderColor: 'rgba(124, 58, 237, 1)',
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.4,
+                            pointRadius: 0,
+                          },
+                          {
+                            label: 'Lower Range',
+                            data: [4000, 3500, 2800, 2100, 1400, 700],
+                            borderColor: 'rgba(124, 58, 237, 0.3)',
+                            borderWidth: 2,
+                            fill: '-1',
+                            tension: 0.4,
+                            pointRadius: 0,
+                            backgroundColor: 'rgba(124, 58, 237, 0.1)',
+                          }
+                        ],
+                      }}
+                      options={{
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        layout: {
+                          padding: {
+                            left: 10,
+                            right: 10
+                          }
+                        },
+                        scales: {
+                          y: {
+                            position: 'left',
+                            grid: {
+                              color: 'rgba(0, 0, 0, 0.03)',
+                              drawBorder: false,
+                            },
+                            ticks: {
+                              callback: (value) => `₱${value.toFixed(2)}`,
+                              stepSize: 928.57,
+                              font: {
+                                size: 11,
+                                family: "'Inter', sans-serif",
+                                color: 'rgb(102, 102, 102)'
+                              },
+                              padding: 10,
+                            },
+                            min: 0,
+                            max: 6500,
+                            border: {
+                              display: false
+                            }
+                          },
+                          x: {
+                            offset: true,
+                            grid: {
+                              display: false,
+                              drawBorder: false
+                            },
+                            ticks: {
+                              font: {
+                                size: 11,
+                                family: "'Inter', sans-serif",
+                                color: 'rgb(102, 102, 102)'
+                              },
+                              padding: 10,
+                              maxRotation: 0
+                            },
+                            border: {
+                              display: false
+                            }
+                          }
+                        },
+                        plugins: {
+                          legend: {
+                            display: false
+                          },
+                          tooltip: {
+                            enabled: true,
+                            mode: 'index',
+                            intersect: false,
+                            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+                            titleColor: 'rgba(0, 0, 0, 0.8)',
+                            bodyColor: 'rgba(0, 0, 0, 0.7)',
+                            borderColor: 'rgba(124, 58, 237, 0.2)',
+                            borderWidth: 1,
+                            padding: 8,
+                            boxPadding: 4,
+                            callbacks: {
+                              label: function(context) {
+                                return `₱${context.parsed.y.toFixed(2)}`;
+                              }
+                            }
+                          }
+                        },
+                        interaction: {
+                          intersect: false,
+                          mode: 'index'
+                        },
+                        elements: {
+                          line: {
+                            tension: 0.4
+                          }
+                        }
+                      }}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
 
               {/* Program Distribution Chart */}
               <Card className="mb-8 bg-gradient-to-br from-[#1E3B0C] to-[#2C4A1B] border-0 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200">

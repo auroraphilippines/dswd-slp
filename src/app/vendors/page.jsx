@@ -130,7 +130,7 @@ const navigation = [
   },
   {
     name: "File Storage",
-    href: "/filestorage",
+    href: "/programs",
     icon: FolderOpen,
     requiresAccess: 'filestorage'
   },

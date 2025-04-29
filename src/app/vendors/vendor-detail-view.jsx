@@ -318,17 +318,17 @@ export function VendorDetailView({ vendor, onUpdate, readOnly }) {
                       </Button>
                       <Button variant="outline" onClick={handleAddManpower}>
                         <Plus className="h-4 w-4 mr-2" />Add Worker
-                      </Button>
-                    </>
-                  ) : (
+                        </Button>
+                      </>
+                    ) : (
                     <Button variant="outline" onClick={() => handleEdit('manpower', vendor?.manpower || [])}>
                       <Edit2 className="h-4 w-4 mr-2" />Edit
-                    </Button>
+                      </Button>
                   )}
                 </div>
               )}
-            </div>
-
+              </div>
+              
             <Table>
               <TableHeader>
                 <TableRow>
@@ -343,11 +343,11 @@ export function VendorDetailView({ vendor, onUpdate, readOnly }) {
                 {(editingSection === 'manpower' ? editedManpower : vendor?.manpower || []).map((worker, index) => (
                   <TableRow key={index}>
                     <TableCell>
-                      {editingSection === 'manpower' ? (
-                        <Input
-                          type="number"
-                          value={worker.numberOfWorkers}
-                          onChange={(e) => handleManpowerChange(index, 'numberOfWorkers', Number(e.target.value))}
+              {editingSection === 'manpower' ? (
+                          <Input
+                            type="number"
+                            value={worker.numberOfWorkers}
+                            onChange={(e) => handleManpowerChange(index, 'numberOfWorkers', Number(e.target.value))}
                           className="w-24"
                         />
                       ) : (
@@ -356,8 +356,8 @@ export function VendorDetailView({ vendor, onUpdate, readOnly }) {
                     </TableCell>
                     <TableCell>
                       {editingSection === 'manpower' ? (
-                        <Input
-                          value={worker.task}
+                          <Input
+                            value={worker.task}
                           onChange={(e) => handleManpowerChange(index, 'task', e.target.value)}
                         />
                       ) : (
@@ -366,10 +366,10 @@ export function VendorDetailView({ vendor, onUpdate, readOnly }) {
                     </TableCell>
                     <TableCell>
                       {editingSection === 'manpower' ? (
-                        <Input
-                          type="number"
-                          value={worker.wage}
-                          onChange={(e) => handleManpowerChange(index, 'wage', Number(e.target.value))}
+                          <Input
+                            type="number"
+                            value={worker.wage}
+                            onChange={(e) => handleManpowerChange(index, 'wage', Number(e.target.value))}
                           className="w-24"
                         />
                       ) : (
@@ -413,17 +413,17 @@ export function VendorDetailView({ vendor, onUpdate, readOnly }) {
                       </Button>
                       <Button variant="outline" onClick={handleAddMaterial}>
                         <Plus className="h-4 w-4 mr-2" />Add Material
-                      </Button>
-                    </>
-                  ) : (
+                        </Button>
+                      </>
+                    ) : (
                     <Button variant="outline" onClick={() => handleEdit('materials', vendor?.rawMaterials || [])}>
                       <Edit2 className="h-4 w-4 mr-2" />Edit
-                    </Button>
+                      </Button>
                   )}
                 </div>
               )}
-            </div>
-
+              </div>
+              
             <Table>
               <TableHeader>
                 <TableRow>
@@ -439,9 +439,9 @@ export function VendorDetailView({ vendor, onUpdate, readOnly }) {
                 {(editingSection === 'materials' ? editedMaterials : vendor?.rawMaterials || []).map((material, index) => (
                   <TableRow key={index}>
                     <TableCell>
-                      {editingSection === 'materials' ? (
-                        <Input
-                          value={material.name}
+              {editingSection === 'materials' ? (
+                          <Input
+                            value={material.name}
                           onChange={(e) => handleMaterialChange(index, 'name', e.target.value)}
                         />
                       ) : (
@@ -450,10 +450,10 @@ export function VendorDetailView({ vendor, onUpdate, readOnly }) {
                     </TableCell>
                     <TableCell>
                       {editingSection === 'materials' ? (
-                        <Input
-                          type="number"
-                          value={material.quantity}
-                          onChange={(e) => handleMaterialChange(index, 'quantity', Number(e.target.value))}
+                          <Input
+                            type="number"
+                            value={material.quantity}
+                            onChange={(e) => handleMaterialChange(index, 'quantity', Number(e.target.value))}
                           className="w-24"
                         />
                       ) : (
@@ -462,8 +462,8 @@ export function VendorDetailView({ vendor, onUpdate, readOnly }) {
                     </TableCell>
                     <TableCell>
                       {editingSection === 'materials' ? (
-                        <Input
-                          value={material.unit}
+                          <Input
+                            value={material.unit}
                           onChange={(e) => handleMaterialChange(index, 'unit', e.target.value)}
                           className="w-24"
                         />
@@ -473,10 +473,10 @@ export function VendorDetailView({ vendor, onUpdate, readOnly }) {
                     </TableCell>
                     <TableCell>
                       {editingSection === 'materials' ? (
-                        <Input
-                          type="number"
-                          value={material.unitPrice}
-                          onChange={(e) => handleMaterialChange(index, 'unitPrice', Number(e.target.value))}
+                          <Input
+                            type="number"
+                            value={material.unitPrice}
+                            onChange={(e) => handleMaterialChange(index, 'unitPrice', Number(e.target.value))}
                           className="w-24"
                         />
                       ) : (
@@ -520,17 +520,17 @@ export function VendorDetailView({ vendor, onUpdate, readOnly }) {
                       </Button>
                       <Button variant="outline" onClick={handleAddTool}>
                         <Plus className="h-4 w-4 mr-2" />Add Tool
-                      </Button>
-                    </>
-                  ) : (
+                        </Button>
+                      </>
+                    ) : (
                     <Button variant="outline" onClick={() => handleEdit('tools', vendor?.tools || [])}>
                       <Edit2 className="h-4 w-4 mr-2" />Edit
-                    </Button>
+                      </Button>
                   )}
                 </div>
               )}
-            </div>
-
+              </div>
+              
             <Table>
               <TableHeader>
                 <TableRow>
@@ -547,8 +547,8 @@ export function VendorDetailView({ vendor, onUpdate, readOnly }) {
                 {(editingSection === 'tools' ? editedTools : vendor?.tools || []).map((tool, index) => (
                   <TableRow key={index}>
                     <TableCell>
-                      {editingSection === 'tools' ? (
-                        <Input
+              {editingSection === 'tools' ? (
+                          <Input
                           value={tool.name}
                           onChange={(e) => handleToolChange(index, 'name', e.target.value)}
                         />
@@ -558,10 +558,10 @@ export function VendorDetailView({ vendor, onUpdate, readOnly }) {
                     </TableCell>
                     <TableCell>
                       {editingSection === 'tools' ? (
-                        <Input
-                          type="number"
+                          <Input
+                            type="number"
                           value={tool.quantity}
-                          onChange={(e) => handleToolChange(index, 'quantity', Number(e.target.value))}
+                            onChange={(e) => handleToolChange(index, 'quantity', Number(e.target.value))}
                           className="w-24"
                         />
                       ) : (
@@ -570,7 +570,7 @@ export function VendorDetailView({ vendor, onUpdate, readOnly }) {
                     </TableCell>
                     <TableCell>
                       {editingSection === 'tools' ? (
-                        <Input
+                          <Input
                           value={tool.unit}
                           onChange={(e) => handleToolChange(index, 'unit', e.target.value)}
                           className="w-24"
@@ -581,10 +581,10 @@ export function VendorDetailView({ vendor, onUpdate, readOnly }) {
                     </TableCell>
                     <TableCell>
                       {editingSection === 'tools' ? (
-                        <Input
-                          type="number"
+                          <Input
+                            type="number"
                           value={tool.unitPrice}
-                          onChange={(e) => handleToolChange(index, 'unitPrice', Number(e.target.value))}
+                            onChange={(e) => handleToolChange(index, 'unitPrice', Number(e.target.value))}
                           className="w-24"
                         />
                       ) : (
