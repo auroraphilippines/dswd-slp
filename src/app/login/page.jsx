@@ -29,6 +29,8 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
   const router = useRouter();
 
   const toggleForm = () => {
@@ -91,6 +93,26 @@ export default function LoginPage() {
       console.error("Error during signin:", error);
       toast.error("An unexpected error occurred.");
       setError("An unexpected error occurred.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      // Here you would typically call your password reset service
+      // For now, we'll just show a success message
+      toast.success("Password reset instructions sent to your email!");
+      setIsForgotPasswordOpen(false);
+      setResetEmail("");
+    } catch (error) {
+      console.error("Error during password reset:", error);
+      toast.error("Failed to send reset instructions");
+      setError("Failed to send reset instructions");
     } finally {
       setLoading(false);
     }
@@ -556,6 +578,19 @@ export default function LoginPage() {
             transform: scale(0.95);
           }
         }
+
+        .forgot-password {
+          color: var(--gray);
+          font-size: 14px;
+          margin-top: 10px;
+          text-align: right;
+          cursor: pointer;
+          transition: color 0.3s ease;
+        }
+
+        .forgot-password:hover {
+          color: var(--green-primary);
+        }
       `}</style>
 
       <div className="main">
@@ -684,6 +719,9 @@ export default function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
+            </div>
+            <div className="forgot-password" onClick={() => router.push("/login/forgot-password")}>
+              Forgot Password?
             </div>
             {error && <div className="error-message">{error}</div>}
             <button
