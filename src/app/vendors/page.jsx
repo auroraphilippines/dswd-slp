@@ -32,6 +32,8 @@ import {
   SortAsc,
   Grid,
   List,
+  Eye,
+  Edit,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -107,6 +109,38 @@ ChartJS.register(
   Legend
 );
 
+// Define navigation items
+const navigation = [
+  {
+    name: "Dashboard",
+    href: "/dashboard",
+    icon: LayoutDashboard,
+  },
+  {
+    name: "Projects",
+    href: "/vendors",
+    icon: Building2,
+    requiresAccess: 'projects'
+  },
+  {
+    name: "Participants",
+    href: "/participants",
+    icon: Users,
+    requiresAccess: 'participants'
+  },
+  {
+    name: "File Storage",
+    href: "/filestorage",
+    icon: FolderOpen,
+    requiresAccess: 'filestorage'
+  },
+  {
+    name: "Settings",
+    href: "/settings",
+    icon: Settings,
+  }
+];
+
 export default function VendorsPage() {
   const router = useRouter();
   const [selectedVendor, setSelectedVendor] = useState(null);
@@ -121,20 +155,20 @@ export default function VendorsPage() {
   const [vendorToDelete, setVendorToDelete] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
-  const [analytics, setAnalytics] = useState({
-    total: 0,
-    programDistribution: {},
-    totalManpowerCost: 0,
-    totalMaterialsCost: 0,
-    totalEquipmentCost: 0
-  });
   const [selectedVendors, setSelectedVendors] = useState([]);
   const [userPermissions, setUserPermissions] = useState({
-    readOnly: true,
-    accessProject: false,
-    accessParticipant: false,
-    accessFileStorage: false
+    readOnly: false,
+    accessProject: true,
+    accessParticipant: true,
+    accessFileStorage: true
   });
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [selectedItems, setSelectedItems] = useState([]);
+
+  // Add handleSearchChange function
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+  };
 
   // Close mobile menu when path changes
   useEffect(() => {
@@ -161,10 +195,6 @@ export default function VendorsPage() {
             b.createdAt?.toDate() - a.createdAt?.toDate()
           );
           setVendors(sortedVendors);
-          
-          // Calculate analytics
-          const vendorAnalytics = calculateVendorAnalytics(sortedVendors);
-          setAnalytics(vendorAnalytics);
           
           setLoading(false);
         });
@@ -220,11 +250,12 @@ export default function VendorsPage() {
           const userDoc = await getDoc(doc(db, "users", user.uid));
           if (userDoc.exists()) {
             const userData = userDoc.data();
+            // Set default access to true for participants and file storage
             setUserPermissions({
-              readOnly: userData.permissions?.readOnly ?? true,
-              accessProject: userData.permissions?.accessProject ?? false,
-              accessParticipant: userData.permissions?.accessParticipant ?? false,
-              accessFileStorage: userData.permissions?.accessFileStorage ?? false
+              readOnly: userData.permissions?.readOnly ?? false,
+              accessProject: userData.permissions?.accessProject ?? true,
+              accessParticipant: userData.permissions?.accessParticipant ?? true,
+              accessFileStorage: userData.permissions?.accessFileStorage ?? true
             });
           }
         }
@@ -260,62 +291,175 @@ export default function VendorsPage() {
     return stats;
   };
 
-  // Helper function to check if user has access to a specific module
+  // Update hasModuleAccess to default to true
   const hasModuleAccess = (moduleName) => {
+    if (!moduleName) return true; // If no access requirement, always show
     switch (moduleName.toLowerCase()) {
       case 'projects':
         return userPermissions.accessProject;
       case 'participants':
-        return userPermissions.accessParticipant;
+        return true; // Always allow access to participants
       case 'filestorage':
-        return userPermissions.accessFileStorage;
+        return true; // Always allow access to file storage
       default:
-        return true; // Default modules like Dashboard, Reports, etc. are always accessible
+        return true;
     }
   };
 
-  // Helper function to check if user has write permissions
+  // Add hasWritePermissions function
   const hasWritePermissions = () => {
     return !userPermissions.readOnly && userPermissions.accessProject;
   };
 
-  // Helper function to show permission denied message
-  const showPermissionDenied = (action) => {
-    toast.error(`Permission denied: You don't have access to ${action}`);
+  // Add isReadOnly function
+  const isReadOnly = () => {
+    return userPermissions.readOnly || !userPermissions.accessProject;
   };
 
-  // Update the navigation array to include access checks
-  const navigation = [
-    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Projects", href: "/vendors", icon: Store, requiresAccess: true },
-    { name: "Participants", href: "/participants", icon: Users, requiresAccess: true },
-    { name: "File Storage", href: "/programs", icon: FolderOpen, requiresAccess: true },
-    { name: "Reports", href: "./reports", icon: FileBarChart },
-    { name: "Analytics", href: "./analytics", icon: FileBarChart },
-    { name: "Settings", href: "./settings", icon: Settings },
-  ].map(item => ({
-    ...item,
-    disabled: item.requiresAccess && !hasModuleAccess(item.name)
-  }));
+  // Add showPermissionDenied function
+  const showPermissionDenied = (action) => {
+    if (!userPermissions.accessProject) {
+      toast.error(`Permission denied: You don't have access to projects module.`);
+    } else {
+      toast.error(`Permission denied: You have read-only access. Cannot ${action}.`);
+    }
+  };
 
+  // Update handleViewDetails to pass readOnly prop
   const handleViewDetails = (vendor) => {
     setSelectedVendor(vendor);
   };
 
-  const handleCloseDetails = () => {
-    setSelectedVendor(null);
-  };
-
-  const handleSearchChange = (e) => {
-    setSearchQuery(e.target.value);
-  };
-
+  // Update handleAddVendor to check permissions
   const handleAddVendor = () => {
     if (!hasWritePermissions()) {
-      showPermissionDenied('add new projects');
+      showPermissionDenied('add new vendors');
       return;
     }
-    router.push("./vendors/add");
+    setSelectedVendor(null);
+    setIsAddModalOpen(true);
+  };
+
+  // Update handleEditVendor to check permissions
+  const handleEditVendor = (vendor) => {
+    if (!hasWritePermissions()) {
+      showPermissionDenied('edit vendors');
+      return;
+    }
+    setSelectedVendor(vendor);
+    setIsAddModalOpen(true);
+  };
+
+  // Update handleDeleteClick to check permissions
+  const handleDeleteClick = (vendor) => {
+    if (!hasWritePermissions()) {
+      showPermissionDenied('delete vendors');
+      return;
+    }
+    setVendorToDelete(vendor);
+    setShowDeleteDialog(true);
+  };
+
+  // Update handleSelectVendor to check permissions
+  const handleSelectVendor = (vendor, checked) => {
+    if (!hasWritePermissions()) {
+      showPermissionDenied('select vendors');
+      return;
+    }
+    setSelectedItems(prev => {
+      if (checked) {
+        return [...prev, vendor.docId];
+      } else {
+        return prev.filter(id => id !== vendor.docId);
+      }
+    });
+  };
+
+  // Update handleMultipleDelete to check permissions
+  const handleMultipleDelete = async () => {
+    if (!hasWritePermissions()) {
+      showPermissionDenied('delete multiple vendors');
+      return;
+    }
+    if (!selectedItems.length || !currentUser) {
+      toast.error("Please select vendors to delete");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const deletePromises = selectedItems.map(id => deleteVendor(id));
+      await Promise.all(deletePromises);
+      
+      toast.success("Selected vendors deleted successfully!");
+      setSelectedItems([]);
+      if (selectedVendor && selectedItems.some(id => id === selectedVendor.docId)) {
+        setSelectedVendor(null);
+      }
+    } catch (error) {
+      console.error("Error deleting vendors:", error);
+      toast.error("An error occurred while deleting vendors");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleDetailUpdate = async (updatedVendor) => {
+    if (!currentUser) {
+      toast.error("You must be logged in to update vendors");
+      return;
+    }
+
+    try {
+      const result = await updateVendorDetails(
+        updatedVendor.id,
+        updatedVendor,
+        currentUser.uid
+      );
+
+      if (result.success) {
+        toast.success("Vendor details updated successfully!");
+        setSelectedVendor(updatedVendor); // Update the local state
+      } else {
+        toast.error(result.error || "Failed to update vendor details");
+      }
+    } catch (error) {
+      console.error("Error updating vendor details:", error);
+      toast.error("An error occurred while updating vendor details");
+    }
+  };
+
+  // Filter vendors based on search query
+  const filteredVendors = vendors.filter((vendor) => {
+    const searchLower = searchQuery.toLowerCase();
+    return (
+      searchQuery === "" ||
+      (vendor.projectCode &&
+        vendor.projectCode.toLowerCase().includes(searchLower)) ||
+      (vendor.programName &&
+        vendor.programName.toLowerCase().includes(searchLower)) ||
+      (vendor.name && vendor.name.toLowerCase().includes(searchLower)) ||
+      (vendor.email && vendor.email.toLowerCase().includes(searchLower))
+    );
+  });
+
+  const getUserInitials = (name) => {
+    if (!name) return "AD";
+    if (name === "Admin DSWD") return "AD";
+
+    const words = name.split(" ");
+    if (words.length >= 2) {
+      return (words[0][0] + words[1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  const handleSelectAll = (e) => {
+    if (!hasWritePermissions()) {
+      showPermissionDenied('select all vendors');
+      return;
+    }
+    setSelectedItems(vendors.map(vendor => vendor.docId));
   };
 
   const exportToCSV = () => {
@@ -453,20 +597,6 @@ export default function VendorsPage() {
     setShowExportDialog(false);
   };
 
-  const handleEditVendor = (vendor) => {
-    if (!hasWritePermissions()) {
-      showPermissionDenied('edit projects');
-      return;
-    }
-    setEditingVendor({
-      id: vendor.id,
-      projectCode: vendor.projectCode || "",
-      programName: vendor.programName || "",
-      name: vendor.name || "",
-      email: vendor.email || "",
-    });
-  };
-
   const handleUpdateVendor = async (e) => {
     e.preventDefault();
     if (!currentUser) {
@@ -501,15 +631,6 @@ export default function VendorsPage() {
     }
   };
 
-  const handleDeleteClick = (vendor) => {
-    if (!hasWritePermissions()) {
-      showPermissionDenied('delete projects');
-      return;
-    }
-    setVendorToDelete(vendor);
-    setShowDeleteDialog(true);
-  };
-
   const handleConfirmDelete = async () => {
     if (!vendorToDelete || !currentUser) {
       toast.error("You must be logged in to delete vendors");
@@ -538,301 +659,6 @@ export default function VendorsPage() {
     }
   };
 
-  const handleDetailUpdate = async (updatedVendor) => {
-    if (!currentUser) {
-      toast.error("You must be logged in to update vendors");
-      return;
-    }
-
-    try {
-      const result = await updateVendorDetails(
-        updatedVendor.id,
-        updatedVendor,
-        currentUser.uid
-      );
-
-      if (result.success) {
-        toast.success("Vendor details updated successfully!");
-        setSelectedVendor(updatedVendor); // Update the local state
-      } else {
-        toast.error(result.error || "Failed to update vendor details");
-      }
-    } catch (error) {
-      console.error("Error updating vendor details:", error);
-      toast.error("An error occurred while updating vendor details");
-    }
-  };
-
-  // Filter vendors based on search query
-  const filteredVendors = vendors.filter((vendor) => {
-    const searchLower = searchQuery.toLowerCase();
-    return (
-      searchQuery === "" ||
-      (vendor.projectCode &&
-        vendor.projectCode.toLowerCase().includes(searchLower)) ||
-      (vendor.programName &&
-        vendor.programName.toLowerCase().includes(searchLower)) ||
-      (vendor.name && vendor.name.toLowerCase().includes(searchLower)) ||
-      (vendor.email && vendor.email.toLowerCase().includes(searchLower))
-    );
-  });
-
-  const getUserInitials = (name) => {
-    if (!name) return "AD";
-    if (name === "Admin DSWD") return "AD";
-
-    const words = name.split(" ");
-    if (words.length >= 2) {
-      return (words[0][0] + words[1][0]).toUpperCase();
-    }
-    return name.substring(0, 2).toUpperCase();
-  };
-
-  // Add this function to handle checkbox selection
-  const handleSelectVendor = (vendor, checked) => {
-    if (checked) {
-      setSelectedVendors([...selectedVendors, vendor]);
-    } else {
-      setSelectedVendors(selectedVendors.filter(v => v.id !== vendor.id));
-    }
-  };
-
-  // Add this function to handle multiple delete
-  const handleMultipleDelete = async () => {
-    if (!selectedVendors.length || !currentUser) {
-      toast.error("Please select vendors to delete");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const deletePromises = selectedVendors.map(vendor => deleteVendor(vendor.id));
-      await Promise.all(deletePromises);
-      
-      toast.success("Selected vendors deleted successfully!");
-      setSelectedVendors([]);
-      if (selectedVendor && selectedVendors.some(v => v.id === selectedVendor.id)) {
-        setSelectedVendor(null);
-      }
-    } catch (error) {
-      console.error("Error deleting vendors:", error);
-      toast.error("An error occurred while deleting vendors");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const exportManpower = () => {
-    let csvContent = "";
-    const BOM = "\uFEFF"; // For Excel compatibility
-    const headers = [
-      "ID",
-      "Project Code",
-      "Program Name",
-      "Email",
-      "Number of Workers",
-      "Task",
-      "Daily Wage",
-      "Total Daily Wage",
-      "Status",
-      "Date Registered"
-    ].join(",") + "\n";
-
-    csvContent += headers;
-
-    vendors.forEach((vendor) => {
-      let isFirstRow = true;
-      
-      if (vendor.manpower && vendor.manpower.length > 0) {
-        vendor.manpower.forEach((worker) => {
-          const row = [];
-          
-          // Basic vendor info - only on first row or if it's the only row
-          if (isFirstRow) {
-            row.push(
-              vendor.id || "",
-              vendor.projectCode || "",
-              vendor.programName || "",
-              vendor.email || ""
-            );
-            isFirstRow = false;
-          } else {
-            row.push("", "", "", "");
-          }
-
-          const totalDailyWage = (Number(worker.wage) * Number(worker.numberOfWorkers)) || 0;
-          row.push(
-            worker.numberOfWorkers || "0",
-            worker.task || "",
-            worker.wage || "0",
-            totalDailyWage.toString(),
-            isFirstRow ? "Active" : "",
-            isFirstRow ? (vendor.createdAt?.toDate().toLocaleDateString() || "") : ""
-          );
-
-          csvContent += row.join(",") + "\n";
-        });
-      }
-    });
-
-    // Create and download the file
-    const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", "manpower_list.csv");
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    setShowExportDialog(false);
-  };
-
-  const exportRawMaterials = () => {
-    let csvContent = "";
-    const BOM = "\uFEFF"; // For Excel compatibility
-    const headers = [
-      "ID",
-      "Project Code",
-      "Program Name",
-      "Email",
-      "Material Name",
-      "Quantity",
-      "Unit",
-      "Unit Price",
-      "Frequency",
-      "Total Cost",
-      "Status",
-      "Date Registered"
-    ].join(",") + "\n";
-
-    csvContent += headers;
-
-    vendors.forEach((vendor) => {
-      let isFirstRow = true;
-      
-      if (vendor.rawMaterials && vendor.rawMaterials.length > 0) {
-        vendor.rawMaterials.forEach((material) => {
-          const row = [];
-          
-          // Basic vendor info - only on first row or if it's the only row
-          if (isFirstRow) {
-            row.push(
-              vendor.id || "",
-              vendor.projectCode || "",
-              vendor.programName || "",
-              vendor.email || ""
-            );
-            isFirstRow = false;
-          } else {
-            row.push("", "", "", "");
-          }
-
-          row.push(
-            material.name || "",
-            material.quantity || "0",
-            material.unit || "",
-            material.unitPrice || "0",
-            material.frequency || "",
-            material.totalCost || "0",
-            isFirstRow ? "Active" : "",
-            isFirstRow ? (vendor.createdAt?.toDate().toLocaleDateString() || "") : ""
-          );
-
-          csvContent += row.join(",") + "\n";
-        });
-      }
-    });
-
-    // Create and download the file
-    const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", "raw_materials_list.csv");
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    setShowExportDialog(false);
-  };
-
-  const exportToolsEquipment = () => {
-    let csvContent = "";
-    const BOM = "\uFEFF"; // For Excel compatibility
-    const headers = [
-      "ID",
-      "Project Code",
-      "Program Name",
-      "Email",
-      "Tool/Equipment Name",
-      "Quantity",
-      "Unit",
-      "Unit Price",
-      "Life Span",
-      "Production Cycle",
-      "Total Cost",
-      "Depreciation Cost",
-      "Status",
-      "Date Registered"
-    ].join(",") + "\n";
-
-    csvContent += headers;
-
-    vendors.forEach((vendor) => {
-      let isFirstRow = true;
-      
-      if (vendor.tools && vendor.tools.length > 0) {
-        vendor.tools.forEach((item) => {
-          const row = [];
-          
-          // Basic vendor info - only on first row or if it's the only row
-          if (isFirstRow) {
-            row.push(
-              vendor.id || "",
-              vendor.projectCode || "",
-              vendor.programName || "",
-              vendor.email || ""
-            );
-            isFirstRow = false;
-          } else {
-            row.push("", "", "", "");
-          }
-
-          row.push(
-            item.name || "",
-            item.quantity || "0",
-            item.unit || "",
-            item.unitPrice || "0",
-            item.lifeSpan || "0",
-            item.productionCycle || "0",
-            item.totalCost || "0",
-            item.depreciationCost || "0",
-            isFirstRow ? "Active" : "",
-            isFirstRow ? (vendor.createdAt?.toDate().toLocaleDateString() || "") : ""
-          );
-
-          csvContent += row.join(",") + "\n";
-        });
-      }
-    });
-
-    // Create and download the file
-    const blob = new Blob([BOM + csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", "tools_equipment_list.csv");
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    setShowExportDialog(false);
-  };
-
   if (loading) {
     return <LoadingPage />;
   }
@@ -854,24 +680,34 @@ export default function VendorsPage() {
           <div className="mt-8 flex-1 flex flex-col">
             <nav className="flex-1 px-2 space-y-1">
               {navigation.map((item) => {
-                const isActive =
-                  pathname === item.href ||
-                  pathname.startsWith(`${item.href}/`);
+                const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                const hasAccess = hasModuleAccess(item.requiresAccess);
+                
                 return (
                   <Link
                     key={item.name}
-                    href={item.href}
+                    href={hasAccess ? item.href : "#"}
+                    onClick={(e) => {
+                      if (!hasAccess) {
+                        e.preventDefault();
+                        toast.error(`You don't have access to ${item.name.toLowerCase()}.`);
+                      }
+                    }}
                     className={`${
                       isActive
                         ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        : hasAccess
+                        ? "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        : "text-muted-foreground/50 cursor-not-allowed"
                     } group flex items-center px-2 py-2 text-sm font-medium rounded-md`}
                   >
                     <item.icon
                       className={`${
                         isActive
                           ? "text-primary"
-                          : "text-muted-foreground group-hover:text-foreground"
+                          : hasAccess
+                          ? "text-muted-foreground group-hover:text-foreground"
+                          : "text-muted-foreground/50"
                       } mr-3 flex-shrink-0 h-5 w-5`}
                       aria-hidden="true"
                     />
@@ -935,24 +771,34 @@ export default function VendorsPage() {
             </div>
             <nav className="mt-5 px-2 space-y-1">
               {navigation.map((item) => {
-                const isActive =
-                  pathname === item.href ||
-                  pathname.startsWith(`${item.href}/`);
+                const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                const hasAccess = hasModuleAccess(item.requiresAccess);
+                
                 return (
                   <Link
                     key={item.name}
-                    href={item.href}
+                    href={hasAccess ? item.href : "#"}
+                    onClick={(e) => {
+                      if (!hasAccess) {
+                        e.preventDefault();
+                        toast.error(`You don't have access to ${item.name.toLowerCase()}.`);
+                      }
+                    }}
                     className={`${
                       isActive
                         ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        : hasAccess
+                        ? "text-muted-foreground hover:bg-muted hover:text-foreground"
+                        : "text-muted-foreground/50 cursor-not-allowed"
                     } group flex items-center px-2 py-2 text-sm font-medium rounded-md`}
                   >
                     <item.icon
                       className={`${
                         isActive
                           ? "text-primary"
-                          : "text-muted-foreground group-hover:text-foreground"
+                          : hasAccess
+                          ? "text-muted-foreground group-hover:text-foreground"
+                          : "text-muted-foreground/50"
                       } mr-3 flex-shrink-0 h-5 w-5`}
                       aria-hidden="true"
                     />
@@ -1083,24 +929,22 @@ export default function VendorsPage() {
                     Vendor Management
                   </h1>
                   <div className="flex items-center gap-4">
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        onClick={() => router.push('/vendors/analytics')}
-                        className="bg-green-600 text-white hover:bg-green-700 hover:text-white border-green-600 hover:border-green-700 transition-colors duration-200"
-                      >
-                        <FileBarChart className="mr-2 h-4 w-4" />
-                        View Analytics
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={exportToCSV}
-                        className="bg-blue-600 text-white hover:bg-blue-700 hover:text-white border-blue-600 hover:border-blue-700 transition-colors duration-200"
-                      >
-                        <Download className="mr-2 h-4 w-4" />
-                        Export to Excel
-                      </Button>
-                    </div>
+                    <Button
+                      variant="outline"
+                      onClick={() => router.push('/vendors/analytics')}
+                      className="bg-green-600 text-white hover:bg-green-700 hover:text-white border-green-600 hover:border-green-700 transition-colors duration-200"
+                    >
+                      <FileBarChart className="mr-2 h-4 w-4" />
+                      View Analytics
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={exportToCSV}
+                      className="bg-blue-600 text-white hover:bg-blue-700 hover:text-white border-blue-600 hover:border-blue-700 transition-colors duration-200"
+                    >
+                      <Download className="mr-2 h-4 w-4" />
+                      Export to Excel
+                    </Button>
                     {hasWritePermissions() && (
                       <Button onClick={handleAddVendor}>
                         <Plus className="mr-2 h-4 w-4" />
@@ -1109,207 +953,6 @@ export default function VendorsPage() {
                     )}
                   </div>
                 </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                  {/* Total Vendors Card */}
-                  <Card className="bg-gradient-to-br from-[#C5D48A] to-[#A6C060] border-0 relative overflow-hidden h-[220px] rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200">
-                    <div className="absolute inset-0 bg-white/5 w-full h-full">
-                      <div className="absolute -inset-2 bg-gradient-to-r from-[#B7CC60]/20 to-transparent blur-3xl"></div>
-                    </div>
-                    <CardHeader className="pb-2 pt-6">
-                      <CardTitle className="text-2xl font-medium text-white">
-                        Total Vendors
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-col justify-center h-full pt-4">
-                        <div className="text-[52px] font-bold text-white leading-none tracking-tight">{analytics.total}</div>
-                        <p className="text-xl text-white/90 mt-3">Registered vendors</p>
-                        <div className="absolute bottom-6 left-0 right-0 h-[60px]">
-                          <svg className="w-full h-full text-white/10" viewBox="0 0 400 100" preserveAspectRatio="none">
-                            <path 
-                              d="M0,50 Q100,80 200,50 T400,50"
-                              fill="none" 
-                              stroke="currentColor" 
-                              strokeWidth="3"
-                            />
-                          </svg>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  {/* Total Investment Card */}
-                  <Card className="bg-gradient-to-br from-[#96B54A] to-[#496E22] border-0 relative overflow-hidden h-[220px] rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200">
-                    <div className="absolute inset-0 bg-white/5 w-full h-full">
-                      <div className="absolute -inset-2 bg-gradient-to-r from-[#5F862C]/20 to-transparent blur-3xl"></div>
-                    </div>
-                    <CardHeader className="pb-2 pt-6">
-                      <CardTitle className="text-2xl font-medium text-white">
-                        Total Investment
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="flex flex-col justify-center h-full pt-4">
-                        <div className="text-[52px] font-bold text-white leading-none tracking-tight">
-                          ₱{(analytics.totalManpowerCost + analytics.totalMaterialsCost + analytics.totalEquipmentCost).toLocaleString()}
-                        </div>
-                        <p className="text-xl text-white/90 mt-3">Combined costs</p>
-                        <div className="absolute bottom-6 left-0 right-0 h-[60px]">
-                          <svg className="w-full h-full text-white/10" viewBox="0 0 400 100" preserveAspectRatio="none">
-                            <path 
-                              d="M0,50 Q100,80 200,50 T400,50"
-                              fill="none" 
-                              stroke="currentColor" 
-                              strokeWidth="3"
-                            />
-                          </svg>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Program Distribution Chart */}
-                <Card className="mb-8 bg-gradient-to-br from-[#1E3B0C] to-[#2C4A1B] border-0 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200">
-                  <CardHeader className="pb-2 pt-6">
-                    <CardTitle className="text-lg font-semibold text-white">Program Distribution</CardTitle>
-                    <CardDescription className="text-white/70">Distribution of vendors across different programs</CardDescription>
-                  </CardHeader>
-                  <CardContent className="p-6">
-                    <div className="h-[300px] relative">
-                      <Chart
-                        type="bar"
-                        data={{
-                          labels: Object.keys(analytics.programDistribution || {}),
-                          datasets: [
-                            {
-                              type: 'bar',
-                              label: 'Vendors',
-                              data: Object.values(analytics.programDistribution || {}),
-                              backgroundColor: [
-                                'rgba(197, 212, 138, 0.8)', // lightest green
-                                'rgba(183, 204, 96, 0.8)',  // light green
-                                'rgba(150, 181, 74, 0.8)',  // medium green
-                                'rgba(121, 159, 58, 0.8)',  // green
-                                'rgba(95, 134, 44, 0.8)',   // dark green
-                                'rgba(73, 110, 34, 0.8)',   // darkest green
-                              ],
-                              borderColor: [
-                                'rgb(197, 212, 138)', // lightest green
-                                'rgb(183, 204, 96)',  // light green
-                                'rgb(150, 181, 74)',  // medium green
-                                'rgb(121, 159, 58)',  // green
-                                'rgb(95, 134, 44)',   // dark green
-                                'rgb(73, 110, 34)',   // darkest green
-                              ],
-                              borderWidth: 1,
-                              borderRadius: 4,
-                            },
-                            {
-                              type: 'line',
-                              label: 'Trend',
-                              data: Object.values(analytics.programDistribution || {}),
-                              borderColor: 'rgba(197, 212, 138, 0.8)', // light green
-                              borderWidth: 2,
-                              fill: true,
-                              backgroundColor: (context) => {
-                                const chart = context.chart;
-                                const { ctx, chartArea } = chart;
-                                if (!chartArea) return null;
-                                
-                                const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-                                gradient.addColorStop(0, 'rgba(197, 212, 138, 0.4)');
-                                gradient.addColorStop(0.5, 'rgba(197, 212, 138, 0.1)');
-                                gradient.addColorStop(1, 'rgba(197, 212, 138, 0)');
-                                return gradient;
-                              },
-                              tension: 0.4,
-                              pointBackgroundColor: 'rgb(197, 212, 138)',
-                              pointBorderColor: '#2C4A1B',
-                              pointBorderWidth: 2,
-                              pointRadius: 4,
-                            },
-                            {
-                              type: 'line',
-                              label: 'Trend Overlay',
-                              data: Object.values(analytics.programDistribution || {}),
-                              borderColor: 'rgba(183, 204, 96, 0.8)', // light green
-                              borderWidth: 2,
-                              fill: true,
-                              backgroundColor: (context) => {
-                                const chart = context.chart;
-                                const { ctx, chartArea } = chart;
-                                if (!chartArea) return null;
-                                
-                                const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-                                gradient.addColorStop(0, 'rgba(183, 204, 96, 0.4)');
-                                gradient.addColorStop(0.5, 'rgba(183, 204, 96, 0.1)');
-                                gradient.addColorStop(1, 'rgba(183, 204, 96, 0)');
-                                return gradient;
-                              },
-                              tension: 0.4,
-                              pointBackgroundColor: 'rgb(183, 204, 96)',
-                              pointBorderColor: '#2C4A1B',
-                              pointBorderWidth: 2,
-                              pointRadius: 4,
-                            }
-                          ],
-                        }}
-                        options={{
-                          responsive: true,
-                          maintainAspectRatio: false,
-                          scales: {
-                            y: {
-                              beginAtZero: true,
-                              grid: {
-                                color: 'rgba(255, 255, 255, 0.1)',
-                              },
-                              ticks: {
-                                color: 'rgba(255, 255, 255, 0.8)',
-                                font: {
-                                  weight: '500'
-                                }
-                              }
-                            },
-                            x: {
-                              grid: {
-                                display: false
-                              },
-                              ticks: {
-                                color: 'rgba(255, 255, 255, 0.8)',
-                                font: {
-                                  weight: '500'
-                                }
-                              }
-                            }
-                          },
-                          plugins: {
-                            legend: {
-                              display: true,
-                              position: 'top',
-                              labels: {
-                                color: 'rgba(255, 255, 255, 0.9)',
-                                font: {
-                                  weight: '500'
-                                }
-                              }
-                            },
-                            tooltip: {
-                              mode: 'index',
-                              intersect: false,
-                              backgroundColor: 'rgba(46, 74, 27, 0.9)',
-                              titleColor: 'rgba(255, 255, 255, 1)',
-                              bodyColor: 'rgba(255, 255, 255, 0.8)',
-                              borderColor: 'rgba(197, 212, 138, 0.3)',
-                              borderWidth: 1,
-                            },
-                          },
-                        }}
-                      />
-                    </div>
-                  </CardContent>
-                </Card>
 
                 {/* Vendors Table */}
                 <Card className="border-0 rounded-2xl overflow-hidden bg-gradient-to-br from-[#C5D48A]/10 to-[#A6C060]/10">
@@ -1347,32 +990,16 @@ export default function VendorsPage() {
                           <Table>
                             <TableHeader>
                               <TableRow className="bg-gradient-to-r from-[#C5D48A]/20 to-[#A6C060]/10 hover:bg-[#96B54A]/5">
-                                <TableHead className="w-[100px]">
-                                  <div className="flex items-center gap-2">
-                                    <Checkbox
-                                      checked={selectedVendors.length === filteredVendors.length}
-                                      onCheckedChange={(checked) => {
-                                        if (checked) {
-                                          setSelectedVendors(filteredVendors);
-                                        } else {
-                                          setSelectedVendors([]);
-                                        }
-                                      }}
+                                {!isReadOnly() && (
+                                  <TableHead className="w-12">
+                                    <input
+                                      type="checkbox"
+                                      className="rounded border-gray-300"
+                                      checked={selectedItems.length === vendors.length && vendors.length > 0}
+                                      onChange={handleSelectAll}
                                     />
-                                    {selectedVendors.length > 0 && (
-                                      <Button
-                                        variant="destructive"
-                                        size="sm"
-                                        onClick={handleMultipleDelete}
-                                        disabled={isSubmitting}
-                                        className="h-6 px-2"
-                                      >
-                                        <Trash2 className="h-3 w-3 mr-1" />
-                                        Delete ({selectedVendors.length})
-                                      </Button>
-                                    )}
-                                  </div>
-                                </TableHead>
+                                  </TableHead>
+                                )}
                                 <TableHead className="w-[100px] text-black font-semibold">
                                   Project Code
                                 </TableHead>
@@ -1397,16 +1024,16 @@ export default function VendorsPage() {
                                     }`}
                                     onClick={() => handleViewDetails(vendor)}
                                   >
-                                    <TableCell>
-                                      <Checkbox
-                                        checked={selectedVendors.some(v => v.id === vendor.id)}
-                                        onCheckedChange={(checked) => {
-                                          handleSelectVendor(vendor, checked);
-                                        }}
-                                        onClick={(e) => e.stopPropagation()}
-                                        disabled={userPermissions.readOnly}
-                                      />
-                                    </TableCell>
+                                    {!isReadOnly() && (
+                                      <TableCell>
+                                        <input
+                                          type="checkbox"
+                                          className="rounded border-gray-300"
+                                          checked={selectedItems.includes(vendor.docId)}
+                                          onChange={(e) => handleSelectVendor(vendor, e.target.checked)}
+                                        />
+                                      </TableCell>
+                                    )}
                                     <TableCell className="font-medium text-black">
                                       <div className="flex items-center gap-2">
                                         <span>{vendor.projectCode}</span>
@@ -1435,7 +1062,7 @@ export default function VendorsPage() {
                                           asChild
                                           onClick={(e) => e.stopPropagation()}
                                         >
-                                          <Button variant="ghost" size="icon" className="text-black hover:text-[#96B54A] hover:bg-[#96B54A]/10" disabled={userPermissions.readOnly}>
+                                          <Button variant="ghost" size="icon" className="text-black hover:text-[#96B54A] hover:bg-[#96B54A]/10" disabled={isReadOnly()}>
                                             <MoreHorizontal className="h-4 w-4" />
                                             <span className="sr-only">
                                               Open menu
@@ -1455,7 +1082,7 @@ export default function VendorsPage() {
                                           >
                                             View Details
                                           </DropdownMenuItem>
-                                          {!userPermissions.readOnly && (
+                                          {!isReadOnly() && (
                                             <>
                                               <DropdownMenuItem
                                                 className="text-black focus:text-black focus:bg-[#96B54A]/10"
@@ -1509,7 +1136,7 @@ export default function VendorsPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={handleCloseDetails}
+                              onClick={() => setSelectedVendor(null)}
                               className="text-black hover:text-[#96B54A] hover:bg-[#96B54A]/10"
                             >
                               <X className="h-4 w-4 mr-1" />
@@ -1520,7 +1147,7 @@ export default function VendorsPage() {
                           <VendorDetailView
                             vendor={selectedVendor}
                             onUpdate={handleDetailUpdate}
-                            readOnly={userPermissions.readOnly}
+                            readOnly={isReadOnly()}
                           />
                         </div>
                       )}

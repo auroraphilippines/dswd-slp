@@ -376,8 +376,6 @@ export default function ProgramsPage() {
     { name: "Projects", href: "/vendors", icon: Store, requiresAccess: true },
     { name: "Participants", href: "/participants", icon: Users, requiresAccess: true },
     { name: "File Storage", href: "/programs", icon: FolderOpen, requiresAccess: true },
-    { name: "Reports", href: "./reports", icon: FileBarChart },
-    { name: "Analytics", href: "./analytics", icon: FileBarChart },
     { name: "Settings", href: "./settings", icon: Settings },
   ].map(item => ({
     ...item,

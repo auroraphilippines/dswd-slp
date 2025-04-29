@@ -19,7 +19,7 @@ import {
   Building,
   CreditCard, 
   Lock,
-  Layers,
+  FolderOpen,
   User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,9 @@ export default function SettingsPage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const pathname = usePathname();
+
+  // Add isAdmin check
+  const isAdmin = currentUser?.role === "SLP Administrator";
 
   // Close mobile menu when path changes
   useEffect(() => {
@@ -101,9 +104,7 @@ export default function SettingsPage() {
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Projects", href: "/vendors", icon: Store },
     { name: "Participants", href: "/participants", icon: Users },
-    { name: "Programs", href: "/programs", icon: Building2 },
-    { name: "Reports", href: "./reports", icon: FileBarChart },
-    { name: "Analytics", href: "./analytics", icon: FileBarChart },
+    { name: "File Storage", href: "/programs", icon: FolderOpen },
     { name: "Settings", href: "./settings", icon: Settings },
   ];
 
@@ -356,17 +357,19 @@ export default function SettingsPage() {
                   </h1>
                 </div>
 
-                <Tabs defaultValue="users" className="w-full">
+                <Tabs defaultValue={isAdmin ? "users" : "security"} className="w-full">
                   <div className="flex flex-col md:flex-row gap-4">
                     <div className="md:w-1/4">
                       <TabsList className="flex flex-col h-auto bg-transparent p-0 justify-start">
-                        <TabsTrigger
-                          value="users"
-                          className="justify-start w-full mb-1 data-[state=active]:bg-muted"
-                        >
-                          <Users className="mr-2 h-4 w-4" />
-                          Users & Permissions
-                        </TabsTrigger>
+                        {isAdmin && (
+                          <TabsTrigger
+                            value="users"
+                            className="justify-start w-full mb-1 data-[state=active]:bg-muted"
+                          >
+                            <Users className="mr-2 h-4 w-4" />
+                            Users & Permissions
+                          </TabsTrigger>
+                        )}
                         <TabsTrigger
                           value="security"
                           className="justify-start w-full mb-1 data-[state=active]:bg-muted"
@@ -378,20 +381,22 @@ export default function SettingsPage() {
                     </div>
 
                     <div className="md:w-3/4">
-                      <TabsContent value="users" className="mt-0">
-                        <div className="space-y-4">
-                          <div>
-                            <h2 className="text-lg font-medium">
-                              Users & Permissions
-                            </h2>
-                            <p className="text-sm text-muted-foreground">
-                              Manage users, roles, and access permissions
-                            </p>
+                      {isAdmin && (
+                        <TabsContent value="users" className="mt-0">
+                          <div className="space-y-4">
+                            <div>
+                              <h2 className="text-lg font-medium">
+                                Users & Permissions
+                              </h2>
+                              <p className="text-sm text-muted-foreground">
+                                Manage users, roles, and access permissions
+                              </p>
+                            </div>
+                            <Separator />
+                            <UsersPermissionsSettings />
                           </div>
-                          <Separator />
-                          <UsersPermissionsSettings />
-                        </div>
-                      </TabsContent>
+                        </TabsContent>
+                      )}
 
                       <TabsContent value="security" className="mt-0">
                         <div className="space-y-4">

@@ -1,5 +1,5 @@
 "use client";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
@@ -9,12 +9,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Edit2, Plus, Trash2 } from "lucide-react";
+import { Edit2, Plus, Trash2, Save, X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 export function VendorDetailView({ vendor, onUpdate, readOnly }) {
   const [editingSection, setEditingSection] = useState(null);
@@ -54,6 +54,10 @@ export function VendorDetailView({ vendor, onUpdate, readOnly }) {
 
   // Handler for starting edit mode
   const handleEdit = (section, data) => {
+    if (readOnly) {
+      toast.error("You have read-only access. Cannot modify vendor details.");
+      return;
+    }
     setEditingSection(section);
     switch(section) {
       case 'manpower':
@@ -70,6 +74,10 @@ export function VendorDetailView({ vendor, onUpdate, readOnly }) {
 
   // Handler for saving changes
   const handleSave = async (section) => {
+    if (readOnly) {
+      toast.error("You have read-only access. Cannot modify vendor details.");
+      return;
+    }
     try {
       let updatedVendor = { ...vendor };
       switch(section) {
@@ -103,6 +111,10 @@ export function VendorDetailView({ vendor, onUpdate, readOnly }) {
 
   // Handlers for adding new items
   const handleAddManpower = () => {
+    if (readOnly) {
+      toast.error("You have read-only access. Cannot add manpower.");
+      return;
+    }
     setEditedManpower([...editedManpower, {
       numberOfWorkers: 0,
       task: '',
@@ -112,6 +124,10 @@ export function VendorDetailView({ vendor, onUpdate, readOnly }) {
   };
 
   const handleAddTool = () => {
+    if (readOnly) {
+      toast.error("You have read-only access. Cannot add tools.");
+      return;
+    }
     setEditedTools([...editedTools, {
       name: '',
       quantity: 0,
@@ -125,6 +141,10 @@ export function VendorDetailView({ vendor, onUpdate, readOnly }) {
   };
 
   const handleAddMaterial = () => {
+    if (readOnly) {
+      toast.error("You have read-only access. Cannot add materials.");
+      return;
+    }
     setEditedMaterials([...editedMaterials, {
       name: '',
       quantity: 0,
@@ -137,19 +157,35 @@ export function VendorDetailView({ vendor, onUpdate, readOnly }) {
 
   // Handlers for removing items
   const handleRemoveManpower = (index) => {
+    if (readOnly) {
+      toast.error("You have read-only access. Cannot remove manpower.");
+      return;
+    }
     setEditedManpower(editedManpower.filter((_, i) => i !== index));
   };
 
   const handleRemoveTool = (index) => {
+    if (readOnly) {
+      toast.error("You have read-only access. Cannot remove tools.");
+      return;
+    }
     setEditedTools(editedTools.filter((_, i) => i !== index));
   };
 
   const handleRemoveMaterial = (index) => {
+    if (readOnly) {
+      toast.error("You have read-only access. Cannot remove materials.");
+      return;
+    }
     setEditedMaterials(editedMaterials.filter((_, i) => i !== index));
   };
 
   // Handlers for updating item fields
   const handleManpowerChange = (index, field, value) => {
+    if (readOnly) {
+      toast.error("You have read-only access. Cannot modify manpower details.");
+      return;
+    }
     const updated = [...editedManpower];
     updated[index] = { ...updated[index], [field]: value };
     if (field === 'wage' || field === 'numberOfWorkers') {
@@ -159,6 +195,10 @@ export function VendorDetailView({ vendor, onUpdate, readOnly }) {
   };
 
   const handleToolChange = (index, field, value) => {
+    if (readOnly) {
+      toast.error("You have read-only access. Cannot modify tool details.");
+      return;
+    }
     const updated = [...editedTools];
     updated[index] = { ...updated[index], [field]: value };
     
@@ -169,20 +209,14 @@ export function VendorDetailView({ vendor, onUpdate, readOnly }) {
       updated[index].totalCost = quantity * unitPrice;
     }
 
-    // Calculate depreciation cost when total cost, life span, or production cycle changes
+    // Calculate depreciation cost
     if (field === 'quantity' || field === 'unitPrice' || field === 'lifeSpan' || field === 'productionCycle') {
       const totalCost = Number(updated[index].totalCost || 0);
       const lifeSpan = Number(updated[index].lifeSpan || 0);
       const productionCycle = Number(updated[index].productionCycle || 0);
       
-      // Convert life span from years to months for calculation
-      const lifeSpanInMonths = lifeSpan * 12;
-      
-      // Calculate monthly depreciation
-      if (lifeSpanInMonths > 0 && productionCycle > 0) {
-        // Monthly depreciation = Total Cost / Life Span in months
-        const monthlyDepreciation = totalCost / lifeSpanInMonths;
-        // Total depreciation for the production cycle
+      if (lifeSpan > 0 && productionCycle > 0) {
+        const monthlyDepreciation = totalCost / (lifeSpan * 12);
         updated[index].depreciationCost = monthlyDepreciation * productionCycle;
       } else {
         updated[index].depreciationCost = 0;
@@ -193,6 +227,10 @@ export function VendorDetailView({ vendor, onUpdate, readOnly }) {
   };
 
   const handleMaterialChange = (index, field, value) => {
+    if (readOnly) {
+      toast.error("You have read-only access. Cannot modify material details.");
+      return;
+    }
     const updated = [...editedMaterials];
     updated[index] = { ...updated[index], [field]: value };
     if (field === 'quantity' || field === 'unitPrice') {
@@ -266,110 +304,94 @@ export function VendorDetailView({ vendor, onUpdate, readOnly }) {
       <TabsContent value="manpower">
         <Card>
           <CardContent className="p-6">
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">Man Power Details</h3>
+            <div className="flex justify-between items-center mb-4">
+              <CardTitle className="text-lg">Manpower Details</CardTitle>
+              {!readOnly && (
                 <div className="flex gap-2">
-                  <Badge variant="outline">Total: ₱ {totalManpowerCost.toLocaleString()}</Badge>
-                  {!readOnly && (
-                    editingSection === 'manpower' ? (
-                      <>
-                        <Button onClick={() => handleSave('manpower')} size="sm">Save</Button>
-                        <Button onClick={handleCancel} variant="outline" size="sm">Cancel</Button>
-                        <Button onClick={handleAddManpower} variant="outline" size="sm">
-                          <Plus className="h-4 w-4 mr-1" />Add Worker
-                        </Button>
-                      </>
-                    ) : (
-                      <Button onClick={() => handleEdit('manpower', vendor?.manpower || [])} variant="outline" size="sm">
-                        <Edit2 className="h-4 w-4 mr-1" />Edit
+                  {editingSection === 'manpower' ? (
+                    <>
+                      <Button onClick={() => handleSave('manpower')}>
+                        <Save className="h-4 w-4 mr-2" />Save
                       </Button>
-                    )
+                      <Button variant="outline" onClick={handleCancel}>
+                        <X className="h-4 w-4 mr-2" />Cancel
+                      </Button>
+                      <Button variant="outline" onClick={handleAddManpower}>
+                        <Plus className="h-4 w-4 mr-2" />Add Worker
+                      </Button>
+                    </>
+                  ) : (
+                    <Button variant="outline" onClick={() => handleEdit('manpower', vendor?.manpower || [])}>
+                      <Edit2 className="h-4 w-4 mr-2" />Edit
+                    </Button>
                   )}
                 </div>
-              </div>
-              
-              {editingSection === 'manpower' ? (
-                <div className="space-y-4">
-                  {editedManpower.map((worker, index) => (
-                    <div key={index} className="border p-4 rounded-lg">
-                      <div className="flex justify-between mb-2">
-                        <h4 className="font-medium">Worker {index + 1}</h4>
-                        <Button onClick={() => handleRemoveManpower(index)} variant="ghost" size="sm">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-sm text-muted-foreground">Number of Workers:</label>
-                          <Input
-                            type="number"
-                            value={worker.numberOfWorkers}
-                            onChange={(e) => handleManpowerChange(index, 'numberOfWorkers', Number(e.target.value))}
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm text-muted-foreground">Task:</label>
-                          <Input
-                            value={worker.task}
-                            onChange={(e) => handleManpowerChange(index, 'task', e.target.value.toUpperCase())}
-                            className="uppercase"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm text-muted-foreground">Daily Wage:</label>
-                          <Input
-                            type="number"
-                            value={worker.wage}
-                            onChange={(e) => handleManpowerChange(index, 'wage', Number(e.target.value))}
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm text-muted-foreground">Total Wage:</label>
-                          <p className="font-medium">₱ {(worker.totalWage || 0).toLocaleString()}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                vendor?.manpower && vendor.manpower.length > 0 ? (
-                  <div className="space-y-4">
-                    {vendor.manpower.map((worker, index) => {
-                      // Ensure numeric values
-                      const numberOfWorkers = Number(worker.numberOfWorkers) || 0;
-                      const wage = Number(worker.wage) || 0;
-                      const totalWage = numberOfWorkers * wage;
-
-                      return (
-                        <div key={index} className="border p-4 rounded-lg">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="text-sm text-muted-foreground">Number of Workers:</label>
-                              <p className="font-medium">{numberOfWorkers}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm text-muted-foreground">Task:</label>
-                              <p className="font-medium">{worker.task || "N/A"}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm text-muted-foreground">Daily Wage:</label>
-                              <p className="font-medium">₱ {wage.toLocaleString()}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm text-muted-foreground">Total Wage:</label>
-                              <p className="font-medium">₱ {totalWage.toLocaleString()}</p>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground">No manpower details added yet.</p>
-                )
               )}
             </div>
+
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Number of Workers</TableHead>
+                  <TableHead>Task</TableHead>
+                  <TableHead>Daily Wage</TableHead>
+                  <TableHead>Total Wage</TableHead>
+                  {!readOnly && editingSection === 'manpower' && <TableHead>Actions</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(editingSection === 'manpower' ? editedManpower : vendor?.manpower || []).map((worker, index) => (
+                  <TableRow key={index}>
+                    <TableCell>
+                      {editingSection === 'manpower' ? (
+                        <Input
+                          type="number"
+                          value={worker.numberOfWorkers}
+                          onChange={(e) => handleManpowerChange(index, 'numberOfWorkers', Number(e.target.value))}
+                          className="w-24"
+                        />
+                      ) : (
+                        worker.numberOfWorkers
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {editingSection === 'manpower' ? (
+                        <Input
+                          value={worker.task}
+                          onChange={(e) => handleManpowerChange(index, 'task', e.target.value)}
+                        />
+                      ) : (
+                        worker.task
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {editingSection === 'manpower' ? (
+                        <Input
+                          type="number"
+                          value={worker.wage}
+                          onChange={(e) => handleManpowerChange(index, 'wage', Number(e.target.value))}
+                          className="w-24"
+                        />
+                      ) : (
+                        `₱${worker.wage}`
+                      )}
+                    </TableCell>
+                    <TableCell>₱{worker.totalWage}</TableCell>
+                    {!readOnly && editingSection === 'manpower' && (
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveManpower(index)}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       </TabsContent>
@@ -377,123 +399,106 @@ export function VendorDetailView({ vendor, onUpdate, readOnly }) {
       <TabsContent value="materials">
         <Card>
           <CardContent className="p-6">
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">Raw Materials</h3>
+            <div className="flex justify-between items-center mb-4">
+              <CardTitle className="text-lg">Raw Materials</CardTitle>
+              {!readOnly && (
                 <div className="flex gap-2">
-                  <Badge variant="outline">Total: ₱ {totalMaterialsCost.toLocaleString()}</Badge>
-                  {!readOnly && (
-                    editingSection === 'materials' ? (
-                      <>
-                        <Button onClick={() => handleSave('materials')} size="sm">Save</Button>
-                        <Button onClick={handleCancel} variant="outline" size="sm">Cancel</Button>
-                        <Button onClick={handleAddMaterial} variant="outline" size="sm">
-                          <Plus className="h-4 w-4 mr-1" />Add Material
-                        </Button>
-                      </>
-                    ) : (
-                      <Button onClick={() => handleEdit('materials', vendor?.rawMaterials || [])} variant="outline" size="sm">
-                        <Edit2 className="h-4 w-4 mr-1" />Edit
+                  {editingSection === 'materials' ? (
+                    <>
+                      <Button onClick={() => handleSave('materials')}>
+                        <Save className="h-4 w-4 mr-2" />Save
                       </Button>
-                    )
+                      <Button variant="outline" onClick={handleCancel}>
+                        <X className="h-4 w-4 mr-2" />Cancel
+                      </Button>
+                      <Button variant="outline" onClick={handleAddMaterial}>
+                        <Plus className="h-4 w-4 mr-2" />Add Material
+                      </Button>
+                    </>
+                  ) : (
+                    <Button variant="outline" onClick={() => handleEdit('materials', vendor?.rawMaterials || [])}>
+                      <Edit2 className="h-4 w-4 mr-2" />Edit
+                    </Button>
                   )}
                 </div>
-              </div>
-              
-              {editingSection === 'materials' ? (
-                <div className="space-y-4">
-                  {editedMaterials.map((material, index) => (
-                    <div key={index} className="border p-4 rounded-lg">
-                      <div className="flex justify-between mb-2">
-                        <h4 className="font-medium">Material {index + 1}</h4>
-                        <Button onClick={() => handleRemoveMaterial(index)} variant="ghost" size="sm">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-sm text-muted-foreground">Material Name:</label>
-                          <Input
-                            value={material.name}
-                            onChange={(e) => handleMaterialChange(index, 'name', e.target.value.toUpperCase())}
-                            className="uppercase"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm text-muted-foreground">Quantity:</label>
-                          <Input
-                            type="number"
-                            value={material.quantity}
-                            onChange={(e) => handleMaterialChange(index, 'quantity', Number(e.target.value))}
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm text-muted-foreground">Unit:</label>
-                          <Input
-                            value={material.unit}
-                            onChange={(e) => handleMaterialChange(index, 'unit', e.target.value.toUpperCase())}
-                            className="uppercase"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm text-muted-foreground">Unit Price:</label>
-                          <Input
-                            type="number"
-                            value={material.unitPrice}
-                            onChange={(e) => handleMaterialChange(index, 'unitPrice', Number(e.target.value))}
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm text-muted-foreground">Frequency:</label>
-                          <Input
-                            value={material.frequency}
-                            onChange={(e) => handleMaterialChange(index, 'frequency', e.target.value.toUpperCase())}
-                            className="uppercase"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm text-muted-foreground">Total Cost:</label>
-                          <p className="font-medium">₱ {(material.totalCost || 0).toLocaleString()}</p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                vendor?.rawMaterials && vendor.rawMaterials.length > 0 ? (
-                  <div className="space-y-4">
-                    {vendor.rawMaterials.map((material, index) => (
-                      <div key={index} className="border p-4 rounded-lg">
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="text-sm text-muted-foreground">Material Name:</label>
-                            <p className="font-medium">{material.name}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm text-muted-foreground">Quantity:</label>
-                            <p className="font-medium">{material.quantity} {material.unit}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm text-muted-foreground">Unit Price:</label>
-                            <p className="font-medium">₱ {material.unitPrice?.toLocaleString()}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm text-muted-foreground">Total Cost:</label>
-                            <p className="font-medium">₱ {material.totalCost?.toLocaleString()}</p>
-                          </div>
-                          <div>
-                            <label className="text-sm text-muted-foreground">Frequency:</label>
-                            <p className="font-medium">{material.frequency}</p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground">No raw materials added yet.</p>
-                )
               )}
             </div>
+
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Material Name</TableHead>
+                  <TableHead>Quantity</TableHead>
+                  <TableHead>Unit</TableHead>
+                  <TableHead>Unit Price</TableHead>
+                  <TableHead>Total Cost</TableHead>
+                  {!readOnly && editingSection === 'materials' && <TableHead>Actions</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(editingSection === 'materials' ? editedMaterials : vendor?.rawMaterials || []).map((material, index) => (
+                  <TableRow key={index}>
+                    <TableCell>
+                      {editingSection === 'materials' ? (
+                        <Input
+                          value={material.name}
+                          onChange={(e) => handleMaterialChange(index, 'name', e.target.value)}
+                        />
+                      ) : (
+                        material.name
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {editingSection === 'materials' ? (
+                        <Input
+                          type="number"
+                          value={material.quantity}
+                          onChange={(e) => handleMaterialChange(index, 'quantity', Number(e.target.value))}
+                          className="w-24"
+                        />
+                      ) : (
+                        material.quantity
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {editingSection === 'materials' ? (
+                        <Input
+                          value={material.unit}
+                          onChange={(e) => handleMaterialChange(index, 'unit', e.target.value)}
+                          className="w-24"
+                        />
+                      ) : (
+                        material.unit
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {editingSection === 'materials' ? (
+                        <Input
+                          type="number"
+                          value={material.unitPrice}
+                          onChange={(e) => handleMaterialChange(index, 'unitPrice', Number(e.target.value))}
+                          className="w-24"
+                        />
+                      ) : (
+                        `₱${material.unitPrice}`
+                      )}
+                    </TableCell>
+                    <TableCell>₱{material.totalCost}</TableCell>
+                    {!readOnly && editingSection === 'materials' && (
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveMaterial(index)}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       </TabsContent>
@@ -501,158 +506,108 @@ export function VendorDetailView({ vendor, onUpdate, readOnly }) {
       <TabsContent value="equipment">
         <Card>
           <CardContent className="p-6">
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold">Tools and Equipment</h3>
+            <div className="flex justify-between items-center mb-4">
+              <CardTitle className="text-lg">Tools and Equipment</CardTitle>
+              {!readOnly && (
                 <div className="flex gap-2">
-                  <Badge variant="outline">Total: ₱ {totalEquipmentCost.toLocaleString()}</Badge>
-                  {!readOnly && (
-                    editingSection === 'tools' ? (
-                      <>
-                        <Button onClick={() => handleSave('tools')} size="sm">Save</Button>
-                        <Button onClick={handleCancel} variant="outline" size="sm">Cancel</Button>
-                        <Button onClick={handleAddTool} variant="outline" size="sm">
-                          <Plus className="h-4 w-4 mr-1" />Add Tool
-                        </Button>
-                      </>
-                    ) : (
-                      <Button onClick={() => handleEdit('tools', vendor?.tools || [])} variant="outline" size="sm">
-                        <Edit2 className="h-4 w-4 mr-1" />Edit
+                  {editingSection === 'tools' ? (
+                    <>
+                      <Button onClick={() => handleSave('tools')}>
+                        <Save className="h-4 w-4 mr-2" />Save
                       </Button>
-                    )
+                      <Button variant="outline" onClick={handleCancel}>
+                        <X className="h-4 w-4 mr-2" />Cancel
+                      </Button>
+                      <Button variant="outline" onClick={handleAddTool}>
+                        <Plus className="h-4 w-4 mr-2" />Add Tool
+                      </Button>
+                    </>
+                  ) : (
+                    <Button variant="outline" onClick={() => handleEdit('tools', vendor?.tools || [])}>
+                      <Edit2 className="h-4 w-4 mr-2" />Edit
+                    </Button>
                   )}
                 </div>
-              </div>
-              
-              {editingSection === 'tools' ? (
-                <div className="space-y-4">
-                  {editedTools.map((item, index) => (
-                    <div key={index} className="border p-4 rounded-lg">
-                      <div className="flex justify-between mb-2">
-                        <h4 className="font-medium">Tool {index + 1}</h4>
-                        <Button onClick={() => handleRemoveTool(index)} variant="ghost" size="sm">
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-sm text-muted-foreground">Item Name:</label>
-                          <Input
-                            value={item.name}
-                            onChange={(e) => handleToolChange(index, 'name', e.target.value.toUpperCase())}
-                            className="uppercase"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm text-muted-foreground">Quantity:</label>
-                          <Input
-                            type="number"
-                            value={item.quantity}
-                            onChange={(e) => handleToolChange(index, 'quantity', Number(e.target.value))}
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm text-muted-foreground">Unit:</label>
-                          <Input
-                            value={item.unit}
-                            onChange={(e) => handleToolChange(index, 'unit', e.target.value.toUpperCase())}
-                            className="uppercase"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm text-muted-foreground">Unit Price:</label>
-                          <Input
-                            type="number"
-                            value={item.unitPrice}
-                            onChange={(e) => handleToolChange(index, 'unitPrice', Number(e.target.value))}
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm text-muted-foreground">Life Span (Years):</label>
-                          <Input
-                            type="number"
-                            value={item.lifeSpan}
-                            onChange={(e) => handleToolChange(index, 'lifeSpan', Number(e.target.value))}
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm text-muted-foreground">Production Cycle (Months):</label>
-                          <Input
-                            type="number"
-                            value={item.productionCycle}
-                            onChange={(e) => handleToolChange(index, 'productionCycle', Number(e.target.value))}
-                          />
-                        </div>
-                        <div>
-                          <label className="text-sm text-muted-foreground">Total Cost:</label>
-                          <p className="font-medium">₱ {(item.totalCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                        </div>
-                        <div>
-                          <label className="text-sm text-muted-foreground">Depreciation Cost:</label>
-                          <p className="font-medium">₱ {(item.depreciationCost || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            Monthly depreciation: ₱ {((item.totalCost || 0) / ((item.lifeSpan || 0) * 12)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                vendor?.tools && vendor.tools.length > 0 ? (
-                  <div className="space-y-4">
-                    {vendor.tools.map((item, index) => {
-                      // Ensure numeric values
-                      const quantity = Number(item.quantity) || 0;
-                      const unitPrice = Number(item.unitPrice) || 0;
-                      const totalCost = Number(item.totalCost) || (quantity * unitPrice);
-                      const depreciationCost = Number(item.depreciationCost) || 0;
-
-                      return (
-                        <div key={index} className="border p-4 rounded-lg">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div>
-                              <label className="text-sm text-muted-foreground">Item Name:</label>
-                              <p className="font-medium">{item.name || "N/A"}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm text-muted-foreground">Quantity:</label>
-                              <p className="font-medium">{quantity} {item.unit || ""}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm text-muted-foreground">Unit:</label>
-                              <p className="font-medium">{item.unit || "N/A"}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm text-muted-foreground">Unit Price:</label>
-                              <p className="font-medium">₱ {unitPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm text-muted-foreground">Life Span (Years):</label>
-                              <p className="font-medium">{Number(item.lifeSpan) || "N/A"}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm text-muted-foreground">Production Cycle (Months):</label>
-                              <p className="font-medium">{Number(item.productionCycle) || "N/A"}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm text-muted-foreground">Total Cost:</label>
-                              <p className="font-medium">₱ {totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm text-muted-foreground">Depreciation Cost:</label>
-                              <p className="font-medium">₱ {depreciationCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground">No tools and equipment added yet.</p>
-                )
               )}
             </div>
+
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Tool Name</TableHead>
+                  <TableHead>Quantity</TableHead>
+                  <TableHead>Unit</TableHead>
+                  <TableHead>Unit Price</TableHead>
+                  <TableHead>Total Cost</TableHead>
+                  <TableHead>Depreciation Cost</TableHead>
+                  {!readOnly && editingSection === 'tools' && <TableHead>Actions</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {(editingSection === 'tools' ? editedTools : vendor?.tools || []).map((tool, index) => (
+                  <TableRow key={index}>
+                    <TableCell>
+                      {editingSection === 'tools' ? (
+                        <Input
+                          value={tool.name}
+                          onChange={(e) => handleToolChange(index, 'name', e.target.value)}
+                        />
+                      ) : (
+                        tool.name
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {editingSection === 'tools' ? (
+                        <Input
+                          type="number"
+                          value={tool.quantity}
+                          onChange={(e) => handleToolChange(index, 'quantity', Number(e.target.value))}
+                          className="w-24"
+                        />
+                      ) : (
+                        tool.quantity
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {editingSection === 'tools' ? (
+                        <Input
+                          value={tool.unit}
+                          onChange={(e) => handleToolChange(index, 'unit', e.target.value)}
+                          className="w-24"
+                        />
+                      ) : (
+                        tool.unit
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {editingSection === 'tools' ? (
+                        <Input
+                          type="number"
+                          value={tool.unitPrice}
+                          onChange={(e) => handleToolChange(index, 'unitPrice', Number(e.target.value))}
+                          className="w-24"
+                        />
+                      ) : (
+                        `₱${tool.unitPrice}`
+                      )}
+                    </TableCell>
+                    <TableCell>₱{tool.totalCost}</TableCell>
+                    <TableCell>₱{tool.depreciationCost}</TableCell>
+                    {!readOnly && editingSection === 'tools' && (
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleRemoveTool(index)}
+                        >
+                          <Trash2 className="h-4 w-4 text-red-500" />
+                        </Button>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </CardContent>
         </Card>
       </TabsContent>

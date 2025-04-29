@@ -43,6 +43,7 @@ import {
   doc,
   updateDoc,
   where,
+  getDoc,
 } from "firebase/firestore";
 import {
   Dialog,
@@ -98,14 +99,30 @@ export function UsersPermissionsSettings() {
     }
   });
 
-  // Add auth state listener
+  // Add permission check
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      console.log("Auth state changed:", user?.email);
-      setCurrentUser(user);
-    });
+    const checkAdminAccess = async () => {
+      try {
+        const user = auth.currentUser;
+        if (user) {
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            if (userData.role !== "SLP Administrator") {
+              // Redirect non-admin users
+              window.location.href = "/settings";
+              return;
+            }
+            setCurrentUser(userData);
+          }
+        }
+      } catch (error) {
+        console.error("Error checking admin access:", error);
+        toast.error("Error checking permissions");
+      }
+    };
 
-    return () => unsubscribe();
+    checkAdminAccess();
   }, []);
 
   // Fetch users from Firestore with debug logging

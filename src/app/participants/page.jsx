@@ -583,12 +583,14 @@ export default function ParticipantsPage() {
   const renderTableHeader = () => (
     <TableRow className="bg-gradient-to-r from-[#C5D48A]/20 to-[#A6C060]/10 hover:bg-[#96B54A]/5">
       <TableHead className="w-12">
-        <input
-          type="checkbox"
-          className="rounded border-gray-300 text-[#496E22] focus:ring-[#496E22]"
-          checked={selectedItems.length === filteredParticipants.length && filteredParticipants.length > 0}
-          onChange={handleSelectAll}
-        />
+        {hasWritePermissions() && (
+          <input
+            type="checkbox"
+            className="rounded border-gray-300 text-[#496E22] focus:ring-[#496E22]"
+            checked={selectedItems.length === filteredParticipants.length && filteredParticipants.length > 0}
+            onChange={handleSelectAll}
+          />
+        )}
       </TableHead>
       <TableHead className="text-[#496E22] font-semibold">ID</TableHead>
       <TableHead className="text-[#496E22] font-semibold">Name</TableHead>
@@ -610,15 +612,17 @@ export default function ParticipantsPage() {
         }`}
       >
         <TableCell className="w-12">
-          <input
-            type="checkbox"
-            className="rounded border-gray-300 text-[#496E22] focus:ring-[#496E22]"
-            checked={selectedItems.includes(item.docId)}
-            onChange={(e) => {
-              e.stopPropagation();
-              handleSelectItem(item.docId);
-            }}
-          />
+          {!isReadOnly() && (
+            <input
+              type="checkbox"
+              className="rounded border-gray-300 text-[#496E22] focus:ring-[#496E22]"
+              checked={selectedItems.includes(item.docId)}
+              onChange={(e) => {
+                e.stopPropagation();
+                handleSelectItem(item.docId);
+              }}
+            />
+          )}
         </TableCell>
         <TableCell className="font-medium text-black" onClick={() => handleViewDetails(item)}>
           {isFamily ? item.familyId : item.id}
@@ -662,7 +666,7 @@ export default function ParticipantsPage() {
                 <Eye className="mr-2 h-4 w-4" />
                 View Details
               </DropdownMenuItem>
-              {!isFamily && (
+              {!isFamily && !isReadOnly() && (
                 <>
                   <DropdownMenuItem
                     className="text-[#496E22] focus:text-[#496E22] focus:bg-[#96B54A]/10"
@@ -687,27 +691,31 @@ export default function ParticipantsPage() {
                   </DropdownMenuItem>
                 </>
               )}
-              <DropdownMenuSeparator className="bg-[#96B54A]/10" />
-              <DropdownMenuItem
-                className="text-red-500 focus:text-red-500 focus:bg-red-50 flex items-center"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleStatusChange(item);
-                }}
-              >
-                <Power className="mr-2 h-4 w-4" />
-                {item.status === "Active" ? "Deactivate" : "Activate"} {isFamily ? 'Family' : 'Participant'}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="text-red-500 focus:text-red-500 focus:bg-red-50 flex items-center"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDeleteParticipant(item);
-                }}
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete {isFamily ? 'Family' : 'Participant'}
-              </DropdownMenuItem>
+              {!isReadOnly() && (
+                <>
+                  <DropdownMenuSeparator className="bg-[#96B54A]/10" />
+                  <DropdownMenuItem
+                    className="text-red-500 focus:text-red-500 focus:bg-red-50 flex items-center"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleStatusChange(item);
+                    }}
+                  >
+                    <Power className="mr-2 h-4 w-4" />
+                    {item.status === "Active" ? "Deactivate" : "Activate"} {isFamily ? 'Family' : 'Participant'}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    className="text-red-500 focus:text-red-500 focus:bg-red-50 flex items-center"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteParticipant(item);
+                    }}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete {isFamily ? 'Family' : 'Participant'}
+                  </DropdownMenuItem>
+                </>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         </TableCell>
@@ -715,9 +723,9 @@ export default function ParticipantsPage() {
     );
   };
 
-  // Update the renderSelectedActions function to include delete button
+  // Update the renderSelectedActions function to use isReadOnly
   const renderSelectedActions = () => {
-    if (selectedItems.length > 0) {
+    if (selectedItems.length > 0 && !isReadOnly()) {
       return (
         <div className="flex items-center justify-between mb-4 p-4 bg-[#496E22]/5 rounded-lg">
           <div className="flex items-center gap-2">
@@ -754,7 +762,16 @@ export default function ParticipantsPage() {
     return <LoadingPage />;
   }
 
-  // Add helper functions for permission checks
+  // Update the navigation array to include access checks
+  const navigation = [
+    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+    { name: "Projects", href: "/vendors", icon: Store },
+    { name: "Participants", href: "/participants", icon: Users },
+    { name: "File Storage", href: "/programs", icon: FolderOpen },
+    { name: "Settings", href: "./settings", icon: Settings },
+  ];
+
+  // Update hasModuleAccess to check specific access permissions
   const hasModuleAccess = (moduleName) => {
     switch (moduleName.toLowerCase()) {
       case 'projects':
@@ -764,31 +781,45 @@ export default function ParticipantsPage() {
       case 'filestorage':
         return userPermissions.accessFileStorage;
       default:
-        return true; // Default modules like Dashboard, Reports, etc. are always accessible
+        return true;
     }
   };
 
+  // Update hasWritePermissions to check both readOnly and specific access
   const hasWritePermissions = () => {
     return !userPermissions.readOnly && userPermissions.accessParticipant;
   };
 
-  const showPermissionDenied = (action) => {
-    toast.error(`Permission denied: You don't have access to ${action}`);
+  // Update isReadOnly to check both readOnly flag and access permission
+  const isReadOnly = () => {
+    return userPermissions.readOnly || !userPermissions.accessParticipant;
   };
 
-  // Update the navigation array to include access checks
-  const navigation = [
-    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Projects", href: "/vendors", icon: Store, requiresAccess: true },
-    { name: "Participants", href: "/participants", icon: Users, requiresAccess: true },
-    { name: "File Storage", href: "/programs", icon: FolderOpen, requiresAccess: true },
-    { name: "Reports", href: "./reports", icon: FileBarChart },
-    { name: "Analytics", href: "./analytics", icon: FileBarChart },
-    { name: "Settings", href: "./settings", icon: Settings },
-  ].map(item => ({
-    ...item,
-    disabled: item.requiresAccess && !hasModuleAccess(item.name)
-  }));
+  const showPermissionDenied = (action) => {
+    if (!userPermissions.accessParticipant) {
+      toast.error(`Permission denied: You don't have access to participants module.`);
+    } else {
+      toast.error(`Permission denied: You have read-only access. Cannot ${action}.`);
+    }
+  };
+
+  // Pass the correct read-only state to ParticipantDetailView
+  const renderParticipantDetailView = (participant) => {
+    return (
+      <ParticipantDetailView
+        participant={participant}
+        onEdit={handleEditParticipant}
+        onAddAssistance={(participantId) => {
+          setSelectedParticipantId(participantId);
+          setIsAssistanceModalOpen(true);
+        }}
+        userPermissions={{
+          ...userPermissions,
+          readOnly: isReadOnly()
+        }}
+      />
+    );
+  };
 
   return (
     <>
@@ -824,16 +855,21 @@ export default function ParticipantsPage() {
                   const isActive =
                     pathname === item.href ||
                     pathname.startsWith(`${item.href}/`);
-                  if (item.disabled) {
-                    return null; // Don't show disabled navigation items
-                  }
                   return (
                     <Link
                       key={item.name}
-                      href={item.href}
+                      href={item.disabled ? "#" : item.href}
+                      onClick={(e) => {
+                        if (item.disabled) {
+                          e.preventDefault();
+                          showPermissionDenied(`access ${item.name.toLowerCase()}`);
+                        }
+                      }}
                       className={`${
                         isActive
                           ? "bg-primary/10 text-primary"
+                          : item.disabled
+                          ? "text-muted-foreground/50 cursor-not-allowed"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       } group flex items-center px-2 py-2 text-sm font-medium rounded-md`}
                     >
@@ -841,6 +877,8 @@ export default function ParticipantsPage() {
                         className={`${
                           isActive
                             ? "text-primary"
+                            : item.disabled
+                            ? "text-muted-foreground/50"
                             : "text-muted-foreground group-hover:text-foreground"
                         } mr-3 flex-shrink-0 h-5 w-5`}
                         aria-hidden="true"
@@ -1062,7 +1100,7 @@ export default function ParticipantsPage() {
                         <Download className="mr-2 h-4 w-4" />
                         Export to Excel
                       </Button>
-                      {hasWritePermissions() && (
+                      {!isReadOnly() && (
                         <Button onClick={handleAddParticipant}>
                           <Plus className="mr-2 h-4 w-4" />
                           Add Participant
@@ -1138,15 +1176,7 @@ export default function ParticipantsPage() {
                                 <X className="h-4 w-4" />
                               </Button>
                             </div>
-                            <ParticipantDetailView
-                              participant={selectedParticipant}
-                              onEdit={handleEditParticipant}
-                              onAddAssistance={(participantId) => {
-                                setSelectedParticipantId(participantId);
-                                setIsAssistanceModalOpen(true);
-                              }}
-                              userPermissions={userPermissions}
-                            />
+                            {renderParticipantDetailView(selectedParticipant)}
                           </div>
                         )}
                       </div>

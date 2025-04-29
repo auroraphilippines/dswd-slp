@@ -12,11 +12,11 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CheckCircle, X, AlertTriangle, Plus, Pencil, Save, Trash } from "lucide-react";
+import { Plus, Pencil, Save, Trash } from "lucide-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { db, storage, auth } from "@/service/firebase";
+import { db, } from "@/service/firebase";
 import { 
   doc, 
   updateDoc, 
@@ -25,7 +25,7 @@ import {
 } from "firebase/firestore";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { ErrorBoundary } from 'react-error-boundary';
+
 
 // Add date formatting function
 const formatDate = (dateString) => {
@@ -48,6 +48,8 @@ const formatDate = (dateString) => {
 
 export function ParticipantDetailView({ participant, onEdit, onAddAssistance, userPermissions }) {
   const [familyMembers, setFamilyMembers] = useState(participant.familyMembers || []);
+  const [members, setMembers] = useState(participant.members || []);
+  const [isLoading, setIsLoading] = useState(false);
   const [isEditingFamily, setIsEditingFamily] = useState(false);
   const [showFamilyForm, setShowFamilyForm] = useState(false);
   const [newFamilyMember, setNewFamilyMember] = useState({
@@ -56,8 +58,6 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance, us
     age: "",
     occupation: ""
   });
-  const [isLoading, setIsLoading] = useState(false);
-  const [members, setMembers] = useState(participant.members || []);
   const [newMember, setNewMember] = useState({
     name: "",
     position: "",
@@ -69,10 +69,13 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance, us
   const [showMemberForm, setShowMemberForm] = useState(false);
   const [editingFamilyMember, setEditingFamilyMember] = useState(null);
 
+  // Check if user has read-only access or no participant access
+  const readOnly = userPermissions?.readOnly || !userPermissions?.accessParticipant;
+
   // Family member handlers
   const handleAddFamilyMember = async () => {
-    if (userPermissions?.readOnly) {
-      toast.error("You have read-only access. Cannot add family members.");
+    if (readOnly) {
+      toast.error("You don't have permission to add family members.");
       return;
     }
 
@@ -123,8 +126,8 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance, us
   };
 
   const handleEditFamilyMember = (member) => {
-    if (userPermissions?.readOnly) {
-      toast.error("You have read-only access. Cannot edit family members.");
+    if (readOnly) {
+      toast.error("You don't have permission to edit family members.");
       return;
     }
     setEditingFamilyMember(member);
@@ -149,8 +152,8 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance, us
   };
 
   const handleRemoveFamilyMember = async (memberId) => {
-    if (userPermissions?.readOnly) {
-      toast.error("You have read-only access. Cannot remove family members.");
+    if (readOnly) {
+      toast.error("You don't have permission to remove family members.");
       return;
     }
     setIsLoading(true);
@@ -175,6 +178,10 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance, us
 
   // Program History Functions
   const handleAddProgram = async (programData) => {
+    if (readOnly) {
+      toast.error("You don't have permission to add programs.");
+      return;
+    }
     setIsLoading(true);
     try {
       const participantRef = doc(db, "participants", participant.docId);
@@ -203,6 +210,10 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance, us
   };
 
   const handleUpdateProgramStatus = async (programId, newStatus) => {
+    if (readOnly) {
+      toast.error("You don't have permission to update program status.");
+      return;
+    }
     setIsLoading(true);
     try {
       const participantRef = doc(db, "participants", participant.docId);
@@ -249,8 +260,8 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance, us
 
   // Add member handler
   const handleAddMember = async () => {
-    if (userPermissions?.readOnly) {
-      toast.error("You have read-only access. Cannot add members.");
+    if (readOnly) {
+      toast.error("You don't have permission to add members.");
       return;
     }
 
@@ -302,8 +313,8 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance, us
 
   // Edit member handler
   const handleEditMember = (member) => {
-    if (userPermissions?.readOnly) {
-      toast.error("You have read-only access. Cannot edit members.");
+    if (readOnly) {
+      toast.error("You don't have permission to edit members.");
       return;
     }
     setEditingMember(member);
@@ -319,6 +330,10 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance, us
 
   // Update member handler
   const handleUpdateMember = async () => {
+    if (readOnly) {
+      toast.error("You don't have permission to update members.");
+      return;
+    }
     if (!editingMember || !newMember.name || !newMember.position) {
       toast.error("Name and position are required");
       return;
@@ -381,8 +396,8 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance, us
 
   // Remove member handler
   const handleRemoveMember = async (memberId) => {
-    if (userPermissions?.readOnly) {
-      toast.error("You have read-only access. Cannot remove members.");
+    if (readOnly) {
+      toast.error("You don't have permission to remove members.");
       return;
     }
     if (!memberId) return;
@@ -624,7 +639,7 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance, us
                 <CardTitle className="text-sm font-medium">
                   Family Information
                 </CardTitle>
-                {!userPermissions?.readOnly && (
+                {!readOnly && (
                   <div className="flex gap-2">
                     <Button 
                       size="sm" 
@@ -639,7 +654,7 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance, us
               </div>
             </CardHeader>
             <CardContent>
-              {showFamilyForm && (
+              {showFamilyForm && !readOnly && (
                 <div className="grid grid-cols-2 gap-4 mb-4 p-4 border rounded-lg">
                   <div className="space-y-2">
                     <Label htmlFor="name">Name</Label>
@@ -723,7 +738,7 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance, us
                     <TableHead>Relationship</TableHead>
                     <TableHead>Age</TableHead>
                     <TableHead>Occupation</TableHead>
-                    <TableHead>Actions</TableHead>
+                    {!readOnly && <TableHead>Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -733,29 +748,31 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance, us
                       <TableCell>{member.relationship}</TableCell>
                       <TableCell>{member.age}</TableCell>
                       <TableCell>{member.occupation}</TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditFamilyMember(member)}
-                          >
-                            <Pencil className="h-4 w-4 text-blue-500" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleRemoveFamilyMember(member.id)}
-                          >
-                            <Trash className="h-4 w-4 text-red-500" />
-                          </Button>
-                        </div>
-                      </TableCell>
+                      {!readOnly && (
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEditFamilyMember(member)}
+                            >
+                              <Pencil className="h-4 w-4 text-blue-500" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleRemoveFamilyMember(member.id)}
+                            >
+                              <Trash className="h-4 w-4 text-red-500" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                   {familyMembers.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={5} className="text-center py-4 text-muted-foreground">
+                      <TableCell colSpan={readOnly ? 4 : 5} className="text-center py-4 text-muted-foreground">
                         No family members added yet
                       </TableCell>
                     </TableRow>
@@ -773,7 +790,7 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance, us
                 <CardTitle className="text-sm font-medium">
                   Member Management
                 </CardTitle>
-                {!userPermissions?.readOnly && !editingMember && !showMemberForm && (
+                {!readOnly && !editingMember && !showMemberForm && (
                   <Button 
                     onClick={() => {
                       setShowMemberForm(true);
@@ -787,7 +804,7 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance, us
               </div>
             </CardHeader>
             <CardContent>
-              {(showMemberForm || editingMember) && (
+              {(showMemberForm || editingMember) && !readOnly && (
                 <div className="grid grid-cols-2 gap-4 mb-4 p-4 border rounded-lg">
                   <div className="space-y-2">
                     <Label htmlFor="memberName">Name</Label>
@@ -880,7 +897,7 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance, us
                     <TableHead>Position</TableHead>
                     <TableHead>Contact Number</TableHead>
                     <TableHead>Address</TableHead>
-                    {!userPermissions?.readOnly && <TableHead>Actions</TableHead>}
+                    {!readOnly && <TableHead>Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -890,7 +907,7 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance, us
                       <TableCell>{member.position}</TableCell>
                       <TableCell>{member.contactNumber}</TableCell>
                       <TableCell>{member.address}</TableCell>
-                      {!userPermissions?.readOnly && (
+                      {!readOnly && (
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Button
@@ -914,7 +931,7 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance, us
                   ))}
                   {members.length === 0 && (
                     <TableRow>
-                      <TableCell colSpan={userPermissions?.readOnly ? 4 : 5} className="text-center py-4 text-muted-foreground">
+                      <TableCell colSpan={readOnly ? 4 : 5} className="text-center py-4 text-muted-foreground">
                         No members added yet
                       </TableCell>
                     </TableRow>

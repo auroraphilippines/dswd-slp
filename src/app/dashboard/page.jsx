@@ -47,10 +47,9 @@ import {
   CardTitle,
   CardFooter,
 } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
+
 import { auth, db } from "@/service/firebase";
 import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
-import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { UploadActivity } from "./upload-activity";
 import { ActivityFeed } from "./activity-feed";
@@ -223,8 +222,6 @@ export default function DashboardPage() {
     { name: "Projects", href: "/vendors", icon: Store },
     { name: "Participants", href: "/participants", icon: Users },
     { name: "File Storage", href: "/programs", icon: FolderOpen },
-    { name: "Reports", href: "/reports", icon: FileBarChart },
-    { name: "Analytics", href: "/analytics", icon: TrendingUp },
     { name: "Settings", href: "/settings", icon: Settings },
   ];
 

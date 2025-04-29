@@ -92,6 +92,7 @@ export function ActivityFeed() {
   const [selectedMonth, setSelectedMonth] = useState("all");
   const [selectedMunicipality, setSelectedMunicipality] = useState("all");
   const [availableMunicipalities, setAvailableMunicipalities] = useState([]);
+  const [userPermissions, setUserPermissions] = useState({});
 
   useEffect(() => {
     fetchActivities();
@@ -550,6 +551,7 @@ export function ActivityFeed() {
         onClose={() => setEditingActivity(null)}
         activity={editingActivity}
         onUpdate={handleUpdate}
+        userPermissions={userPermissions}
       />
     </div>
   );
