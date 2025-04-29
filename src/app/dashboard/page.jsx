@@ -26,6 +26,7 @@ import {
   LogOut,
   FolderOpen,
   ChevronRight,
+  MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,17 +48,124 @@ import {
   CardFooter,
 } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { RecentActivities } from "./recent-activities";
 import { auth, db } from "@/service/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { UploadActivity } from "./upload-activity";
+import { ActivityFeed } from "./activity-feed";
 
 export default function DashboardPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
   const pathname = usePathname();
+
+  // Add municipalities array
+  const MUNICIPALITIES = [
+    { id: 'baler', name: 'Baler' },
+    { id: 'casiguran', name: 'Casiguran' },
+    { id: 'dilasag', name: 'Dilasag' },
+    { id: 'dinalungan', name: 'Dinalungan' },
+    { id: 'dingalan', name: 'Dingalan' },
+    { id: 'dipaculao', name: 'Dipaculao' },
+    { id: 'maria-aurora', name: 'Maria Aurora' },
+    { id: 'san-luis', name: 'San Luis' }
+  ];
+
+  // Add search function
+  const handleSearch = async (value) => {
+    setSearchQuery(value);
+    if (!value.trim()) {
+      setSearchResults([]);
+      return;
+    }
+
+    setIsSearching(true);
+    try {
+      const activitiesRef = collection(db, "activities");
+      const searchTerm = value.toLowerCase();
+      
+      // Find matching municipalities
+      const matchingMunicipalities = MUNICIPALITIES.filter(mun => 
+        mun.name.toLowerCase().includes(searchTerm)
+      );
+
+      if (matchingMunicipalities.length > 0) {
+        const queries = matchingMunicipalities.map(mun => {
+          return query(
+            activitiesRef,
+            where("municipalityName", "==", mun.name)
+          );
+        });
+
+        const querySnapshots = await Promise.all(
+          queries.map(q => getDocs(q))
+        );
+
+        const results = [];
+        querySnapshots.forEach((querySnapshot, index) => {
+          querySnapshot.forEach(doc => {
+            results.push({
+              id: doc.id,
+              ...doc.data(),
+              municipality: matchingMunicipalities[index].name
+            });
+          });
+        });
+
+        setSearchResults(results);
+      } else {
+        setSearchResults([]);
+      }
+    } catch (error) {
+      console.error("Error searching activities:", error);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Add search results dropdown
+  const SearchResultsDropdown = () => {
+    if (!searchQuery || searchResults.length === 0) return null;
+
+    return (
+      <div className="absolute mt-1 w-full bg-background border rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
+        <div className="p-2">
+          {searchResults.map((result) => (
+            <div
+              key={result.id}
+              className="flex items-center gap-2 p-2 hover:bg-muted rounded-md cursor-pointer"
+              onClick={() => {
+                // Scroll to the activity with this ID
+                const element = document.getElementById(`activity-${result.id}`);
+                if (element) {
+                  element.scrollIntoView({ behavior: 'smooth' });
+                  element.classList.add('highlight-activity');
+                  setTimeout(() => {
+                    element.classList.remove('highlight-activity');
+                  }, 2000);
+                }
+                setSearchResults([]);
+                setSearchQuery("");
+              }}
+            >
+              <MapPin className="h-4 w-4 text-muted-foreground" />
+              <div>
+                <p className="text-sm font-medium">{result.municipalityName}</p>
+                <p className="text-xs text-muted-foreground truncate">
+                  {result.description?.slice(0, 100)}...
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   // Close mobile menu when path changes
   useEffect(() => {
@@ -302,14 +410,17 @@ export default function DashboardPage() {
               <div className="w-full flex md:ml-0">
                 <div className="relative w-full text-muted-foreground">
                   <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none">
-                    <Search className="h-5 w-5 ml-3" aria-hidden="true" />
+                    <Search className={`h-5 w-5 ml-3 ${isSearching ? 'animate-pulse' : ''}`} aria-hidden="true" />
                   </div>
                   <Input
                     id="search-field"
                     className="block w-full h-9 pl-10 pr-3 rounded-full bg-muted/50 border-0 text-sm placeholder:text-muted-foreground/70"
-                    placeholder="Search resources, beneficiaries, vendors..."
+                    placeholder="Search by municipality..."
                     type="search"
+                    value={searchQuery}
+                    onChange={(e) => handleSearch(e.target.value)}
                   />
+                  <SearchResultsDropdown />
                 </div>
               </div>
             </div>
@@ -390,221 +501,33 @@ export default function DashboardPage() {
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div>
                     <h1 className="text-2xl font-bold tracking-tight mb-1">
-                      DSWD Sustainable Livelihood Program - Proposal System
+                      DSWD Sustainable Livelihood Program - Activity Feed
                     </h1>
                     <p className="text-muted-foreground">
-                      Monitor and manage resources, beneficiaries, and programs
+                      Share and view project activities and updates
                     </p>
                   </div>
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2">
-                    <Button
-                      variant="outline"
-                      className="h-9 gap-1.5 rounded-lg"
-                    >
-                      <TrendingUp className="h-4 w-4" />
-                      Generate Report
-                    </Button>
-                    <Button className="h-9 gap-1.5 rounded-lg">
-                      <Package className="h-4 w-4" />
-                      Manage Inventory
-                    </Button>
-                  </div>
                 </div>
 
-                {/* Overview Cards */}
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-                  <Card className="overflow-hidden border-none shadow-md bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950/40 dark:to-blue-900/20">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">
-                        Total Inventory
-                      </CardTitle>
-                      <div className="h-8 w-8 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                        <Package className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                {/* Activity Feed */}
+                <Card className="border shadow-sm">
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <CardTitle>Activity Feed</CardTitle>
+                        <CardDescription>
+                          Share and view project activities
+                        </CardDescription>
                       </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">412</div>
-                      <div className="flex items-center pt-1 text-xs text-blue-600 dark:text-blue-400">
-                        <ArrowUpRight className="mr-1 h-3 w-3" />
-                        <span>+3.2% from last month</span>
-                      </div>
-                      <Progress
-                        value={65}
-                        className="mt-3 h-1 bg-blue-100 dark:bg-blue-900/50"
-                        indicatorClassName="bg-blue-500 dark:bg-blue-400"
-                      />
-                    </CardContent>
-                  </Card>
-
-                  <Card className="overflow-hidden border-none shadow-md bg-gradient-to-br from-green-50 to-green-100 dark:from-green-950/40 dark:to-green-900/20">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">
-                        Fund Value
-                      </CardTitle>
-                      <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                        <DollarSign className="h-4 w-4 text-green-600 dark:text-green-400" />
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">₱15,231,890</div>
-                      <div className="flex items-center pt-1 text-xs text-green-600 dark:text-green-400">
-                        <ArrowUpRight className="mr-1 h-3 w-3" />
-                        <span>+5.2% from last month</span>
-                      </div>
-                      <Progress
-                        value={75}
-                        className="mt-3 h-1 bg-green-100 dark:bg-green-900/50"
-                        indicatorClassName="bg-green-500 dark:bg-green-400"
-                      />
-                    </CardContent>
-                  </Card>
-
-                  <Card className="overflow-hidden border-none shadow-md bg-gradient-to-br from-amber-50 to-amber-100 dark:from-amber-950/40 dark:to-amber-900/20">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">
-                        Low Stock Items
-                      </CardTitle>
-                      <div className="h-8 w-8 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
-                        <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">47</div>
-                      <div className="flex items-center pt-1 text-xs text-amber-600 dark:text-amber-400">
-                        <ArrowDownRight className="mr-1 h-3 w-3" />
-                        <span>+6 since yesterday</span>
-                      </div>
-                      <Progress
-                        value={15}
-                        className="mt-3 h-1 bg-amber-100 dark:bg-amber-900/50"
-                        indicatorClassName="bg-amber-500 dark:bg-amber-400"
-                      />
-                    </CardContent>
-                  </Card>
-
-                  <Card className="overflow-hidden border-none shadow-md bg-gradient-to-br from-purple-50 to-purple-100 dark:from-purple-950/40 dark:to-purple-900/20">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-sm font-medium">
-                        Active Programs
-                      </CardTitle>
-                      <div className="h-8 w-8 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                        <Building2 className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">24</div>
-                      <div className="flex items-center pt-1 text-xs text-purple-600 dark:text-purple-400">
-                        <ArrowUpRight className="mr-1 h-3 w-3" />
-                        <span>+2 new programs</span>
-                      </div>
-                      <Progress
-                        value={85}
-                        className="mt-3 h-1 bg-purple-100 dark:bg-purple-900/50"
-                        indicatorClassName="bg-purple-500 dark:bg-purple-400"
-                      />
-                    </CardContent>
-                  </Card>
-                </div>
-
-                {/* Main Content Area */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-                  {/* Recent Activities */}
-                  <Card className="lg:col-span-2 border shadow-sm">
-                    <CardHeader className="pb-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <CardTitle>Recent Activities</CardTitle>
-                          <CardDescription>
-                            Latest inventory and disbursement activities
-                          </CardDescription>
-                        </div>
-                        <Badge variant="outline" className="rounded-lg">
-                          Today
-                        </Badge>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <RecentActivities />
-                    </CardContent>
-                    <CardFooter className="border-t pt-3 flex justify-between">
-                      <Button variant="ghost" size="sm" className="text-xs h-8">
-                        View all activities
-                      </Button>
-                      <Button variant="ghost" size="sm" className="text-xs h-8">
-                        Export <ChevronRight className="ml-1 h-3 w-3" />
-                      </Button>
-                    </CardFooter>
-                  </Card>
-
-                  {/* Quick Actions */}
-                  <div className="flex flex-col gap-5">
-                    <Card className="border shadow-sm">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium">
-                          Low Stock Alert
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm text-muted-foreground mb-3">
-                          47 items are running low on stock and need
-                          replenishment.
-                        </p>
-                        <Link href="/dashboard/inventory?filter=low-stock">
-                          <Button
-                            variant="secondary"
-                            className="w-full rounded-lg"
-                          >
-                            View Low Stock Items
-                          </Button>
-                        </Link>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="border shadow-sm">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium">
-                          Monthly Report
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm text-muted-foreground mb-3">
-                          Generate and download the monthly inventory and fund
-                          report.
-                        </p>
-                        <Link href="/dashboard/reports/generate">
-                          <Button
-                            variant="secondary"
-                            className="w-full rounded-lg"
-                          >
-                            Generate Report
-                          </Button>
-                        </Link>
-                      </CardContent>
-                    </Card>
-
-                    <Card className="border shadow-sm">
-                      <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium">
-                          Participant Registration
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <p className="text-sm text-muted-foreground mb-3">
-                          Register new participants for the social welfare
-                          programs.
-                        </p>
-                        <Link href="/participants/register">
-                          <Button
-                            variant="secondary"
-                            className="w-full rounded-lg"
-                          >
-                            Register Participant
-                          </Button>
-                        </Link>
-                      </CardContent>
-                    </Card>
-                  </div>
-                </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <UploadActivity />
+                    <div className="border-t pt-6">
+                      <ActivityFeed />
+                    </div>
+                  </CardContent>
+                </Card>
               </div>
             </div>
           </div>

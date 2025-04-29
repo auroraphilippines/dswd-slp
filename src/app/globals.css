@@ -156,3 +156,23 @@
 .animate-wave-slow {
   animation: wave-slow 12s infinite linear;
 }
+
+/* Add highlight animation for search results */
+@keyframes highlight {
+  0% {
+    background-color: hsl(var(--primary) / 0.1);
+    transform: scale(1);
+  }
+  50% {
+    background-color: hsl(var(--primary) / 0.2);
+    transform: scale(1.02);
+  }
+  100% {
+    background-color: transparent;
+    transform: scale(1);
+  }
+}
+
+.highlight-activity {
+  animation: highlight 2s ease-in-out;
+}

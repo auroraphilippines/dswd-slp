@@ -127,10 +127,31 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Activities collection
+    match /activities/{activityId} {
+      // Allow reading activities for all users
+      allow read: if true;
+      
+      // Allow creating activities if authenticated and data is valid
+      allow create: if isAuthenticated() && 
+                   request.resource.data.userId == request.auth.uid &&
+                   request.resource.data.images is list &&
+                   request.resource.data.images.size() <= 5;
+      
+      // Allow updating only your own activities
+      allow update: if isAuthenticated() &&
+                   resource.data.userId == request.auth.uid &&
+                   request.resource.data.userId == request.auth.uid;
+      
+      // Allow deleting only your own activities or if admin
+      allow delete: if isAuthenticated() &&
+                   (resource.data.userId == request.auth.uid || isAdmin());
+    }
+
     // Other collections should check for specific permissions
     match /{collection}/{document=**} {
       allow read: if isAuthenticated();
-      allow write: if isAdmin();
+      allow write: if isAuthenticated();
     }
   }
 }
