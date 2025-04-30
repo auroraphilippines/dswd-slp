@@ -43,10 +43,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Separator } from "@/components/ui/separator";
-import { auth, db, storage } from "@/service/firebase";
-import { doc, getDoc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { updateDoc } from "firebase/firestore";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { toast } from "react-toastify";
 import {
@@ -57,11 +53,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { uploadProfilePhoto, getProfilePhotoFromLocalStorage } from "@/service/storage";
-import { updateUserProfile } from "@/service/user";
-import { hasFirebaseConnectivityIssues } from "@/service/firebase";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { signOutUser } from "@/service/auth";
 
 export default function ProfilePage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -84,59 +78,32 @@ export default function ProfilePage() {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const user = auth.currentUser;
-        if (user) {
-          let userData = null;
-          let firestoreError = false;
-          
-          try {
-            // Try Firestore first
-            const userDoc = await getDoc(doc(db, "users", user.uid));
-            if (userDoc.exists()) {
-              userData = userDoc.data();
-            }
-          } catch (error) {
-            console.error("Error fetching data from Firestore:", error);
-            firestoreError = true;
-          }
-          
-          // If Firestore failed or user doc doesn't exist, use default values
-          const rawName = userData?.name || "";
-          const displayName = rawName === "255" ? "Admin DSWD" : (rawName || "User");
+        // Get user data from local storage
+        const userData = JSON.parse(localStorage.getItem('user')) || {};
+        const displayName = userData?.name || "Admin DSWD";
 
-          setCurrentUser({
-            ...userData,
-            uid: user.uid,
-            email: userData?.email || "admin@dswd.gov.ph",
-            name: displayName,
-            role: userData?.role || "Administrator",
-            phoneNumber: userData?.phoneNumber || "+63 XXX XXX XXXX",
-            address: userData?.address || "DSWD Office, Manila",
-            joinDate: userData?.joinDate || "January 2023",
-            department: userData?.department || "Administration",
-          });
+        setCurrentUser({
+          ...userData,
+          name: displayName,
+          email: userData?.email || "admin@dswd.gov.ph",
+          role: userData?.role || "Administrator",
+          phoneNumber: userData?.phoneNumber || "+63 XXX XXX XXXX",
+          address: userData?.address || "DSWD Office, Manila",
+          joinDate: userData?.joinDate || "January 2023",
+          department: userData?.department || "Administration",
+        });
 
-          // Handle photo URL from Firestore or localStorage
-          if (userData?.photoURL) {
-            setProfileUrl(userData.photoURL);
-          } else if (firestoreError) {
-            // Try to get from localStorage if Firestore failed
-            const localPhotoURL = getProfilePhotoFromLocalStorage(user.uid);
-            if (localPhotoURL) {
-              setProfileUrl(localPhotoURL);
-              console.log("Retrieved profile photo from localStorage");
-            }
-          }
+        // Handle photo URL from localStorage
+        const localPhotoURL = localStorage.getItem('profilePhoto');
+        if (localPhotoURL) {
+          setProfileUrl(localPhotoURL);
         }
+        
         setLoading(false);
       } catch (error) {
         console.error("Error fetching user data:", error);
         setLoading(false);
-        
-        // Show an error message to the user
-        toast.error("Failed to load profile data. Some features may be limited.", {
-          autoClose: 5000,
-        });
+        toast.error("Failed to load profile data. Some features may be limited.");
       }
     };
 
@@ -292,6 +259,21 @@ export default function ProfilePage() {
       toast.error("Failed to update contact information");
     } finally {
       setUpdatingContact(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      const result = await signOutUser();
+      if (!result.success) {
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      console.error("Sign out error:", error);
+      toast.error("Failed to sign out. Please try again.", {
+        position: "top-center",
+        autoClose: 3000,
+      });
     }
   };
 
@@ -539,8 +521,8 @@ export default function ProfilePage() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/">Sign out</Link>
+                  <DropdownMenuItem onClick={handleSignOut}>
+                    Sign out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

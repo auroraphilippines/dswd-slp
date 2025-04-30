@@ -29,6 +29,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
   const [resetEmail, setResetEmail] = useState("");
   const router = useRouter();
@@ -80,6 +81,21 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
+    // Basic validation
+    if (!email || !password) {
+      setError("Please enter both email and password");
+      setLoading(false);
+      return;
+    }
+
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError("Please enter a valid email address");
+      setLoading(false);
+      return;
+    }
+
     try {
       const result = await loginUser(email, password);
       if (result.success) {
@@ -91,8 +107,9 @@ export default function LoginPage() {
       }
     } catch (error) {
       console.error("Error during signin:", error);
-      toast.error("An unexpected error occurred.");
-      setError("An unexpected error occurred.");
+      const errorMessage = error.message || "An unexpected error occurred";
+      toast.error(errorMessage);
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -246,6 +263,20 @@ export default function LoginPage() {
           top: 50%;
           transform: translateY(-50%);
           color: var(--gray);
+        }
+
+        .password-toggle {
+          position: absolute;
+          right: 8px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: var(--gray);
+          cursor: pointer;
+          transition: color 0.3s ease;
+        }
+
+        .password-toggle:hover {
+          color: var(--green-primary);
         }
 
         .form__input {
@@ -656,13 +687,18 @@ export default function LoginPage() {
             <div className="input-container">
               <Lock className="input-icon" size={20} />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 className="form__input"
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
+              {showPassword ? (
+                <EyeOff className="password-toggle" size={20} onClick={() => setShowPassword(false)} />
+              ) : (
+                <Eye className="password-toggle" size={20} onClick={() => setShowPassword(true)} />
+              )}
             </div>
             {error && <div className="error-message">{error}</div>}
             <button
@@ -712,13 +748,18 @@ export default function LoginPage() {
             <div className="input-container">
               <Lock className="input-icon" size={20} />
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 className="form__input"
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
+              {showPassword ? (
+                <EyeOff className="password-toggle" size={20} onClick={() => setShowPassword(false)} />
+              ) : (
+                <Eye className="password-toggle" size={20} onClick={() => setShowPassword(true)} />
+              )}
             </div>
             <div className="forgot-password" onClick={() => router.push("/login/forgot-password")}>
               Forgot Password?

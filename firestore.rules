@@ -18,20 +18,26 @@ service cloud.firestore {
              (user.data.permissions[permission] == true || isAdmin());
     }
 
+    // New function to allow password reset
+    function isPasswordReset() {
+      return request.resource.data.diff(resource.data).affectedKeys()
+        .hasOnly(['password', 'updatedAt']);
+    }
+
     // Users collection
     match /users/{userId} {
-      // Allow listing users for authenticated users
-      allow list: if isAuthenticated();
-      // Allow reading own profile
-      allow get: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
-      // Allow creating own profile or if admin
-      allow create: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
-      // Allow updating own profile or if admin
-      allow update: if isAuthenticated() && (
-        request.auth.uid == userId || 
-        isAdmin()
+      // Allow reading user documents for password reset
+      allow read: if true;
+      
+      // Allow updating password without authentication
+      allow update: if (
+        // Only allow updating password and updatedAt fields
+        request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['password', 'updatedAt'])
       );
-      // Only admin can delete users
+      
+      // Other operations still require authentication
+      allow create: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
       allow delete: if isAdmin();
     }
 

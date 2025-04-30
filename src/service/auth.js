@@ -14,7 +14,9 @@ import {
     getDocs,
     serverTimestamp,
     query,
-    orderBy
+    orderBy,
+    where,
+    updateDoc
 } from "firebase/firestore";
 
 // Helper function to retry Firestore operations
@@ -115,86 +117,58 @@ export const registerUser = async (name, email, password) => {
 
 export const loginUser = async (email, password) => {
     try {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-
-        try {
-            // Get user data from Firestore with retry logic
-            const userData = await retryOperation(async () => {
-                const userDoc = await getDoc(doc(db, "users", user.uid));
-                
-                if (!userDoc.exists()) {
-                    await setDoc(doc(db, "users", user.uid), {
-                        uid: user.uid,
-                        email: user.email,
-                        role: "user",
-                        status: "active",
-                        createdAt: serverTimestamp(),
-                        updatedAt: serverTimestamp(),
-                        lastLoginAt: serverTimestamp()
-                    });
-                    return {
-                        uid: user.uid,
-                        email: user.email,
-                        role: "user",
-                        status: "active"
-                    };
-                }
-                
-                return userDoc.data();
-            });
-
-            // Check if user is active
-            if (userData?.status === "disabled") {
-                await signOut(auth);
-                throw new Error("This account has been disabled");
-            }
-
-            // Update last login timestamp
-            try {
-                await setDoc(doc(db, "users", user.uid), {
-                    lastLoginAt: serverTimestamp()
-                }, { merge: true });
-            } catch (updateError) {
-                console.error("Failed to update last login time:", updateError);
-            }
-
-            return { 
-                success: true, 
-                user: {
-                    ...userData,
-                    uid: user.uid,
-                    email: user.email
-                }
-            };
-        } catch (firestoreError) {
-            console.error("Firestore error during login:", firestoreError);
-            return {
-                success: true,
-                user: {
-                    uid: user.uid,
-                    email: user.email,
-                    role: "user",
-                    status: "active"
-                }
-            };
+        // Query users collection to find the user by email
+        const usersRef = collection(db, "users");
+        const q = query(usersRef, where("email", "==", email));
+        const querySnapshot = await getDocs(q);
+        
+        if (querySnapshot.empty) {
+            throw new Error("No account found with this email");
         }
+
+        // Get the first matching user document
+        const userDoc = querySnapshot.docs[0];
+        const userData = userDoc.data();
+
+        // Check if password matches
+        if (userData.password !== password) {
+            throw new Error("Invalid password");
+        }
+
+        // Check if user is active
+        if (userData.status === "disabled") {
+            throw new Error("This account has been disabled");
+        }
+
+        // Update last login timestamp
+        try {
+            await updateDoc(doc(db, "users", userDoc.id), {
+                lastLoginAt: serverTimestamp()
+            });
+        } catch (updateError) {
+            console.error("Failed to update last login time:", updateError);
+        }
+
+        return { 
+            success: true, 
+            user: {
+                ...userData,
+                uid: userDoc.id
+            }
+        };
     } catch (error) {
         console.error("Login error:", error);
         let errorMessage = "Failed to login";
         
-        switch (error.code) {
-            case 'auth/invalid-email':
-                errorMessage = "Invalid email address";
-                break;
-            case 'auth/user-disabled':
-                errorMessage = "This account has been disabled";
-                break;
-            case 'auth/user-not-found':
+        switch (error.message) {
+            case 'No account found with this email':
                 errorMessage = "No account found with this email";
                 break;
-            case 'auth/wrong-password':
+            case 'Invalid password':
                 errorMessage = "Invalid password";
+                break;
+            case 'This account has been disabled':
+                errorMessage = "This account has been disabled";
                 break;
         }
         
