@@ -1565,7 +1565,7 @@ export default function LandingPage() {
                             </motion.span>
                           </motion.button>
                           <motion.button
-                            onClick={() => router.push("/contact")}
+                            onClick={() => router.push("/about/contact")}
                             className="bg-transparent border border-white/30 hover:bg-white/10 text-white font-medium py-3.5 px-8 rounded-xl text-base transition-all focus:outline-none focus:ring-2 focus:ring-white/50 flex items-center gap-2"
                             whileHover={{ scale: 1.03 }}
                             whileTap={{ scale: 0.97 }}
