@@ -1,10 +1,35 @@
 "use client";
 
-import { useState } from "react";
-import { Facebook, Linkedin, Twitter, Home } from "lucide-react";
+import { useState, useEffect } from "react";
+import {
+  Facebook,
+  Linkedin,
+  Twitter,
+  Home,
+  User,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import Image from "next/image";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { registerUser, loginUser } from "@/service/auth";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+import { auth } from "@/service/firebase";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function LoginPage() {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -14,6 +39,9 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
   const router = useRouter();
 
   const toggleForm = () => {
@@ -41,14 +69,17 @@ export default function LoginPage() {
     setError("");
 
     try {
-      const result = await registerUser(name, email, password);
+      const result = await registerUser(name, email, password, "SLP Member");
       if (result.success) {
+        toast.success("Account created successfully!");
         router.push("/dashboard");
       } else {
+        toast.error(result.error || "Failed to create account");
         setError(result.error);
       }
     } catch (error) {
       console.error("Error during signup:", error);
+      toast.error("An unexpected error occurred.");
       setError("An unexpected error occurred.");
     } finally {
       setLoading(false);
@@ -60,16 +91,55 @@ export default function LoginPage() {
     setLoading(true);
     setError("");
 
+    // Basic validation
+    if (!email || !password) {
+      setError("Please enter both email and password");
+      setLoading(false);
+      return;
+    }
+
+    // Email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError("Please enter a valid email address");
+      setLoading(false);
+      return;
+    }
+
     try {
       const result = await loginUser(email, password);
       if (result.success) {
+        toast.success("Logged in successfully!");
         router.push("/dashboard");
       } else {
+        toast.error(result.error || "Failed to login");
         setError(result.error);
       }
     } catch (error) {
       console.error("Error during signin:", error);
-      setError("An unexpected error occurred.");
+      const errorMessage = error.message || "An unexpected error occurred";
+      toast.error(errorMessage);
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+
+    try {
+      // Here you would typically call your password reset service
+      // For now, we'll just show a success message
+      toast.success("Password reset instructions sent to your email!");
+      setIsForgotPasswordOpen(false);
+      setResetEmail("");
+    } catch (error) {
+      console.error("Error during password reset:", error);
+      toast.error("Failed to send reset instructions");
+      setError("Failed to send reset instructions");
     } finally {
       setLoading(false);
     }
@@ -191,11 +261,39 @@ export default function LoginPage() {
           margin-bottom: 10px;
         }
 
+        .input-container {
+          position: relative;
+          width: 100%;
+          margin: 4px 0;
+        }
+
+        .input-icon {
+          position: absolute;
+          left: 8px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: var(--gray);
+        }
+
+        .password-toggle {
+          position: absolute;
+          right: 8px;
+          top: 50%;
+          transform: translateY(-50%);
+          color: var(--gray);
+          cursor: pointer;
+          transition: color 0.3s ease;
+        }
+
+        .password-toggle:hover {
+          color: var(--green-primary);
+        }
+
         .form__input {
           width: 100%;
           height: 40px;
-          margin: 4px 0;
-          padding-left: 25px;
+          margin: 0;
+          padding-left: 40px;
           font-size: 13px;
           letter-spacing: 0.15px;
           border: 1px solid #e5e7eb;
@@ -222,6 +320,12 @@ export default function LoginPage() {
           border-bottom: 1px solid var(--gray);
           line-height: 2;
           cursor: pointer;
+          transition: all 0.3s ease;
+        }
+
+        .form__link:hover {
+          color: var(--green-primary);
+          border-bottom-color: var(--green-primary);
         }
 
         .title {
@@ -450,9 +554,100 @@ export default function LoginPage() {
           transform: translateY(-2px);
           box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         }
+
+        /* Toast customization */
+        .Toastify__toast {
+          border-radius: 8px;
+          font-family: "Montserrat", sans-serif;
+        }
+
+        .Toastify__toast--success {
+          background: var(--green-primary);
+        }
+
+        .Toastify__toast--error {
+          background: #d32f2f;
+        }
+
+        /* Add these new styles for the dialog */
+        [data-dialog-overlay] {
+          background-color: rgba(0, 0, 0, 0.5);
+          position: fixed;
+          inset: 0;
+          z-index: 50;
+        }
+
+        [data-dialog-content] {
+          position: relative;
+          width: 90vw;
+          max-width: 450px;
+          margin: 1.5rem auto;
+          background: white;
+          border-radius: 0.5rem;
+          box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+            0 10px 10px -5px rgba(0, 0, 0, 0.04);
+          z-index: 51;
+        }
+
+        [data-dialog-overlay][data-state="open"],
+        [data-dialog-content][data-state="open"] {
+          animation: fadeIn 0.2s ease-out;
+        }
+
+        [data-dialog-overlay][data-state="closed"],
+        [data-dialog-content][data-state="closed"] {
+          animation: fadeOut 0.2s ease-in;
+        }
+
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+          to {
+            opacity: 1;
+            transform: scale(1);
+          }
+        }
+
+        @keyframes fadeOut {
+          from {
+            opacity: 1;
+            transform: scale(1);
+          }
+          to {
+            opacity: 0;
+            transform: scale(0.95);
+          }
+        }
+
+        .forgot-password {
+          color: var(--gray);
+          font-size: 14px;
+          margin-top: 10px;
+          text-align: right;
+          cursor: pointer;
+          transition: color 0.3s ease;
+        }
+
+        .forgot-password:hover {
+          color: var(--green-primary);
+        }
       `}</style>
 
       <div className="main">
+        <ToastContainer
+          position="top-right"
+          autoClose={3000}
+          hideProgressBar={false}
+          newestOnTop
+          closeOnClick
+          rtl={false}
+          pauseOnFocusLoss
+          draggable
+          pauseOnHover
+          theme="colored"
+        />
         <button className="home-button" onClick={goToHome}>
           <Home size={20} />
           <span>Back Home</span>
@@ -478,30 +673,52 @@ export default function LoginPage() {
               <Twitter className="form__icon" size={24} />
             </div>
             <span className="form__span">or use email for registration</span>
-            <input
-              type="text"
-              className="form__input"
-              placeholder="Name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-            />
-            <input
-              type="email"
-              className="form__input"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-            <input
-              type="password"
-              className="form__input"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
+            <div className="input-container">
+              <User className="input-icon" size={20} />
+              <input
+                type="text"
+                className="form__input"
+                placeholder="Name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </div>
+            <div className="input-container">
+              <Mail className="input-icon" size={20} />
+              <input
+                type="email"
+                className="form__input"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="input-container">
+              <Lock className="input-icon" size={20} />
+              <input
+                type={showPassword ? "text" : "password"}
+                className="form__input"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              {showPassword ? (
+                <EyeOff
+                  className="password-toggle"
+                  size={20}
+                  onClick={() => setShowPassword(false)}
+                />
+              ) : (
+                <Eye
+                  className="password-toggle"
+                  size={20}
+                  onClick={() => setShowPassword(true)}
+                />
+              )}
+            </div>
             {error && <div className="error-message">{error}</div>}
             <button
               className="form__button button submit"
@@ -536,24 +753,48 @@ export default function LoginPage() {
               <Twitter className="form__icon" size={24} />
             </div>
             <span className="form__span">or use your email account</span>
-            <input
-              type="email"
-              className="form__input"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-            <input
-              type="password"
-              className="form__input"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
+            <div className="input-container">
+              <Mail className="input-icon" size={20} />
+              <input
+                type="email"
+                className="form__input"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+            <div className="input-container">
+              <Lock className="input-icon" size={20} />
+              <input
+                type={showPassword ? "text" : "password"}
+                className="form__input"
+                placeholder="Password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              {showPassword ? (
+                <EyeOff
+                  className="password-toggle"
+                  size={20}
+                  onClick={() => setShowPassword(false)}
+                />
+              ) : (
+                <Eye
+                  className="password-toggle"
+                  size={20}
+                  onClick={() => setShowPassword(true)}
+                />
+              )}
+            </div>
+            <div
+              className="forgot-password"
+              onClick={() => router.push("/login/forgot-password")}
+            >
+              Forgot Password?
+            </div>
             {error && <div className="error-message">{error}</div>}
-            <a className="form__link">Forgot your password?</a>
             <button
               className="form__button button submit"
               type="submit"
