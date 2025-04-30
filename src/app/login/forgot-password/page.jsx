@@ -8,7 +8,7 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { db, auth } from "@/service/firebase";
 import { collection, query, where, getDocs, updateDoc, doc, getDoc } from "firebase/firestore";
-import { sendPasswordResetEmail, updatePassword, signInWithEmailAndPassword } from "firebase/auth";
+import { resetLocalPassword } from "@/service/auth";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
@@ -40,14 +40,6 @@ export default function ForgotPasswordPage() {
       const q = query(usersRef, where("email", "==", email));
       const querySnapshot = await getDocs(q);
       
-      console.log("Query results:", {
-        size: querySnapshot.size,
-        docs: querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          data: doc.data()
-        }))
-      });
-      
       if (querySnapshot.empty) {
         throw new Error("No account found with this email address");
       }
@@ -56,11 +48,6 @@ export default function ForgotPasswordPage() {
       const userDoc = querySnapshot.docs[0];
       setUserId(userDoc.id);
       
-      console.log("User found:", {
-        id: userDoc.id,
-        data: userDoc.data()
-      });
-
       setIsEmailVerified(true);
       toast.success("Email verified successfully!");
     } catch (error) {
@@ -70,10 +57,6 @@ export default function ForgotPasswordPage() {
       if (error.message === "No account found with this email address") {
         errorMessage = "No account found with this email address";
       }
-      
-      console.error("Error details:", {
-        message: error.message
-      });
       
       toast.error(errorMessage);
       setError(errorMessage);
@@ -86,7 +69,6 @@ export default function ForgotPasswordPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
-    console.log("Starting password reset process");
 
     if (!newPassword || !confirmPassword) {
       setError("Please enter both passwords");
@@ -107,46 +89,20 @@ export default function ForgotPasswordPage() {
     }
 
     try {
-      if (!userId) {
-        throw new Error("User ID not found. Please verify your email again.");
+      const result = await resetLocalPassword(email, newPassword);
+      
+      if (result.success) {
+        toast.success("Password has been successfully reset! You can now login with your new password.");
+        setTimeout(() => {
+          router.push("/login");
+        }, 2000);
+      } else {
+        throw new Error(result.error);
       }
-
-      // Get user document
-      const userRef = doc(db, "users", userId);
-      const userDoc = await getDoc(userRef);
-      if (!userDoc.exists()) {
-        throw new Error("User not found");
-      }
-
-      // Update password in Firestore
-      const updateData = {
-        password: newPassword,
-        updatedAt: new Date().toISOString()
-      };
-
-      console.log("Attempting to update user password in Firestore");
-      await updateDoc(userRef, updateData);
-      console.log("User password updated in Firestore");
-
-      toast.success("Password has been successfully reset! You can now login with your new password.");
-      setTimeout(() => {
-        router.push("/login");
-      }, 2000);
     } catch (error) {
       console.error("Error resetting password:", error);
-      console.error("Error details:", {
-        message: error.message,
-        code: error.code,
-        userId: userId
-      });
-      
-      let errorMessage = "Failed to reset password";
-      if (error.code === 'permission-denied') {
-        errorMessage = "You don't have permission to reset the password. Please contact support.";
-      }
-      
-      toast.error(errorMessage);
-      setError(errorMessage);
+      toast.error(error.message);
+      setError(error.message);
     } finally {
       setLoading(false);
     }

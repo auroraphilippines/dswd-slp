@@ -53,6 +53,7 @@ import { doc, getDoc, collection, query, where, getDocs } from "firebase/firesto
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { UploadActivity } from "./upload-activity";
 import { ActivityFeed } from "./activity-feed";
+import { onAuthStateChanged } from "firebase/auth";
 
 export default function DashboardPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -172,9 +173,8 @@ export default function DashboardPage() {
   }, [pathname]);
 
   useEffect(() => {
-    const fetchUserData = async () => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       try {
-        const user = auth.currentUser;
         if (user) {
           const userDoc = await getDoc(doc(db, "users", user.uid));
           if (userDoc.exists()) {
@@ -190,15 +190,18 @@ export default function DashboardPage() {
               role: userData.role || "Administrator",
             });
           }
+        } else {
+          setCurrentUser(null);
         }
-        setLoading(false);
       } catch (error) {
         console.error("Error fetching user data:", error);
+      } finally {
         setLoading(false);
       }
-    };
+    });
 
-    fetchUserData();
+    // Cleanup subscription on unmount
+    return () => unsubscribe();
   }, []);
 
   // Get user initials from name

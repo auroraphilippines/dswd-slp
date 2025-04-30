@@ -4,7 +4,8 @@ import {
     createUserWithEmailAndPassword,
     signInWithEmailAndPassword,
     signOut,
-    onAuthStateChanged
+    onAuthStateChanged,
+    sendPasswordResetEmail
 } from "firebase/auth";
 import {
     doc,
@@ -117,7 +118,7 @@ export const registerUser = async (name, email, password) => {
 
 export const loginUser = async (email, password) => {
     try {
-        // Query users collection to find the user by email
+        // First check if user exists in Firestore
         const usersRef = collection(db, "users");
         const q = query(usersRef, where("email", "==", email));
         const querySnapshot = await getDocs(q);
@@ -126,48 +127,93 @@ export const loginUser = async (email, password) => {
             throw new Error("No account found with this email");
         }
 
-        // Get the first matching user document
         const userDoc = querySnapshot.docs[0];
         const userData = userDoc.data();
-
-        // Check if password matches
-        if (userData.password !== password) {
-            throw new Error("Invalid password");
-        }
 
         // Check if user is active
         if (userData.status === "disabled") {
             throw new Error("This account has been disabled");
         }
 
-        // Update last login timestamp
-        try {
+        // For local accounts, check password directly
+        if (userData.password) {
+            if (userData.password !== password) {
+                throw new Error("Invalid password");
+            }
+
+            // Update last login timestamp
             await updateDoc(doc(db, "users", userDoc.id), {
                 lastLoginAt: serverTimestamp()
             });
-        } catch (updateError) {
-            console.error("Failed to update last login time:", updateError);
+
+            return { 
+                success: true, 
+                user: {
+                    ...userData,
+                    uid: userDoc.id,
+                    email: userData.email
+                }
+            };
         }
 
-        return { 
-            success: true, 
-            user: {
-                ...userData,
-                uid: userDoc.id
+        // For Firebase Auth accounts
+        try {
+            const userCredential = await signInWithEmailAndPassword(auth, email, password);
+            const user = userCredential.user;
+
+            // Update last login timestamp
+            await updateDoc(doc(db, "users", user.uid), {
+                lastLoginAt: serverTimestamp()
+            });
+
+            return { 
+                success: true, 
+                user: {
+                    ...userData,
+                    uid: user.uid,
+                    email: user.email
+                }
+            };
+        } catch (authError) {
+            // If auth fails, check if we need to recreate the auth account
+            if (authError.code === 'auth/user-not-found') {
+                // Create new auth account with the same credentials
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+
+                // Update Firestore document with new uid
+                await updateDoc(doc(db, "users", userDoc.id), {
+                    uid: user.uid,
+                    lastLoginAt: serverTimestamp()
+                });
+
+                return { 
+                    success: true, 
+                    user: {
+                        ...userData,
+                        uid: user.uid,
+                        email: user.email
+                    }
+                };
             }
-        };
+            throw authError;
+        }
     } catch (error) {
         console.error("Login error:", error);
         let errorMessage = "Failed to login";
         
-        switch (error.message) {
-            case 'No account found with this email':
+        switch (error.code) {
+            case 'auth/user-not-found':
+            case 'auth/invalid-email':
                 errorMessage = "No account found with this email";
                 break;
-            case 'Invalid password':
+            case 'auth/wrong-password':
                 errorMessage = "Invalid password";
                 break;
-            case 'This account has been disabled':
+            case 'auth/too-many-requests':
+                errorMessage = "Too many failed attempts. Please try again later";
+                break;
+            case 'auth/user-disabled':
                 errorMessage = "This account has been disabled";
                 break;
         }
@@ -222,5 +268,74 @@ export const logout = async () => {
             success: false, 
             error: error.message || "Failed to logout" 
         };
+    }
+};
+
+export const resetPassword = async (email) => {
+    try {
+        // First check if user exists in Firestore
+        const usersRef = collection(db, "users");
+        const q = query(usersRef, where("email", "==", email));
+        const querySnapshot = await getDocs(q);
+        
+        if (querySnapshot.empty) {
+            throw new Error("No account found with this email");
+        }
+
+        // Send password reset email using Firebase Auth
+        await sendPasswordResetEmail(auth, email);
+        
+        return { success: true };
+    } catch (error) {
+        console.error("Password reset error:", error);
+        let errorMessage = "Failed to reset password";
+        
+        switch (error.code) {
+            case 'auth/user-not-found':
+            case 'auth/invalid-email':
+                errorMessage = "No account found with this email";
+                break;
+            case 'auth/too-many-requests':
+                errorMessage = "Too many attempts. Please try again later";
+                break;
+        }
+        
+        return { success: false, error: errorMessage };
+    }
+};
+
+export const resetLocalPassword = async (email, newPassword) => {
+    try {
+        // First check if user exists in Firestore
+        const usersRef = collection(db, "users");
+        const q = query(usersRef, where("email", "==", email));
+        const querySnapshot = await getDocs(q);
+        
+        if (querySnapshot.empty) {
+            throw new Error("No account found with this email");
+        }
+
+        // Get the user document
+        const userDoc = querySnapshot.docs[0];
+        
+        // Update the password in Firestore
+        await updateDoc(doc(db, "users", userDoc.id), {
+            password: newPassword,
+            updatedAt: serverTimestamp()
+        });
+        
+        return { 
+            success: true,
+            userId: userDoc.id
+        };
+    } catch (error) {
+        console.error("Local password reset error:", error);
+        let errorMessage = "Failed to reset password";
+        
+        if (error.code === 'permission-denied') {
+            errorMessage = "You don't have permission to reset the password";
+        }
+        
+        return { success: false, error: errorMessage };
     }
 };

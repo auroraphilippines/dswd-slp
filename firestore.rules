@@ -36,6 +36,12 @@ service cloud.firestore {
           .hasOnly(['password', 'updatedAt'])
       );
       
+      // Allow users to update their own last login time
+      allow update: if isAuthenticated() && 
+                   request.auth.uid == userId &&
+                   request.resource.data.diff(resource.data).affectedKeys()
+                     .hasOnly(['lastLoginAt']);
+      
       // Other operations still require authentication
       allow create: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
       allow delete: if isAdmin();
