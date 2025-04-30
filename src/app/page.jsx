@@ -14,6 +14,9 @@ import {
   Clock,
   Menu,
   X,
+  Code,
+  Settings,
+  Shield,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -25,7 +28,7 @@ export default function LandingPage() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false);
-    }, 4000); // 4 seconds for the animation
+    }, 4000);
 
     return () => {
       clearTimeout(timer);
@@ -35,7 +38,6 @@ export default function LandingPage() {
   // Close mobile menu when clicking on a link
   const handleNavLinkClick = (id) => {
     setMobileMenuOpen(false);
-    // If we need to scroll to an element
     if (id) {
       const element = document.getElementById(id);
       if (element) {
@@ -58,12 +60,12 @@ export default function LandingPage() {
   }, [mobileMenuOpen]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100">
+    <div className="min-h-screen bg-gradient-to-b from-lime-50 to-lime-100">
       <AnimatePresence>
         {loading ? (
           <motion.div
             key="loader"
-            className="fixed inset-0 flex items-center justify-center bg-gradient-to-b from-sky-800 to-sky-900 z-50"
+            className="fixed inset-0 flex items-center justify-center bg-gradient-to-b from-lime-600 to-lime-700 z-50"
             initial={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
@@ -72,24 +74,41 @@ export default function LandingPage() {
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               transition={{ duration: 1 }}
-              className="text-center"
+              className="text-center relative"
             >
+              <motion.div
+                className="absolute inset-0 w-48 h-48 mx-auto rounded-full bg-lime-400 opacity-20"
+                animate={{
+                  scale: [1, 1.2, 1],
+                  rotate: [0, 180, 360],
+                }}
+                transition={{
+                  duration: 3,
+                  repeat: Infinity,
+                  repeatType: "reverse",
+                  ease: "easeInOut",
+                }}
+              />
+              <motion.div
+                className="absolute inset-0 w-48 h-48 mx-auto rounded-full bg-lime-300 opacity-20"
+                animate={{
+                  scale: [1.2, 1, 1.2],
+                  rotate: [360, 180, 0],
+                }}
+                transition={{
+                  duration: 3,
+                  repeat: Infinity,
+                  repeatType: "reverse",
+                  ease: "easeInOut",
+                  delay: 0.5,
+                }}
+              />
               <motion.div
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ duration: 0.8 }}
                 className="w-40 h-40 mx-auto mb-4 relative"
               >
-                <motion.div
-                  className="absolute inset-0 rounded-full bg-sky-300 opacity-30"
-                  animate={{ scale: [1, 1.2, 1] }}
-                  transition={{
-                    duration: 2,
-                    repeat: Number.POSITIVE_INFINITY,
-                    repeatType: "reverse",
-                    ease: "easeInOut",
-                  }}
-                />
                 <img
                   src="/images/SLP.png"
                   alt="SLP Logo"
@@ -100,7 +119,7 @@ export default function LandingPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5, duration: 0.8 }}
-                className="text-2xl font-bold text-white"
+                className="text-3xl font-bold text-white"
               >
                 DSWD SLP-PS
               </motion.h1>
@@ -108,10 +127,46 @@ export default function LandingPage() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 1, duration: 0.8 }}
-                className="text-white mt-2"
+                className="text-lime-100 mt-2 text-lg"
               >
                 Sustainable Livelihood Program - Proposal System
               </motion.p>
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 1.5, duration: 0.8 }}
+                className="mt-6"
+              >
+                <div className="flex justify-center space-x-2">
+                  <motion.div
+                    className="w-2 h-2 bg-lime-400 rounded-full"
+                    animate={{ scale: [1, 1.5, 1] }}
+                    transition={{
+                      duration: 1,
+                      repeat: Infinity,
+                      repeatDelay: 0.2,
+                    }}
+                  />
+                  <motion.div
+                    className="w-2 h-2 bg-lime-400 rounded-full"
+                    animate={{ scale: [1, 1.5, 1] }}
+                    transition={{
+                      duration: 1,
+                      repeat: Infinity,
+                      repeatDelay: 0.3,
+                    }}
+                  />
+                  <motion.div
+                    className="w-2 h-2 bg-lime-400 rounded-full"
+                    animate={{ scale: [1, 1.5, 1] }}
+                    transition={{
+                      duration: 1,
+                      repeat: Infinity,
+                      repeatDelay: 0.4,
+                    }}
+                  />
+                </div>
+              </motion.div>
             </motion.div>
           </motion.div>
         ) : (
@@ -122,14 +177,14 @@ export default function LandingPage() {
             transition={{ duration: 0.5 }}
           >
             {/* Header */}
-            <header className="bg-white shadow-sm sticky top-0 z-40">
+            <header className="bg-white/80 backdrop-blur-sm shadow-sm sticky top-0 z-40">
               <div className="container mx-auto px-4 py-3 flex justify-between items-center">
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-2">
                     <img
                       src="/images/SLP.png"
                       alt="SLP Logo"
-                      className="w-10 h-10 rounded-full object-cover border-2 border-sky-100"
+                      className="w-10 h-10 rounded-full object-cover border-2 border-lime-200"
                     />
                     <img
                       src="/images/DSWD.png"
@@ -138,10 +193,10 @@ export default function LandingPage() {
                     />
                   </div>
                   <div>
-                    <h1 className="text-lg font-bold text-sky-900">
+                    <h1 className="text-lg font-bold text-lime-900">
                       DSWD SLP-PS
                     </h1>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-lime-600">
                       Sustainable Livelihood Program
                     </p>
                   </div>
@@ -151,33 +206,37 @@ export default function LandingPage() {
                 <nav className="hidden md:flex space-x-8">
                   <a
                     href="#platform-users"
-                    className="text-slate-600 hover:text-sky-700 font-medium transition-colors text-sm"
+                    className="text-lime-700 hover:text-lime-500 font-medium transition-colors text-sm flex items-center gap-1"
                   >
-                    Users
+                    <Users className="w-4 h-4" />
+                    <span>Users</span>
                   </a>
                   <a
                     href="#account-creation"
-                    className="text-slate-600 hover:text-sky-700 font-medium transition-colors text-sm"
+                    className="text-lime-700 hover:text-lime-500 font-medium transition-colors text-sm flex items-center gap-1"
                   >
-                    Accounts
+                    <UserPlus className="w-4 h-4" />
+                    <span>Accounts</span>
                   </a>
                   <a
                     href="#service-access"
-                    className="text-slate-600 hover:text-sky-700 font-medium transition-colors text-sm"
+                    className="text-lime-700 hover:text-lime-500 font-medium transition-colors text-sm flex items-center gap-1"
                   >
-                    Services
+                    <Compass className="w-4 h-4" />
+                    <span>Services</span>
                   </a>
                   <a
                     href="#faqs"
-                    className="text-slate-600 hover:text-sky-700 font-medium transition-colors text-sm"
+                    className="text-lime-700 hover:text-lime-500 font-medium transition-colors text-sm flex items-center gap-1"
                   >
-                    FAQs
+                    <HelpCircle className="w-4 h-4" />
+                    <span>FAQs</span>
                   </a>
                 </nav>
 
                 {/* Mobile Menu Button */}
                 <button
-                  className="md:hidden flex items-center justify-center p-2 rounded-md text-slate-700 hover:text-sky-700 hover:bg-sky-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-sky-500 transition-colors"
+                  className="md:hidden flex items-center justify-center p-2 rounded-md text-lime-700 hover:text-lime-500 hover:bg-lime-50 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-lime-500 transition-colors"
                   onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                   aria-expanded={mobileMenuOpen}
                   aria-label="Toggle menu"
@@ -213,78 +272,88 @@ export default function LandingPage() {
                       }}
                       onClick={(e) => e.stopPropagation()}
                     >
-                      <div className="p-4 border-b border-slate-200 flex justify-between items-center">
+                      <div className="p-4 border-b border-lime-200 flex justify-between items-center">
                         <div className="flex items-center gap-2">
                           <img
                             src="/images/SLP.png"
                             alt="SLP Logo"
-                            className="w-8 h-8 rounded-full object-cover border-2 border-sky-100"
+                            className="w-8 h-8 rounded-full object-cover border-2 border-lime-200"
                           />
-                          <span className="font-bold text-sky-900">
+                          <span className="font-bold text-lime-900">
                             DSWD SLP-PS
                           </span>
                         </div>
-                        <button
-                          className="p-2 rounded-md text-slate-500 hover:text-sky-700 hover:bg-sky-50 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                        <motion.button
+                          className="p-2 rounded-md text-lime-500 hover:text-lime-700 hover:bg-lime-50 focus:outline-none focus:ring-2 focus:ring-lime-500"
                           onClick={() => setMobileMenuOpen(false)}
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
                           aria-label="Close menu"
                         >
                           <X className="h-5 w-5" aria-hidden="true" />
-                        </button>
+                        </motion.button>
                       </div>
                       <div className="flex-1 overflow-y-auto py-4">
                         <nav className="flex flex-col space-y-1 px-2">
-                          <a
+                          <motion.a
                             href="#platform-users"
-                            className="px-4 py-3 text-base font-medium text-slate-700 hover:bg-sky-50 hover:text-sky-700 rounded-md transition-colors"
+                            className="px-4 py-3 text-base font-medium text-lime-700 hover:bg-lime-50 hover:text-lime-500 rounded-md transition-colors"
                             onClick={() => handleNavLinkClick("platform-users")}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
                           >
                             <div className="flex items-center">
-                              <Users className="mr-3 h-5 w-5 text-slate-500" />
+                              <Users className="mr-3 h-5 w-5" />
                               <span>Platform Users</span>
                             </div>
-                          </a>
-                          <a
+                          </motion.a>
+                          <motion.a
                             href="#account-creation"
-                            className="px-4 py-3 text-base font-medium text-slate-700 hover:bg-sky-50 hover:text-sky-700 rounded-md transition-colors"
+                            className="px-4 py-3 text-base font-medium text-lime-700 hover:bg-lime-50 hover:text-lime-500 rounded-md transition-colors"
                             onClick={() =>
                               handleNavLinkClick("account-creation")
                             }
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
                           >
                             <div className="flex items-center">
-                              <UserPlus className="mr-3 h-5 w-5 text-slate-500" />
+                              <UserPlus className="mr-3 h-5 w-5" />
                               <span>Account Creation</span>
                             </div>
-                          </a>
-                          <a
+                          </motion.a>
+                          <motion.a
                             href="#service-access"
-                            className="px-4 py-3 text-base font-medium text-slate-700 hover:bg-sky-50 hover:text-sky-700 rounded-md transition-colors"
+                            className="px-4 py-3 text-base font-medium text-lime-700 hover:bg-lime-50 hover:text-lime-500 rounded-md transition-colors"
                             onClick={() => handleNavLinkClick("service-access")}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
                           >
                             <div className="flex items-center">
-                              <Compass className="mr-3 h-5 w-5 text-slate-500" />
+                              <Compass className="mr-3 h-5 w-5" />
                               <span>Service Access</span>
                             </div>
-                          </a>
-                          <a
+                          </motion.a>
+                          <motion.a
                             href="#faqs"
-                            className="px-4 py-3 text-base font-medium text-slate-700 hover:bg-sky-50 hover:text-sky-700 rounded-md transition-colors"
+                            className="px-4 py-3 text-base font-medium text-lime-700 hover:bg-lime-50 hover:text-lime-500 rounded-md transition-colors"
                             onClick={() => handleNavLinkClick("faqs")}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
                           >
                             <div className="flex items-center">
-                              <HelpCircle className="mr-3 h-5 w-5 text-slate-500" />
+                              <HelpCircle className="mr-3 h-5 w-5" />
                               <span>FAQs</span>
                             </div>
-                          </a>
+                          </motion.a>
                         </nav>
                       </div>
-                      <div className="p-4 border-t border-slate-200">
+                      <div className="p-4 border-t border-lime-200">
                         <button
                           onClick={() => {
                             setMobileMenuOpen(false);
                             router.push("/login");
                           }}
-                          className="w-full bg-sky-700 hover:bg-sky-800 text-white font-semibold py-2 px-4 rounded-lg text-base shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2"
+                          className="w-full bg-lime-700 hover:bg-lime-800 text-white font-semibold py-2 px-4 rounded-lg text-base shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-lime-500 focus:ring-offset-2"
                         >
                           Login to System
                         </button>
@@ -293,7 +362,7 @@ export default function LandingPage() {
                             setMobileMenuOpen(false);
                             router.push("/about");
                           }}
-                          className="w-full mt-3 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold py-2 px-4 rounded-lg text-base shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2"
+                          className="w-full mt-3 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold py-2 px-4 rounded-lg text-base shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-lime-500 focus:ring-offset-2"
                         >
                           Learn More
                         </button>
@@ -304,59 +373,140 @@ export default function LandingPage() {
               </AnimatePresence>
             </header>
 
-            {/* Hero Section with Background Image */}
-            <section
-              className="relative text-white py-24 md:py-32 bg-cover bg-center bg-no-repeat overflow-hidden"
-              style={{
-                backgroundImage:
-                  "linear-gradient(rgba(15, 23, 42, 0.7), rgba(15, 23, 42, 0.8)), url('/images/DSWD-RO3.png')",
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-              }}
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-sky-900/80 to-indigo-900/80"></div>
-              <div className="container mx-auto px-4 text-center relative z-10">
+            {/* Hero Section */}
+            <section className="relative py-20 md:py-32 overflow-hidden">
+              <motion.div
+                className="absolute inset-0 bg-[url('/images/DSWD-RO3.png')] bg-cover bg-center"
+                initial={{ scale: 1.1 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: 1.5 }}
+              />
+              <div className="absolute inset-0 bg-gradient-to-r from-lime-900/90 to-lime-800/90" />
+              <div className="container mx-auto px-4 relative z-10">
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.8 }}
-                  className="max-w-4xl mx-auto"
+                  className="max-w-4xl mx-auto text-center"
                 >
-                  <h2 className="text-3xl md:text-5xl font-bold mb-6 leading-tight">
-                    Welcome to DSWD Sustainable Livelihood Program - Proposal
-                    System
-                  </h2>
-                  <p className="text-lg md:text-xl mb-10 max-w-3xl mx-auto text-slate-200">
-                    Manage inventory, track disbursements, and support
-                    participants through our integrated platform designed to
-                    strengthen communities across the Philippines
-                  </p>
-                  <div className="flex flex-col sm:flex-row justify-center gap-4">
-                    <button
+                  <motion.h2
+                    className="text-4xl md:text-6xl font-bold mb-6 text-white leading-tight"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2, duration: 0.8 }}
+                  >
+                    Welcome to DSWD Sustainable Livelihood Program
+                  </motion.h2>
+                  <motion.p
+                    className="text-xl md:text-2xl mb-10 text-lime-100 max-w-3xl mx-auto"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4, duration: 0.8 }}
+                  >
+                    Empowering communities through sustainable livelihood initiatives
+                  </motion.p>
+                  <motion.div
+                    className="flex flex-col sm:flex-row justify-center gap-4"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.6, duration: 0.8 }}
+                  >
+                    <motion.button
                       onClick={() => router.push("/login")}
-                      className="bg-amber-500 hover:bg-amber-400 text-slate-900 font-semibold py-3 px-8 rounded-lg text-base shadow-lg transition-all hover:shadow-amber-500/20 focus:outline-none focus:ring-4 focus:ring-amber-500/30 w-full sm:w-auto"
+                      className="bg-lime-500 hover:bg-lime-400 text-lime-900 font-semibold py-4 px-8 rounded-lg text-lg shadow-lg transition-all hover:shadow-lime-500/20 focus:outline-none focus:ring-4 focus:ring-lime-500/30 w-full sm:w-auto"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                     >
-                      Login to System
-                    </button>
-                    <button
+                      Get Started
+                    </motion.button>
+                    <motion.button
                       onClick={() => router.push("/about")}
-                      className="bg-white/10 backdrop-blur-sm border border-white/30 hover:bg-white/20 text-white font-semibold py-3 px-8 rounded-lg text-base shadow-lg transition-all hover:shadow-white/10 focus:outline-none focus:ring-4 focus:ring-white/20 w-full sm:w-auto mt-3 sm:mt-0"
+                      className="bg-white/10 backdrop-blur-sm border border-white/30 hover:bg-white/20 text-white font-semibold py-4 px-8 rounded-lg text-lg shadow-lg transition-all hover:shadow-white/10 focus:outline-none focus:ring-4 focus:ring-white/20 w-full sm:w-auto"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
                     >
                       Learn More
-                    </button>
-                  </div>
+                    </motion.button>
+                  </motion.div>
                 </motion.div>
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
-                  transition={{ delay: 0.8, duration: 0.8 }}
-                  className="mt-16"
+                  transition={{ delay: 1, duration: 0.8 }}
+                  className="mt-16 flex flex-col items-center"
                 >
-                  <ChevronDown className="w-8 h-8 mx-auto animate-bounce text-amber-400" />
-                  <p className="text-sm mt-2 text-slate-300">
-                    Scroll to learn more
-                  </p>
+                  <motion.div
+                    animate={{
+                      y: [0, -10, 0],
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      repeatType: "reverse",
+                    }}
+                  >
+                    <ChevronDown className="w-8 h-8 text-lime-400" />
+                  </motion.div>
+                  <p className="text-lime-200 mt-2">Scroll to explore</p>
                 </motion.div>
+              </div>
+            </section>
+
+            {/* Features Grid */}
+            <section className="py-20 bg-white">
+              <div className="container mx-auto px-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  <motion.div
+                    className="bg-lime-50 p-8 rounded-2xl border border-lime-200 hover:shadow-xl transition-all"
+                    whileHover={{ y: -5 }}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5 }}
+                  >
+                    <Code className="w-12 h-12 text-lime-600 mb-6" />
+                    <h3 className="text-xl font-bold text-lime-900 mb-4">
+                      Developer Friendly
+                    </h3>
+                    <p className="text-lime-700">
+                      Built with modern technologies for seamless integration and
+                      development experience.
+                    </p>
+                  </motion.div>
+
+                  <motion.div
+                    className="bg-lime-50 p-8 rounded-2xl border border-lime-200 hover:shadow-xl transition-all"
+                    whileHover={{ y: -5 }}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.2 }}
+                  >
+                    <Settings className="w-12 h-12 text-lime-600 mb-6" />
+                    <h3 className="text-xl font-bold text-lime-900 mb-4">
+                      Highly Configurable
+                    </h3>
+                    <p className="text-lime-700">
+                      Customize and adapt the system to meet your specific needs and
+                      requirements.
+                    </p>
+                  </motion.div>
+
+                  <motion.div
+                    className="bg-lime-50 p-8 rounded-2xl border border-lime-200 hover:shadow-xl transition-all"
+                    whileHover={{ y: -5 }}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.5, delay: 0.4 }}
+                  >
+                    <Shield className="w-12 h-12 text-lime-600 mb-6" />
+                    <h3 className="text-xl font-bold text-lime-900 mb-4">
+                      Secure & Reliable
+                    </h3>
+                    <p className="text-lime-700">
+                      Built with security in mind, ensuring your data is protected
+                      and always available.
+                    </p>
+                  </motion.div>
+                </div>
               </div>
             </section>
 
