@@ -790,7 +790,7 @@ export default function LoginPage() {
             </div>
             <div
               className="forgot-password"
-              onClick={() => router.push("/login/forgot-password")}
+              onClick={() => router.push("/login/forgot")}
             >
               Forgot Password?
             </div>
