@@ -1702,7 +1702,8 @@ export default function LandingPage() {
                         { name: "Service Access", href: "#service-access" },
                         { name: "FAQs", href: "#faqs" },
                         { name: "DSWD Official Website", href: "https://www.dswd.gov.ph" },
-                        { name: "Livelihood Program", href: "https://fo3.dswd.gov.ph/slp/" }
+                        { name: "Livelihood Program", href: "https://fo3.dswd.gov.ph/slp/" },
+                        { name: "Contact Support", href: "/about/contact" }
                       ].map((link) => (
                         <li key={link.name}>
                           <a
