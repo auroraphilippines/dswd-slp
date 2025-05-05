@@ -58,7 +58,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { ParticipantDetailView } from "./participant-detail-view";
 import { auth, db } from "@/service/firebase";
 import { doc, getDoc, updateDoc, serverTimestamp, collection, query, orderBy, getDocs, arrayUnion, deleteDoc, writeBatch } from "firebase/firestore";
@@ -69,17 +68,18 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Checkbox } from "@/components/ui/checkbox";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import Image from "next/image";
 
 export default function ParticipantsPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [userPermissions, setUserPermissions] = useState({
-    readOnly: true,
-    accessProject: false,
-    accessParticipant: false,
-    accessFileStorage: false
+    readOnly: false,
+    accessProject: true,
+    accessParticipant: true,
+    accessFileStorage: true
   });
   const [selectedParticipant, setSelectedParticipant] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -142,7 +142,7 @@ export default function ParticipantsPage() {
         ) || [])
       ];
 
-      return fieldsToSearch
+      return fieldsToSearch 
         .filter(Boolean)
         .map(field => field.toLowerCase())
         .some(field => field.includes(query));
@@ -195,11 +195,12 @@ export default function ParticipantsPage() {
           const userDoc = await getDoc(doc(db, "users", user.uid));
           if (userDoc.exists()) {
             const userData = userDoc.data();
+            // Set default access to true for all modules
             setUserPermissions({
-              readOnly: userData.permissions?.readOnly ?? true,
-              accessProject: userData.permissions?.accessProject ?? false,
-              accessParticipant: userData.permissions?.accessParticipant ?? false,
-              accessFileStorage: userData.permissions?.accessFileStorage ?? false
+              readOnly: userData.permissions?.readOnly ?? false,
+              accessProject: userData.permissions?.accessProject ?? true,
+              accessParticipant: userData.permissions?.accessParticipant ?? true,
+              accessFileStorage: userData.permissions?.accessFileStorage ?? true
             });
           }
         }
@@ -764,15 +765,21 @@ export default function ParticipantsPage() {
 
   // Update the navigation array to include access checks
   const navigation = [
-    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Projects", href: "/vendors", icon: Store },
-    { name: "Participants", href: "/participants", icon: Users },
-    { name: "File Storage", href: "/programs", icon: FolderOpen },
-    { name: "Settings", href: "./settings", icon: Settings },
+    { name: "Activities", href: "/dashboard", icon: LayoutDashboard, requiresAccess: null },
+    { name: "Projects", href: "/vendors", icon: Store, requiresAccess: 'projects' },
+    { name: "Participants", href: "/participants", icon: Users, requiresAccess: 'participants' },
+    { name: "File Storage", href: "/programs", icon: FolderOpen, requiresAccess: 'filestorage' },
+    { name: "Settings", href: "/settings", icon: Settings, requiresAccess: null },
   ];
 
   // Update hasModuleAccess to check specific access permissions
   const hasModuleAccess = (moduleName) => {
+    // If no module name is provided, always allow access
+    if (!moduleName) return true;
+    
+    // For admin users, always allow access
+    if (currentUser?.role === "Administrator") return true;
+    
     switch (moduleName.toLowerCase()) {
       case 'projects':
         return userPermissions.accessProject;
@@ -787,11 +794,15 @@ export default function ParticipantsPage() {
 
   // Update hasWritePermissions to check both readOnly and specific access
   const hasWritePermissions = () => {
+    // For admin users, always allow write access
+    if (currentUser?.role === "Administrator") return true;
     return !userPermissions.readOnly && userPermissions.accessParticipant;
   };
 
   // Update isReadOnly to check both readOnly flag and access permission
   const isReadOnly = () => {
+    // For admin users, never read-only
+    if (currentUser?.role === "Administrator") return false;
     return userPermissions.readOnly || !userPermissions.accessParticipant;
   };
 
@@ -839,47 +850,54 @@ export default function ParticipantsPage() {
 
       <div className="flex h-screen overflow-hidden bg-background">
         {/* Sidebar for desktop */}
-        <div className="hidden md:flex md:w-64 md:flex-col">
-          <div className="flex flex-col flex-grow pt-5 overflow-y-auto bg-[#004225]">
-            <div className="flex items-center flex-shrink-0 px-4">
+        <div className="hidden md:flex md:w-64 md:flex-col bg-[#0B3D2E]">
+          <div className="flex flex-col flex-grow pt-5 overflow-y-auto border-r border-green-900">
+            <div className="flex items-center flex-shrink-0 px-4 mb-6">
               <Link href="/dashboard" className="flex items-center">
-                <img src="./images/SLP.png" alt="Logo" className="h-8 w-8" />
+                <div className="relative h-10 w-10 rounded-lg overflow-hidden bg-green-100">
+                  <Image
+                    src="/images/SLP.png"
+                    alt="Logo"
+                    fill
+                    className="object-contain p-1"
+                  />
+                </div>
                 <span className="ml-3 text-xl font-bold text-white">
                   DSWD SLP-PS
                 </span>
               </Link>
             </div>
-            <div className="mt-8 flex-1 flex flex-col">
-              <nav className="flex-1 px-2 space-y-1">
+            <div className="flex-1 flex flex-col px-3">
+              <nav className="flex-1 space-y-1">
                 {navigation.map((item) => {
-                  const isActive =
-                    pathname === item.href ||
-                    pathname.startsWith(`${item.href}/`);
+                  const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                  const hasAccess = hasModuleAccess(item.requiresAccess);
+                  
                   return (
                     <Link
                       key={item.name}
-                      href={item.disabled ? "#" : item.href}
+                      href={hasAccess ? item.href : "#"}
                       onClick={(e) => {
-                        if (item.disabled) {
+                        if (!hasAccess) {
                           e.preventDefault();
-                          showPermissionDenied(`access ${item.name.toLowerCase()}`);
+                          toast.error(`You don't have access to ${item.name.toLowerCase()}.`);
                         }
                       }}
                       className={`${
                         isActive
                           ? "bg-white/10 text-white"
-                          : item.disabled
-                          ? "text-gray-300/50 cursor-not-allowed"
-                          : "text-gray-300 hover:bg-white/5 hover:text-white"
-                      } group flex items-center px-2 py-2 text-sm font-medium rounded-md`}
+                          : hasAccess
+                          ? "text-white/70 hover:bg-white/10 hover:text-white"
+                          : "text-white/50 cursor-not-allowed"
+                      } group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ease-in-out`}
                     >
                       <item.icon
                         className={`${
                           isActive
                             ? "text-white"
-                            : item.disabled
-                            ? "text-gray-300/50"
-                            : "text-gray-300 group-hover:text-white"
+                            : hasAccess
+                            ? "text-white/70 group-hover:text-white"
+                            : "text-white/50"
                         } mr-3 flex-shrink-0 h-5 w-5`}
                         aria-hidden="true"
                       />
@@ -889,22 +907,21 @@ export default function ParticipantsPage() {
                 })}
               </nav>
             </div>
-            <div className="flex-shrink-0 flex border-t p-4">
+            <div className="flex-shrink-0 flex border-t border-white/10 p-4">
               <div className="flex items-center w-full justify-between">
                 <div className="flex items-center">
-                  <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                  <div className="h-8 w-8 rounded-full bg-white/10 text-white flex items-center justify-center">
                     <span className="text-sm font-medium">
                       {getUserInitials(currentUser?.name)}
                     </span>
                   </div>
                   <div className="ml-3">
-                    <p className="text-sm font-medium">{currentUser?.name}</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-sm font-medium text-white">{currentUser?.name}</p>
+                    <p className="text-xs text-gray-300">
                       {currentUser?.role}
                     </p>
                   </div>
                 </div>
-                <ThemeToggle />
               </div>
             </div>
           </div>
@@ -919,15 +936,15 @@ export default function ParticipantsPage() {
           aria-modal="true"
         >
           <div
-            className="fixed inset-0 bg-black/30"
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm"
             aria-hidden="true"
             onClick={() => setIsMobileMenuOpen(false)}
           />
-          <div className="relative flex-1 flex flex-col max-w-xs w-full bg-card">
-            <div className="absolute top-0 right-0 -mr-12 pt-2">
+          <div className="relative flex-1 flex flex-col max-w-xs w-full bg-[#0B3D2E]">
+            <div className="absolute top-0 right-0 -mr-12 pt-4">
               <button
                 type="button"
-                className="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
+                className="flex items-center justify-center h-10 w-10 rounded-full bg-black/10 backdrop-blur-sm"
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 <span className="sr-only">Close sidebar</span>
@@ -935,32 +952,51 @@ export default function ParticipantsPage() {
               </button>
             </div>
             <div className="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
-              <div className="flex-shrink-0 flex items-center px-4">
+              <div className="flex-shrink-0 flex items-center px-4 mb-6">
                 <Link href="/dashboard" className="flex items-center">
-                  <img src="./images/SLP.png" alt="Logo" className="h-8 w-8" />
-                  <span className="ml-2 text-xl font-bold">DSWD SLP-TIS</span>
+                  <div className="relative h-10 w-10 rounded-lg overflow-hidden bg-primary/10">
+                    <Image
+                      src="/images/SLP.png"
+                      alt="Logo"
+                      fill
+                      className="object-contain p-1"
+                    />
+                  </div>
+                  <span className="ml-3 text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                    DSWD SLP-TIS
+                  </span>
                 </Link>
               </div>
-              <nav className="mt-5 px-2 space-y-1">
+              <nav className="px-3 space-y-1">
                 {navigation.map((item) => {
-                  const isActive =
-                    pathname === item.href ||
-                    pathname.startsWith(`${item.href}/`);
+                  const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                  const hasAccess = hasModuleAccess(item.requiresAccess);
+                  
                   return (
                     <Link
                       key={item.name}
-                      href={item.href}
+                      href={hasAccess ? item.href : "#"}
+                      onClick={(e) => {
+                        if (!hasAccess) {
+                          e.preventDefault();
+                          toast.error(`You don't have access to ${item.name.toLowerCase()}.`);
+                        }
+                      }}
                       className={`${
                         isActive
-                          ? "bg-primary/10 text-primary"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                      } group flex items-center px-2 py-2 text-sm font-medium rounded-md`}
+                          ? "bg-white/10 text-white"
+                          : hasAccess
+                          ? "text-white/70 hover:bg-white/10 hover:text-white"
+                          : "text-white/50 cursor-not-allowed"
+                      } group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ease-in-out`}
                     >
                       <item.icon
                         className={`${
                           isActive
-                            ? "text-primary"
-                            : "text-muted-foreground group-hover:text-foreground"
+                            ? "text-white"
+                            : hasAccess
+                            ? "text-white/70 group-hover:text-white"
+                            : "text-white/50"
                         } mr-3 flex-shrink-0 h-5 w-5`}
                         aria-hidden="true"
                       />
@@ -970,21 +1006,25 @@ export default function ParticipantsPage() {
                 })}
               </nav>
             </div>
-            <div className="flex-shrink-0 flex border-t p-4">
-              <div className="flex items-center">
-                <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                  <span className="text-sm font-medium">
-                    {getUserInitials(currentUser?.name)}
-                  </span>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium">{currentUser?.name}</p>
+            <div className="flex-shrink-0 p-4">
+              <div className="rounded-lg bg-white/5 p-3">
+                <div className="flex items-center">
+                  <Avatar className="h-9 w-9 border-2 border-white/20">
+                    <AvatarFallback className="bg-white/10 text-white font-medium">
+                      {getUserInitials(currentUser?.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="ml-3">
+                    <p className="text-sm font-medium text-white">
+                      {currentUser?.name || "Admin DSWD"}
+                    </p>
+                    <p className="text-xs text-gray-300">
+                      {currentUser?.role || "Administrator"}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-          <div className="flex-shrink-0 w-14" aria-hidden="true">
-            {/* Dummy element to force sidebar to shrink to fit close icon */}
           </div>
         </div>
 
@@ -1067,9 +1107,7 @@ export default function ParticipantsPage() {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild>
-                      <Link href="/">Sign out</Link>
-                    </DropdownMenuItem>
+                  
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>

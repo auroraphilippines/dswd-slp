@@ -220,9 +220,9 @@ export default function AddVendorPage() {
       <div className="max-w-2xl mx-auto">
         <Card>
           <CardHeader>
-            <CardTitle>Add New Vendor</CardTitle>
+            <CardTitle>Add New Project</CardTitle>
             <CardDescription>
-              Enter vendor details for the program
+              Enter project details for the program
             </CardDescription>
           </CardHeader>
           <CardContent>

@@ -911,7 +911,10 @@ export function UsersPermissionsSettings() {
             onChange={(e) => handleSearch(e.target.value)}
           />
         </div>
-        <Button className="bg-[#496E22] text-white hover:bg-[#96B54A]">
+        <Button 
+          className="bg-[#496E22] text-white hover:bg-[#96B54A]"
+          onClick={handleAddUserClick}
+        >
           <Plus className="h-4 w-4 mr-2" />
           Add User
         </Button>

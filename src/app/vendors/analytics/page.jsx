@@ -38,7 +38,7 @@ import {
   Filler
 } from 'chart.js';
 import { Chart } from 'react-chartjs-2';
-import { ThemeToggle } from "@/components/theme-toggle";
+
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { auth, db } from "@/service/firebase";
 import { doc, getDoc } from "firebase/firestore";
@@ -52,6 +52,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import Image from "next/image";
 
 // Register ChartJS components
 ChartJS.register(
@@ -336,18 +337,25 @@ export default function VendorsAnalyticsPage() {
     <div className="flex h-screen overflow-hidden bg-background">
       <ToastContainer position="top-right" />
       {/* Sidebar for desktop */}
-      <div className="hidden md:flex md:w-64 md:flex-col">
-        <div className="flex flex-col flex-grow pt-5 overflow-y-auto border-r bg-card">
-          <div className="flex items-center flex-shrink-0 px-4">
+      <div className="hidden md:flex md:w-64 md:flex-col bg-[#0B3D2E]">
+        <div className="flex flex-col flex-grow pt-5 overflow-y-auto border-r border-green-900">
+          <div className="flex items-center flex-shrink-0 px-4 mb-6">
             <Link href="/dashboard" className="flex items-center">
-              <img src="/images/SLP.png" alt="Logo" className="h-8 w-8" />
-              <span className="ml-3 text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+              <div className="relative h-10 w-10 rounded-lg overflow-hidden bg-green-100">
+                <Image
+                  src="/images/SLP.png"
+                  alt="Logo"
+                  fill
+                  className="object-contain p-1"
+                />
+              </div>
+              <span className="ml-3 text-xl font-bold text-white">
                 DSWD SLP-PS
               </span>
             </Link>
           </div>
-          <div className="mt-8 flex-1 flex flex-col">
-            <nav className="flex-1 px-2 space-y-1">
+          <div className="flex-1 flex flex-col px-3">
+            <nav className="flex-1 space-y-1">
               {navigation.map((item) => {
                 const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
                 const hasAccess = hasModuleAccess(item.requiresAccess);
@@ -364,19 +372,19 @@ export default function VendorsAnalyticsPage() {
                     }}
                     className={`${
                       isActive
-                        ? "bg-primary/10 text-primary"
+                        ? "bg-white/10 text-white"
                         : hasAccess
-                        ? "text-muted-foreground hover:bg-muted hover:text-foreground"
-                        : "text-muted-foreground/50 cursor-not-allowed"
-                    } group flex items-center px-2 py-2 text-sm font-medium rounded-md`}
+                        ? "text-white/70 hover:bg-white/10 hover:text-white"
+                        : "text-white/50 cursor-not-allowed"
+                    } group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ease-in-out`}
                   >
                     <item.icon
                       className={`${
                         isActive
-                          ? "text-primary"
+                          ? "text-white"
                           : hasAccess
-                          ? "text-muted-foreground group-hover:text-foreground"
-                          : "text-muted-foreground/50"
+                          ? "text-white/70 group-hover:text-white"
+                          : "text-white/50"
                       } mr-3 flex-shrink-0 h-5 w-5`}
                       aria-hidden="true"
                     />
@@ -386,33 +394,44 @@ export default function VendorsAnalyticsPage() {
               })}
             </nav>
           </div>
-          <div className="flex-shrink-0 flex border-t p-4">
+          <div className="flex-shrink-0 flex border-t border-white/10 p-4">
             <div className="flex items-center w-full justify-between">
               <div className="flex items-center">
-                <Avatar className="h-8 w-8 border-2 border-primary/20">
-                  <AvatarFallback className="bg-primary/10 text-primary font-medium">
+                <div className="h-8 w-8 rounded-full bg-white/10 text-white flex items-center justify-center">
+                  <span className="text-sm font-medium">
                     {getUserInitials(currentUser?.name)}
-                  </AvatarFallback>
-                </Avatar>
+                  </span>
+                </div>
                 <div className="ml-3">
-                  <p className="text-sm font-medium">{currentUser?.name || "Admin DSWD"}</p>
-                  <p className="text-xs text-muted-foreground">{currentUser?.role || "Administrator"}</p>
+                  <p className="text-sm font-medium text-white">{currentUser?.name}</p>
+                  <p className="text-xs text-gray-300">
+                    {currentUser?.role}
+                  </p>
                 </div>
               </div>
-              <ThemeToggle />
             </div>
           </div>
         </div>
       </div>
 
       {/* Mobile menu */}
-      <div className={`${isMobileMenuOpen ? "fixed inset-0 z-40 flex" : "hidden"} md:hidden`}>
-        <div className="fixed inset-0 bg-black/30" aria-hidden="true" onClick={() => setIsMobileMenuOpen(false)} />
+      <div
+        className={`${
+          isMobileMenuOpen ? "fixed inset-0 z-40 flex" : "hidden"
+        } md:hidden`}
+        role="dialog"
+        aria-modal="true"
+      >
+        <div
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm"
+          aria-hidden="true"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
         <div className="relative flex-1 flex flex-col max-w-xs w-full bg-card">
-          <div className="absolute top-0 right-0 -mr-12 pt-2">
+          <div className="absolute top-0 right-0 -mr-12 pt-4">
             <button
               type="button"
-              className="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
+              className="flex items-center justify-center h-10 w-10 rounded-full bg-black/10 backdrop-blur-sm"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               <span className="sr-only">Close sidebar</span>
@@ -420,15 +439,22 @@ export default function VendorsAnalyticsPage() {
             </button>
           </div>
           <div className="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
-            <div className="flex-shrink-0 flex items-center px-4">
+            <div className="flex-shrink-0 flex items-center px-4 mb-6">
               <Link href="/dashboard" className="flex items-center">
-                <img src="/images/SLP.png" alt="Logo" className="h-8 w-8" />
+                <div className="relative h-10 w-10 rounded-lg overflow-hidden bg-primary/10">
+                  <Image
+                    src="/images/SLP.png"
+                    alt="Logo"
+                    fill
+                    className="object-contain p-1"
+                  />
+                </div>
                 <span className="ml-3 text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                  DSWD SLP-PS
+                  DSWD SLP-TIS
                 </span>
               </Link>
             </div>
-            <nav className="mt-5 px-2 space-y-1">
+            <nav className="px-3 space-y-1">
               {navigation.map((item) => {
                 const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
                 const hasAccess = hasModuleAccess(item.requiresAccess);
@@ -445,16 +471,16 @@ export default function VendorsAnalyticsPage() {
                     }}
                     className={`${
                       isActive
-                        ? "bg-primary/10 text-primary"
+                        ? "bg-primary text-primary-foreground"
                         : hasAccess
                         ? "text-muted-foreground hover:bg-muted hover:text-foreground"
                         : "text-muted-foreground/50 cursor-not-allowed"
-                    } group flex items-center px-2 py-2 text-sm font-medium rounded-md`}
+                    } group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ease-in-out`}
                   >
                     <item.icon
                       className={`${
                         isActive
-                          ? "text-primary"
+                          ? "text-primary-foreground"
                           : hasAccess
                           ? "text-muted-foreground group-hover:text-foreground"
                           : "text-muted-foreground/50"
@@ -467,26 +493,25 @@ export default function VendorsAnalyticsPage() {
               })}
             </nav>
           </div>
-          <div className="flex-shrink-0 flex border-t p-4">
-            <div className="flex items-center">
-              <div className="rounded-lg bg-muted/50 p-3">
-                <div className="flex items-center">
-                  <Avatar className="h-9 w-9 border-2 border-primary/20">
-                    <AvatarFallback className="bg-primary/10 text-primary font-medium">
-                      {getUserInitials(currentUser?.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium">{currentUser?.name || "Admin DSWD"}</p>
-                    <p className="text-xs text-muted-foreground">{currentUser?.role || "Administrator"}</p>
-                  </div>
+          <div className="flex-shrink-0 p-4">
+            <div className="rounded-lg bg-muted/50 p-3">
+              <div className="flex items-center">
+                <Avatar className="h-9 w-9 border-2 border-primary/20">
+                  <AvatarFallback className="bg-primary/10 text-primary font-medium">
+                    {getUserInitials(currentUser?.name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="ml-3">
+                  <p className="text-sm font-medium">
+                    {currentUser?.name || "Admin DSWD"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {currentUser?.role || "Administrator"}
+                  </p>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-        <div className="flex-shrink-0 w-14" aria-hidden="true">
-          {/* Dummy element to force sidebar to shrink to fit close icon */}
         </div>
       </div>
 
@@ -512,11 +537,7 @@ export default function VendorsAnalyticsPage() {
               </div>
             </div>
             <div className="ml-4 flex items-center md:ml-6">
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <span className="sr-only">View notifications</span>
-                <Bell className="h-5 w-5" aria-hidden="true" />
-              </Button>
-
+            
               {/* Profile dropdown */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -572,7 +593,7 @@ export default function VendorsAnalyticsPage() {
           <div className="py-6">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
               <div className="flex items-center justify-between mb-8">
-                <h1 className="text-2xl font-bold">Vendor Analytics</h1>
+                <h1 className="text-2xl font-bold">Project Analytics</h1>
                 <Button
                   variant="outline"
                   onClick={() => router.back()}
@@ -591,7 +612,7 @@ export default function VendorsAnalyticsPage() {
                   </div>
                   <CardHeader className="pb-2 pt-6">
                     <CardTitle className="text-2xl font-medium text-white">
-                      Total Vendors
+                      Total Projects
                     </CardTitle>
                   </CardHeader>
                   <CardContent>

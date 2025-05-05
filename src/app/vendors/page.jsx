@@ -71,7 +71,6 @@ import {
   DialogFooter,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { ThemeToggle } from "@/components/theme-toggle";
 import {
   subscribeToVendors,
   deleteVendor,
@@ -96,6 +95,7 @@ import {
 import { Chart } from 'react-chartjs-2';
 import { Checkbox } from "@/components/ui/checkbox";
 import XLSX from 'xlsx';
+import Image from "next/image";
 
 // Register ChartJS components
 ChartJS.register(
@@ -112,7 +112,7 @@ ChartJS.register(
 // Define navigation items
 const navigation = [
   {
-    name: "Dashboard",
+    name: "Activities",
     href: "/dashboard",
     icon: LayoutDashboard,
   },
@@ -332,12 +332,7 @@ export default function VendorsPage() {
 
   // Update handleAddVendor to check permissions
   const handleAddVendor = () => {
-    if (!hasWritePermissions()) {
-      showPermissionDenied('add new vendors');
-      return;
-    }
-    setSelectedVendor(null);
-    setIsAddModalOpen(true);
+    router.push('/vendors/add');
   };
 
   // Update handleEditVendor to check permissions
@@ -667,12 +662,17 @@ export default function VendorsPage() {
     <div className="flex h-screen overflow-hidden bg-background">
       <ToastContainer position="top-right" />
       {/* Sidebar for desktop */}
-      <div className="hidden md:flex md:w-64 md:flex-col">
-        <div className="flex flex-col flex-grow pt-5 overflow-y-auto bg-[#004225]">
+      <div className="hidden md:flex md:w-64 md:flex-col bg-[#0B3D2E]">
+        <div className="flex flex-col flex-grow pt-5 overflow-y-auto border-r border-green-900">
           <div className="flex items-center flex-shrink-0 px-4 mb-6">
             <Link href="/dashboard" className="flex items-center">
-              <div className="relative h-10 w-10 rounded-lg overflow-hidden bg-white/10">
-                <img src="./images/SLP.png" alt="Logo" className="object-contain p-1" />
+              <div className="relative h-10 w-10 rounded-lg overflow-hidden bg-green-100">
+                <Image
+                  src="/images/SLP.png"
+                  alt="Logo"
+                  fill
+                  className="object-contain p-1"
+                />
               </div>
               <span className="ml-3 text-xl font-bold text-white">
                 DSWD SLP-PS
@@ -699,8 +699,8 @@ export default function VendorsPage() {
                       isActive
                         ? "bg-white/10 text-white"
                         : hasAccess
-                        ? "text-gray-300 hover:bg-white/5 hover:text-white"
-                        : "text-gray-300/50 cursor-not-allowed"
+                        ? "text-white/70 hover:bg-white/10 hover:text-white"
+                        : "text-white/50 cursor-not-allowed"
                     } group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ease-in-out`}
                   >
                     <item.icon
@@ -708,8 +708,8 @@ export default function VendorsPage() {
                         isActive
                           ? "text-white"
                           : hasAccess
-                          ? "text-gray-300 group-hover:text-white"
-                          : "text-gray-300/50"
+                          ? "text-white/70 group-hover:text-white"
+                          : "text-white/50"
                       } mr-3 flex-shrink-0 h-5 w-5`}
                       aria-hidden="true"
                     />
@@ -719,25 +719,20 @@ export default function VendorsPage() {
               })}
             </nav>
           </div>
-          <div className="flex-shrink-0 p-4 mt-6">
-            <div className="rounded-lg bg-white/5 p-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center">
-                  <Avatar className="h-9 w-9 border-2 border-white/20">
-                    <AvatarFallback className="bg-white/10 text-white font-medium">
-                      {getUserInitials(currentUser?.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium text-white">
-                      {currentUser?.name || "Admin DSWD"}
-                    </p>
-                    <p className="text-xs text-gray-300">
-                      {currentUser?.role || "Administrator"}
-                    </p>
-                  </div>
+          <div className="flex-shrink-0 flex border-t border-white/10 p-4">
+            <div className="flex items-center w-full justify-between">
+              <div className="flex items-center">
+                <div className="h-8 w-8 rounded-full bg-white/10 text-white flex items-center justify-center">
+                  <span className="text-sm font-medium">
+                    {getUserInitials(currentUser?.name)}
+                  </span>
                 </div>
-                <ThemeToggle className="text-white" />
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-white">{currentUser?.name}</p>
+                  <p className="text-xs text-gray-300">
+                    {currentUser?.role}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -757,11 +752,11 @@ export default function VendorsPage() {
           aria-hidden="true"
           onClick={() => setIsMobileMenuOpen(false)}
         />
-        <div className="relative flex-1 flex flex-col max-w-xs w-full bg-[#004225]">
+        <div className="relative flex-1 flex flex-col max-w-xs w-full bg-[#0B3D2E]">
           <div className="absolute top-0 right-0 -mr-12 pt-4">
             <button
               type="button"
-              className="flex items-center justify-center h-10 w-10 rounded-full bg-white/10 backdrop-blur-sm"
+              className="flex items-center justify-center h-10 w-10 rounded-full bg-black/10 backdrop-blur-sm"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               <span className="sr-only">Close sidebar</span>
@@ -771,11 +766,16 @@ export default function VendorsPage() {
           <div className="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
             <div className="flex-shrink-0 flex items-center px-4 mb-6">
               <Link href="/dashboard" className="flex items-center">
-                <div className="relative h-10 w-10 rounded-lg overflow-hidden bg-white/10">
-                  <img src="./images/SLP.png" alt="Logo" className="object-contain p-1" />
+                <div className="relative h-10 w-10 rounded-lg overflow-hidden bg-primary/10">
+                  <Image
+                    src="/images/SLP.png"
+                    alt="Logo"
+                    fill
+                    className="object-contain p-1"
+                  />
                 </div>
-                <span className="ml-3 text-xl font-bold text-white">
-                  DSWD SLP-PS
+                <span className="ml-3 text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                  DSWD SLP-TIS
                 </span>
               </Link>
             </div>
@@ -798,8 +798,8 @@ export default function VendorsPage() {
                       isActive
                         ? "bg-white/10 text-white"
                         : hasAccess
-                        ? "text-gray-300 hover:bg-white/5 hover:text-white"
-                        : "text-gray-300/50 cursor-not-allowed"
+                        ? "text-white/70 hover:bg-white/10 hover:text-white"
+                        : "text-white/50 cursor-not-allowed"
                     } group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ease-in-out`}
                   >
                     <item.icon
@@ -807,8 +807,8 @@ export default function VendorsPage() {
                         isActive
                           ? "text-white"
                           : hasAccess
-                          ? "text-gray-300 group-hover:text-white"
-                          : "text-gray-300/50"
+                          ? "text-white/70 group-hover:text-white"
+                          : "text-white/50"
                       } mr-3 flex-shrink-0 h-5 w-5`}
                       aria-hidden="true"
                     />
