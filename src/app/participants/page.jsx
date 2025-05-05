@@ -840,11 +840,11 @@ export default function ParticipantsPage() {
       <div className="flex h-screen overflow-hidden bg-background">
         {/* Sidebar for desktop */}
         <div className="hidden md:flex md:w-64 md:flex-col">
-          <div className="flex flex-col flex-grow pt-5 overflow-y-auto border-r bg-card">
+          <div className="flex flex-col flex-grow pt-5 overflow-y-auto bg-[#004225]">
             <div className="flex items-center flex-shrink-0 px-4">
               <Link href="/dashboard" className="flex items-center">
                 <img src="./images/SLP.png" alt="Logo" className="h-8 w-8" />
-                <span className="ml-3 text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                <span className="ml-3 text-xl font-bold text-white">
                   DSWD SLP-PS
                 </span>
               </Link>
@@ -867,19 +867,19 @@ export default function ParticipantsPage() {
                       }}
                       className={`${
                         isActive
-                          ? "bg-primary/10 text-primary"
+                          ? "bg-white/10 text-white"
                           : item.disabled
-                          ? "text-muted-foreground/50 cursor-not-allowed"
-                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                          ? "text-gray-300/50 cursor-not-allowed"
+                          : "text-gray-300 hover:bg-white/5 hover:text-white"
                       } group flex items-center px-2 py-2 text-sm font-medium rounded-md`}
                     >
                       <item.icon
                         className={`${
                           isActive
-                            ? "text-primary"
+                            ? "text-white"
                             : item.disabled
-                            ? "text-muted-foreground/50"
-                            : "text-muted-foreground group-hover:text-foreground"
+                            ? "text-gray-300/50"
+                            : "text-gray-300 group-hover:text-white"
                         } mr-3 flex-shrink-0 h-5 w-5`}
                         aria-hidden="true"
                       />

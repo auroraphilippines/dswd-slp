@@ -382,12 +382,27 @@ export default function ProgramsPage() {
     disabled: item.requiresAccess && !hasModuleAccess(item.name)
   }));
 
-  const handleCreateFolder = async () => {
+  const handleCreateFolder = () => {
     if (!hasWritePermissions()) {
       showPermissionDenied('create new folders');
       return;
     }
-    if (!newFolderName.trim()) return;
+    setIsCreateFolderOpen(true);
+  };
+
+  const handleUploadFile = () => {
+    if (!hasWritePermissions()) {
+      showPermissionDenied('upload files');
+      return;
+    }
+    setIsUploadFileOpen(true);
+  };
+
+  const handleCreateFolderSubmit = async () => {
+    if (!newFolderName.trim()) {
+      toast.error("Please enter a folder name");
+      return;
+    }
     
     try {
       const folderRef = await addDoc(collection(db, "programs"), {
@@ -409,19 +424,16 @@ export default function ProgramsPage() {
 
       setIsCreateFolderOpen(false);
       setNewFolderName("");
+      toast.success("Folder created successfully");
     } catch (error) {
       console.error("Error creating folder:", error);
+      toast.error("Failed to create folder");
     }
   };
 
-  const handleUploadFile = async () => {
-    if (!hasWritePermissions()) {
-      showPermissionDenied('upload files');
-      return;
-    }
-    if (!selectedFile) return;
-    if (!currentFolder) {
-      alert("Please select a folder first");
+  const handleFileUploadSubmit = async () => {
+    if (!selectedFile) {
+      toast.error("Please select a file to upload");
       return;
     }
 
@@ -430,81 +442,81 @@ export default function ProgramsPage() {
 
     try {
       // Check if user is authenticated
-      const user = auth.currentUser
+      const user = auth.currentUser;
       if (!user) {
-        alert("You must be logged in to upload files")
-        return
+        toast.error("You must be logged in to upload files");
+        return;
       }
 
       // Clean the filename
-      const cleanFileName = selectedFile.name.replace(/[^a-zA-Z0-9.-]/g, "_")
+      const cleanFileName = selectedFile.name.replace(/[^a-zA-Z0-9.-]/g, "_");
 
-      try {
-        // Read the file as ArrayBuffer
-        const reader = new FileReader()
-        const fileContentPromise = new Promise((resolve, reject) => {
-          reader.onload = (e) => resolve(e.target.result)
-          reader.onerror = (e) => reject(e)
-          reader.readAsArrayBuffer(selectedFile)
-        })
+      // Read the file as ArrayBuffer
+      const reader = new FileReader();
+      const fileContentPromise = new Promise((resolve, reject) => {
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = (e) => reject(e);
+        reader.readAsArrayBuffer(selectedFile);
+      });
 
-        const arrayBuffer = await fileContentPromise
-        const chunkSize = 750000 // ~750KB chunks
-        const totalChunks = Math.ceil(arrayBuffer.byteLength / chunkSize)
+      const arrayBuffer = await fileContentPromise;
+      const chunkSize = 750000; // ~750KB chunks
+      const totalChunks = Math.ceil(arrayBuffer.byteLength / chunkSize);
 
-        // Update progress for file reading
-        setUploadProgress(5)
+      // Update progress for file reading
+      setUploadProgress(5);
 
-        // Create the main file document
-        const filesCollectionRef = collection(db, "files")
-        const fileDoc = await addDoc(filesCollectionRef, {
-          name: cleanFileName,
-          originalName: selectedFile.name,
-          type: selectedFile.type,
-          size: selectedFile.size,
-          folderId: currentFolder.id,
-          folderName: currentFolder.name,
-          uploadedAt: new Date(),
-          lastModified: selectedFile.lastModified,
-          path: `programs/${currentFolder.id}/${cleanFileName}`,
-          uploaderId: user.uid,
-          totalChunks: totalChunks,
-          metadata: {
-            contentType: selectedFile.type,
-            customMetadata: {
-              uploadedBy: user.displayName || user.email || "Unknown User",
-              originalName: selectedFile.name,
-              uploaderId: user.uid,
-            },
+      // Create the main file document
+      const filesCollectionRef = collection(db, "files");
+      const fileDoc = await addDoc(filesCollectionRef, {
+        name: cleanFileName,
+        originalName: selectedFile.name,
+        type: selectedFile.type,
+        size: selectedFile.size,
+        folderId: currentFolder?.id || null,
+        folderName: currentFolder?.name || "Root",
+        uploadedAt: new Date(),
+        lastModified: selectedFile.lastModified,
+        path: `programs/${currentFolder?.id || "root"}/${cleanFileName}`,
+        uploaderId: user.uid,
+        totalChunks: totalChunks,
+        metadata: {
+          contentType: selectedFile.type,
+          customMetadata: {
+            uploadedBy: user.displayName || user.email || "Unknown User",
+            originalName: selectedFile.name,
+            uploaderId: user.uid,
           },
-        })
+        },
+      });
 
-        // Update progress after creating main document
-        setUploadProgress(10)
+      // Update progress after creating main document
+      setUploadProgress(10);
 
-        // Upload chunks with progress tracking
-        const chunksCollectionRef = collection(db, "files", fileDoc.id, "chunks")
-        const progressPerChunk = 85 / totalChunks // Reserve 85% for chunks upload (10% for setup, 5% for final updates)
+      // Upload chunks with progress tracking
+      const chunksCollectionRef = collection(db, "files", fileDoc.id, "chunks");
+      const progressPerChunk = 85 / totalChunks; // Reserve 85% for chunks upload (10% for setup, 5% for final updates)
 
-        for (let i = 0; i < totalChunks; i++) {
-          const start = i * chunkSize
-          const end = Math.min(start + chunkSize, arrayBuffer.byteLength)
-          const chunk = arrayBuffer.slice(start, end)
+      for (let i = 0; i < totalChunks; i++) {
+        const start = i * chunkSize;
+        const end = Math.min(start + chunkSize, arrayBuffer.byteLength);
+        const chunk = arrayBuffer.slice(start, end);
 
-          // Convert chunk to base64
-          const base64Chunk = btoa(new Uint8Array(chunk).reduce((data, byte) => data + String.fromCharCode(byte), ""))
+        // Convert chunk to base64
+        const base64Chunk = btoa(new Uint8Array(chunk).reduce((data, byte) => data + String.fromCharCode(byte), ""));
 
-          await addDoc(chunksCollectionRef, {
-            data: base64Chunk,
-            index: i,
-          })
+        await addDoc(chunksCollectionRef, {
+          data: base64Chunk,
+          index: i,
+        });
 
-          // Update progress after each chunk
-          setUploadProgress(10 + (i + 1) * progressPerChunk)
-        }
+        // Update progress after each chunk
+        setUploadProgress(10 + (i + 1) * progressPerChunk);
+      }
 
-        // Update folder document with new file reference
-        const folderRef = doc(db, "programs", currentFolder.id)
+      // Update folder document with new file reference if in a folder
+      if (currentFolder) {
+        const folderRef = doc(db, "programs", currentFolder.id);
         await updateDoc(folderRef, {
           files: [
             ...(currentFolder.files || []),
@@ -522,35 +534,9 @@ export default function ProgramsPage() {
           lastModified: new Date(),
           totalFiles: (currentFolder.files?.length || 0) + 1,
           totalSize: (currentFolder.totalSize || 0) + selectedFile.size,
-        })
+        });
 
-        // Update states
-        setFolders((prev) =>
-          prev.map((folder) =>
-            folder.id === currentFolder.id
-              ? {
-                  ...folder,
-                  files: [
-                    ...(folder.files || []),
-                    {
-                      id: fileDoc.id,
-                      name: cleanFileName,
-                      originalName: selectedFile.name,
-                      type: selectedFile.type,
-                      size: selectedFile.size,
-                      uploadedAt: new Date(),
-                      path: `programs/${currentFolder.id}/${cleanFileName}`,
-                      uploaderId: user.uid,
-                    },
-                  ],
-                  lastModified: new Date(),
-                  totalFiles: (folder.files?.length || 0) + 1,
-                  totalSize: (folder.totalSize || 0) + selectedFile.size,
-                }
-              : folder,
-          ),
-        )
-
+        // Update local state
         setCurrentFolder((prev) => ({
           ...prev,
           files: [
@@ -569,29 +555,25 @@ export default function ProgramsPage() {
           lastModified: new Date(),
           totalFiles: (prev.files?.length || 0) + 1,
           totalSize: (prev.totalSize || 0) + selectedFile.size,
-        }))
-
-        // Complete the progress
-        setUploadProgress(100)
-        setTimeout(() => {
-          setIsUploadFileOpen(false)
-          setSelectedFile(null)
-          setIsUploading(false)
-          setUploadProgress(0)
-        }, 500)
-      } catch (uploadError) {
-        console.error("Error during upload:", uploadError)
-        alert("Error uploading file. Please try again.")
-        setIsUploading(false)
-        setUploadProgress(0)
+        }));
       }
+
+      // Complete the progress
+      setUploadProgress(100);
+      setTimeout(() => {
+        setIsUploadFileOpen(false);
+        setSelectedFile(null);
+        setIsUploading(false);
+        setUploadProgress(0);
+        toast.success("File uploaded successfully");
+      }, 500);
     } catch (error) {
-      console.error("Error in upload process:", error)
-      alert("Error starting upload process. Please try again.")
-      setIsUploading(false)
-      setUploadProgress(0)
+      console.error("Error uploading file:", error);
+      toast.error("Failed to upload file");
+      setIsUploading(false);
+      setUploadProgress(0);
     }
-  }
+  };
 
   const handleRenameFolder = async (folderId, newName) => {
     if (!hasWritePermissions()) {
@@ -1128,62 +1110,63 @@ export default function ProgramsPage() {
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Sidebar for desktop */}
       <div className="hidden md:flex md:w-64 md:flex-col">
-        <div className="flex flex-col flex-grow pt-5 overflow-y-auto border-r bg-card">
-          <div className="flex items-center flex-shrink-0 px-4 py-2">
-            <Link href="/dashboard" className="flex items-center group">
-              <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/90 to-primary/60 flex items-center justify-center shadow-lg transition-all duration-300 group-hover:scale-105 group-hover:shadow-primary/25">
-                <img 
-                  src="./images/SLP.png" 
-                  alt="Logo" 
-                  className="h-8 w-8 object-contain transform group-hover:scale-110 transition-transform duration-300" 
-                />
-              </div>
-              <div className="ml-3 flex flex-col">
-                <span className="text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                  DSWD SLP-PS
-                </span>
-                <span className="text-xs text-muted-foreground">File Storage</span>
-              </div>
+        <div className="flex flex-col flex-grow pt-5 overflow-y-auto bg-[#004225]">
+          <div className="flex items-center flex-shrink-0 px-4">
+            <Link href="/dashboard" className="flex items-center">
+              <img src="./images/SLP.png" alt="Logo" className="h-8 w-8" />
+              <span className="ml-3 text-xl font-bold text-white">
+                DSWD SLP-PS
+              </span>
             </Link>
           </div>
           <div className="mt-8 flex-1 flex flex-col">
             <nav className="flex-1 px-2 space-y-1">
               {navigation.map((item) => {
-                const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
+                const isActive =
+                  pathname === item.href ||
+                  pathname.startsWith(`${item.href}/`);
                 return (
                   <Link
                     key={item.name}
                     href={item.href}
                     className={`${
                       isActive
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    } group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors`}
+                        ? "bg-white/10 text-white"
+                        : "text-gray-300 hover:bg-white/5 hover:text-white"
+                    } group flex items-center px-2 py-2 text-sm font-medium rounded-md`}
                   >
                     <item.icon
                       className={`${
-                        isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+                        isActive
+                          ? "text-white"
+                          : "text-gray-300 group-hover:text-white"
                       } mr-3 flex-shrink-0 h-5 w-5`}
                       aria-hidden="true"
                     />
                     {item.name}
                   </Link>
-                )
+                );
               })}
             </nav>
           </div>
-          <div className="flex-shrink-0 flex border-t p-4">
+          <div className="flex-shrink-0 flex border-t border-white/10 p-4">
             <div className="flex items-center w-full justify-between">
               <div className="flex items-center">
-                <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                  <span className="text-sm font-medium">{getUserInitials(currentUser?.name)}</span>
+                <div className="h-8 w-8 rounded-full bg-white/10 text-white flex items-center justify-center">
+                  <span className="text-sm font-medium">
+                    {getUserInitials(currentUser?.name)}
+                  </span>
                 </div>
                 <div className="ml-3">
-                  <p className="text-sm font-medium">{currentUser?.name || "Admin DSWD"}</p>
-                  <p className="text-xs text-muted-foreground">{currentUser?.role || "Administrator"}</p>
+                  <p className="text-sm font-medium text-white">
+                    {currentUser?.name || "Admin DSWD"}
+                  </p>
+                  <p className="text-xs text-gray-300">
+                    {currentUser?.role || "Administrator"}
+                  </p>
                 </div>
               </div>
-              <ThemeToggle />
+              <ThemeToggle className="text-white" />
             </div>
           </div>
         </div>
@@ -1191,7 +1174,9 @@ export default function ProgramsPage() {
 
       {/* Mobile menu */}
       <div
-        className={`${isMobileMenuOpen ? "fixed inset-0 z-40 flex" : "hidden"} md:hidden`}
+        className={`${
+          isMobileMenuOpen ? "fixed inset-0 z-40 flex" : "hidden"
+        } md:hidden`}
         role="dialog"
         aria-modal="true"
       >
@@ -1200,7 +1185,7 @@ export default function ProgramsPage() {
           aria-hidden="true"
           onClick={() => setIsMobileMenuOpen(false)}
         />
-        <div className="relative flex-1 flex flex-col max-w-xs w-full bg-card">
+        <div className="relative flex-1 flex flex-col max-w-xs w-full bg-[#004225]">
           <div className="absolute top-0 right-0 -mr-12 pt-2">
             <button
               type="button"
@@ -1213,52 +1198,56 @@ export default function ProgramsPage() {
           </div>
           <div className="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
             <div className="flex-shrink-0 flex items-center px-4">
-              <Link href="/dashboard" className="flex items-center group">
-                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-primary/90 to-primary/60 flex items-center justify-center shadow-lg transition-all duration-300 group-hover:scale-105">
-                  <img 
-                    src="./images/SLP.png" 
-                    alt="Logo" 
-                    className="h-8 w-8 object-contain transform group-hover:scale-110 transition-transform duration-300" 
-                  />
-                </div>
-                <span className="ml-3 text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+              <Link href="/dashboard" className="flex items-center">
+                <img src="./images/SLP.png" alt="Logo" className="h-8 w-8" />
+                <span className="ml-3 text-xl font-bold text-white">
                   DSWD SLP-PS
                 </span>
               </Link>
             </div>
             <nav className="mt-5 px-2 space-y-1">
               {navigation.map((item) => {
-                const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
+                const isActive =
+                  pathname === item.href ||
+                  pathname.startsWith(`${item.href}/`);
                 return (
                   <Link
                     key={item.name}
                     href={item.href}
                     className={`${
                       isActive
-                        ? "bg-primary/10 text-primary"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    } group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors`}
+                        ? "bg-white/10 text-white"
+                        : "text-gray-300 hover:bg-white/5 hover:text-white"
+                    } group flex items-center px-2 py-2 text-sm font-medium rounded-md`}
                   >
                     <item.icon
                       className={`${
-                        isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+                        isActive
+                          ? "text-white"
+                          : "text-gray-300 group-hover:text-white"
                       } mr-3 flex-shrink-0 h-5 w-5`}
                       aria-hidden="true"
                     />
                     {item.name}
                   </Link>
-                )
+                );
               })}
             </nav>
           </div>
-          <div className="flex-shrink-0 flex border-t p-4">
+          <div className="flex-shrink-0 flex border-t border-white/10 p-4">
             <div className="flex items-center">
-              <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                <span className="text-sm font-medium">{getUserInitials(currentUser?.name)}</span>
+              <div className="h-8 w-8 rounded-full bg-white/10 text-white flex items-center justify-center">
+                <span className="text-sm font-medium">
+                  {getUserInitials(currentUser?.name)}
+                </span>
               </div>
               <div className="ml-3">
-                <p className="text-sm font-medium">{currentUser?.name || "Admin DSWD"}</p>
-                <p className="text-xs text-muted-foreground">{currentUser?.role || "Administrator"}</p>
+                <p className="text-sm font-medium text-white">
+                  {currentUser?.name || "Admin DSWD"}
+                </p>
+                <p className="text-xs text-gray-300">
+                  {currentUser?.role || "Administrator"}
+                </p>
               </div>
             </div>
           </div>
@@ -1586,98 +1575,39 @@ export default function ProgramsPage() {
                       <Button variant="outline" onClick={() => setIsCreateFolderOpen(false)}>
                         Cancel
                       </Button>
-                      <Button onClick={handleCreateFolder}>Create</Button>
+                      <Button onClick={handleCreateFolderSubmit}>Create</Button>
                     </DialogFooter>
                   </DialogContent>
                 </Dialog>
 
                 {/* Upload File Dialog */}
-                <Dialog
-                  open={isUploadFileOpen}
-                  onOpenChange={(open) => {
-                    if (!isUploading) setIsUploadFileOpen(open)
-                  }}
-                >
+                <Dialog open={isUploadFileOpen} onOpenChange={setIsUploadFileOpen}>
                   <DialogContent>
                     <DialogHeader>
                       <DialogTitle>Upload File</DialogTitle>
-                      <DialogDescription>Select a file to upload to {currentFolder?.name}</DialogDescription>
+                      <DialogDescription>Select a file to upload to {currentFolder?.name || "root"}</DialogDescription>
                     </DialogHeader>
-                    <div
-                      className={`mt-4 border-2 border-dashed ${selectedFile ? "border-primary/30 bg-primary/5" : "border-muted-foreground/25"} rounded-lg p-8 text-center transition-all duration-200`}
-                    >
+                    <div className="mt-4">
                       <Input
                         type="file"
-                        className="hidden"
-                        id="file-upload"
                         onChange={(e) => setSelectedFile(e.target.files[0])}
                         disabled={isUploading}
                       />
-                      <label
-                        htmlFor="file-upload"
-                        className={`cursor-pointer block ${isUploading ? "pointer-events-none" : ""}`}
-                      >
-                        {!isUploading && !selectedFile && (
-                          <div className="mx-auto w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-                            <Upload className="h-8 w-8 text-muted-foreground" />
-                          </div>
-                        )}
-
-                        {selectedFile && !isUploading && (
-                          <div className="mt-4 p-4 bg-background/95 backdrop-blur-sm rounded-xl border border-border/40 inline-block min-w-[240px] shadow-lg hover:shadow-xl transition-shadow duration-300">
-                            <div className="flex items-center gap-3">
-                              <div className="w-12 h-12 rounded-lg bg-primary/10 p-2 flex items-center justify-center">
-                                {getFileIcon(selectedFile.type)}
-                              </div>
-                              <div className="text-left">
-                                <p className="font-medium text-sm truncate max-w-[180px]">{selectedFile.name}</p>
-                                <p className="text-muted-foreground text-xs">{formatFileSize(selectedFile.size)}</p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-
-                        <p className="mt-2 text-base font-medium">
-                          {isUploading
-                            ? "Uploading file..."
-                            : selectedFile
-                              ? "File selected"
-                              : "Drag and drop a file here"}
-                        </p>
-                        {!isUploading && !selectedFile && (
-                          <>
-                            <p className="mt-1 text-sm text-muted-foreground">or click to browse files</p>
-                            <p className="mt-3 text-xs text-muted-foreground">Supports any file type up to 10MB</p>
-                          </>
-                        )}
-                      </label>
-
-                      {isUploading && (
-                        <div className="mt-6 max-w-md mx-auto">
-                          <div className="space-y-3">
-                            <div className="flex items-center justify-between text-sm">
-                              <span className="font-medium">Uploading {selectedFile.name}</span>
-                              <span className="font-bold text-emerald-600 dark:text-emerald-500">{Math.round(uploadProgress)}%</span>
-                            </div>
-                            <Progress 
-                              value={uploadProgress} 
-                              className="h-2.5 bg-muted"
-                              indicatorClassName="bg-emerald-600 dark:bg-emerald-500" 
-                            />
-                            <div className="flex items-center text-xs text-muted-foreground gap-2">
-                              <div className="w-2 h-2 rounded-full bg-emerald-600 dark:bg-emerald-500 animate-pulse"></div>
-                              <p>Please don't close this window while uploading</p>
-                            </div>
-                          </div>
-                        </div>
-                      )}
                     </div>
+                    {isUploading && (
+                      <div className="mt-4">
+                        <Progress value={uploadProgress} className="w-full" />
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Uploading... {Math.round(uploadProgress)}%
+                        </p>
+                      </div>
+                    )}
                     <DialogFooter className="mt-4">
                       <Button variant="outline" onClick={() => setIsUploadFileOpen(false)} disabled={isUploading}>
                         Cancel
                       </Button>
-                      <Button onClick={handleUploadFile} disabled={!selectedFile || isUploading}>
-                        {isUploading ? `Uploading ${Math.round(uploadProgress)}%` : "Upload"}
+                      <Button onClick={handleFileUploadSubmit} disabled={!selectedFile || isUploading}>
+                        {isUploading ? "Uploading..." : "Upload"}
                       </Button>
                     </DialogFooter>
                   </DialogContent>

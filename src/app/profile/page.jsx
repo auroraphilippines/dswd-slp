@@ -55,7 +55,9 @@ import {
 } from "@/components/ui/dialog";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
-import { signOutUser } from "@/service/auth";
+import { signOut } from "firebase/auth";
+import { auth } from "@/service/firebase";
+
 
 export default function ProfilePage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -264,16 +266,14 @@ export default function ProfilePage() {
 
   const handleSignOut = async () => {
     try {
-      const result = await signOutUser();
-      if (!result.success) {
-        throw new Error(result.error);
-      }
+      await signOut(auth);
+      window.location.href = "/";
     } catch (error) {
-      console.error("Sign out error:", error);
       toast.error("Failed to sign out. Please try again.", {
         position: "top-center",
         autoClose: 3000,
       });
+      console.error("Sign out error:", error);
     }
   };
 

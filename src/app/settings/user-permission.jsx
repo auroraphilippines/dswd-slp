@@ -23,7 +23,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Switch } from "@/components/ui/switch";
-import { toast, Toaster } from "sonner";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import {
   Search,
   Plus,
@@ -65,7 +66,6 @@ import { setDoc } from "firebase/firestore";
 
 export function UsersPermissionsSettings() {
   const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [currentUser, setCurrentUser] = useState(null);
@@ -125,16 +125,12 @@ export function UsersPermissionsSettings() {
     checkAdminAccess();
   }, []);
 
-  // Fetch users from Firestore with debug logging
+  // Fetch users from Firestore
   const fetchUsers = async () => {
     try {
-      console.log("Fetching users...");
-      setLoading(true);
       const usersRef = collection(db, "users");
       const q = query(usersRef, orderBy("createdAt", "desc"));
       const querySnapshot = await getDocs(q);
-      
-      console.log("Users query result size:", querySnapshot.size);
       
       const fetchedUsers = querySnapshot.docs.map(doc => {
         const data = doc.data();
@@ -156,15 +152,11 @@ export function UsersPermissionsSettings() {
         };
       });
 
-      console.log("Processed users:", fetchedUsers.length);
       setUsers(fetchedUsers);
       setFilteredUsers(fetchedUsers);
-      toast.success("Users loaded successfully");
     } catch (error) {
       console.error("Error fetching users:", error);
       toast.error("Failed to load users");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -183,10 +175,7 @@ export function UsersPermissionsSettings() {
   // Load initial data when authenticated
   useEffect(() => {
     if (currentUser) {
-      console.log("User is authenticated, fetching data...");
       fetchUsers();
-    } else {
-      console.log("Waiting for authentication...");
     }
   }, [currentUser]);
 
@@ -922,16 +911,7 @@ export function UsersPermissionsSettings() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {loading ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8">
-                    <div className="flex items-center justify-center">
-                      <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                      <span>Loading users...</span>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : filteredUsers.length === 0 ? (
+              {filteredUsers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8">
                     {searchQuery ? "No users found matching your search" : "No users found"}
@@ -1017,7 +997,18 @@ export function UsersPermissionsSettings() {
         }}
       />
       
-      <Toaster position="top-right" expand={false} richColors closeButton />
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
     </div>
   );
 }

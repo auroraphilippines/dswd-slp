@@ -119,7 +119,7 @@ const navigation = [
   {
     name: "Projects",
     href: "/vendors",
-    icon: Building2,
+    icon: Store,
     requiresAccess: 'projects'
   },
   {
@@ -668,17 +668,19 @@ export default function VendorsPage() {
       <ToastContainer position="top-right" />
       {/* Sidebar for desktop */}
       <div className="hidden md:flex md:w-64 md:flex-col">
-        <div className="flex flex-col flex-grow pt-5 overflow-y-auto border-r bg-card">
-          <div className="flex items-center flex-shrink-0 px-4">
+        <div className="flex flex-col flex-grow pt-5 overflow-y-auto bg-[#004225]">
+          <div className="flex items-center flex-shrink-0 px-4 mb-6">
             <Link href="/dashboard" className="flex items-center">
-              <img src="./images/SLP.png" alt="Logo" className="h-8 w-8" />
-              <span className="ml-3 text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+              <div className="relative h-10 w-10 rounded-lg overflow-hidden bg-white/10">
+                <img src="./images/SLP.png" alt="Logo" className="object-contain p-1" />
+              </div>
+              <span className="ml-3 text-xl font-bold text-white">
                 DSWD SLP-PS
               </span>
             </Link>
           </div>
-          <div className="mt-8 flex-1 flex flex-col">
-            <nav className="flex-1 px-2 space-y-1">
+          <div className="flex-1 flex flex-col px-3">
+            <nav className="flex-1 space-y-1">
               {navigation.map((item) => {
                 const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
                 const hasAccess = hasModuleAccess(item.requiresAccess);
@@ -695,19 +697,19 @@ export default function VendorsPage() {
                     }}
                     className={`${
                       isActive
-                        ? "bg-primary/10 text-primary"
+                        ? "bg-white/10 text-white"
                         : hasAccess
-                        ? "text-muted-foreground hover:bg-muted hover:text-foreground"
-                        : "text-muted-foreground/50 cursor-not-allowed"
-                    } group flex items-center px-2 py-2 text-sm font-medium rounded-md`}
+                        ? "text-gray-300 hover:bg-white/5 hover:text-white"
+                        : "text-gray-300/50 cursor-not-allowed"
+                    } group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ease-in-out`}
                   >
                     <item.icon
                       className={`${
                         isActive
-                          ? "text-primary"
+                          ? "text-white"
                           : hasAccess
-                          ? "text-muted-foreground group-hover:text-foreground"
-                          : "text-muted-foreground/50"
+                          ? "text-gray-300 group-hover:text-white"
+                          : "text-gray-300/50"
                       } mr-3 flex-shrink-0 h-5 w-5`}
                       aria-hidden="true"
                     />
@@ -717,20 +719,26 @@ export default function VendorsPage() {
               })}
             </nav>
           </div>
-          <div className="flex-shrink-0 flex border-t p-4">
-            <div className="flex items-center w-full justify-between">
-              <div className="flex items-center">
-                <Avatar className="h-8 w-8 border-2 border-primary/20">
-                  <AvatarFallback className="bg-primary/10 text-primary font-medium">
-                    {getUserInitials(currentUser?.name)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="ml-3">
-                  <p className="text-sm font-medium">{currentUser?.name || "Admin DSWD"}</p>
-                  <p className="text-xs text-muted-foreground">{currentUser?.role || "Administrator"}</p>
+          <div className="flex-shrink-0 p-4 mt-6">
+            <div className="rounded-lg bg-white/5 p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  <Avatar className="h-9 w-9 border-2 border-white/20">
+                    <AvatarFallback className="bg-white/10 text-white font-medium">
+                      {getUserInitials(currentUser?.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="ml-3">
+                    <p className="text-sm font-medium text-white">
+                      {currentUser?.name || "Admin DSWD"}
+                    </p>
+                    <p className="text-xs text-gray-300">
+                      {currentUser?.role || "Administrator"}
+                    </p>
+                  </div>
                 </div>
+                <ThemeToggle className="text-white" />
               </div>
-              <ThemeToggle />
             </div>
           </div>
         </div>
@@ -745,15 +753,15 @@ export default function VendorsPage() {
         aria-modal="true"
       >
         <div
-          className="fixed inset-0 bg-black/30"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm"
           aria-hidden="true"
           onClick={() => setIsMobileMenuOpen(false)}
         />
-        <div className="relative flex-1 flex flex-col max-w-xs w-full bg-card">
-          <div className="absolute top-0 right-0 -mr-12 pt-2">
+        <div className="relative flex-1 flex flex-col max-w-xs w-full bg-[#004225]">
+          <div className="absolute top-0 right-0 -mr-12 pt-4">
             <button
               type="button"
-              className="ml-1 flex items-center justify-center h-10 w-10 rounded-full focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white"
+              className="flex items-center justify-center h-10 w-10 rounded-full bg-white/10 backdrop-blur-sm"
               onClick={() => setIsMobileMenuOpen(false)}
             >
               <span className="sr-only">Close sidebar</span>
@@ -761,15 +769,17 @@ export default function VendorsPage() {
             </button>
           </div>
           <div className="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
-            <div className="flex-shrink-0 flex items-center px-4">
+            <div className="flex-shrink-0 flex items-center px-4 mb-6">
               <Link href="/dashboard" className="flex items-center">
-                <img src="./images/SLP.png" alt="Logo" className="h-8 w-8" />
-                <span className="ml-3 text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
+                <div className="relative h-10 w-10 rounded-lg overflow-hidden bg-white/10">
+                  <img src="./images/SLP.png" alt="Logo" className="object-contain p-1" />
+                </div>
+                <span className="ml-3 text-xl font-bold text-white">
                   DSWD SLP-PS
                 </span>
               </Link>
             </div>
-            <nav className="mt-5 px-2 space-y-1">
+            <nav className="px-3 space-y-1">
               {navigation.map((item) => {
                 const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
                 const hasAccess = hasModuleAccess(item.requiresAccess);
@@ -786,19 +796,19 @@ export default function VendorsPage() {
                     }}
                     className={`${
                       isActive
-                        ? "bg-primary/10 text-primary"
+                        ? "bg-white/10 text-white"
                         : hasAccess
-                        ? "text-muted-foreground hover:bg-muted hover:text-foreground"
-                        : "text-muted-foreground/50 cursor-not-allowed"
-                    } group flex items-center px-2 py-2 text-sm font-medium rounded-md`}
+                        ? "text-gray-300 hover:bg-white/5 hover:text-white"
+                        : "text-gray-300/50 cursor-not-allowed"
+                    } group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ease-in-out`}
                   >
                     <item.icon
                       className={`${
                         isActive
-                          ? "text-primary"
+                          ? "text-white"
                           : hasAccess
-                          ? "text-muted-foreground group-hover:text-foreground"
-                          : "text-muted-foreground/50"
+                          ? "text-gray-300 group-hover:text-white"
+                          : "text-gray-300/50"
                       } mr-3 flex-shrink-0 h-5 w-5`}
                       aria-hidden="true"
                     />
@@ -808,26 +818,25 @@ export default function VendorsPage() {
               })}
             </nav>
           </div>
-          <div className="flex-shrink-0 flex border-t p-4">
-            <div className="flex items-center">
-              <div className="rounded-lg bg-muted/50 p-3">
-                <div className="flex items-center">
-                  <Avatar className="h-9 w-9 border-2 border-primary/20">
-                    <AvatarFallback className="bg-primary/10 text-primary font-medium">
-                      {getUserInitials(currentUser?.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="ml-3">
-                    <p className="text-sm font-medium">{currentUser?.name || "Admin DSWD"}</p>
-                    <p className="text-xs text-muted-foreground">{currentUser?.role || "Administrator"}</p>
-                  </div>
+          <div className="flex-shrink-0 p-4">
+            <div className="rounded-lg bg-white/5 p-3">
+              <div className="flex items-center">
+                <Avatar className="h-9 w-9 border-2 border-white/20">
+                  <AvatarFallback className="bg-white/10 text-white font-medium">
+                    {getUserInitials(currentUser?.name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-white">
+                    {currentUser?.name || "Admin DSWD"}
+                  </p>
+                  <p className="text-xs text-gray-300">
+                    {currentUser?.role || "Administrator"}
+                  </p>
                 </div>
               </div>
             </div>
           </div>
-        </div>
-        <div className="flex-shrink-0 w-14" aria-hidden="true">
-          {/* Dummy element to force sidebar to shrink to fit close icon */}
         </div>
       </div>
 
@@ -864,10 +873,7 @@ export default function VendorsPage() {
               </div>
             </div>
             <div className="ml-4 flex items-center md:ml-6">
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <span className="sr-only">View notifications</span>
-                <Bell className="h-5 w-5" aria-hidden="true" />
-              </Button>
+            
 
               {/* Profile dropdown */}
               <DropdownMenu>
@@ -908,12 +914,6 @@ export default function VendorsPage() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="rounded-lg text-red-500 focus:text-red-500 cursor-pointer">
-                    <Link href="/" className="flex w-full items-center">
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Sign out
-                    </Link>
-                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>

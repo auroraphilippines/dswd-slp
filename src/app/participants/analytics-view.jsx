@@ -158,8 +158,6 @@ export function AnalyticsView() {
     { name: "Projects", href: "/vendors", icon: Store },
     { name: "Participants", href: "/participants", icon: Users },
     { name: "File Storage", href: "/programs", icon: FolderOpen },
-    { name: "Reports", href: "./reports", icon: FileBarChart },
-    { name: "Analytics", href: "./analytics", icon: FileBarChart },
     { name: "Settings", href: "./settings", icon: Settings },
   ];
 

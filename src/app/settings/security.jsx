@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -13,7 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
-import { toast, Toaster } from "sonner";
+import { toast, ToastContainer } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import {
   Eye,
   EyeOff,
@@ -24,10 +25,13 @@ import {
   reauthenticateWithCredential, 
   EmailAuthProvider
 } from "firebase/auth";
+import { getDoc, doc } from "firebase/firestore";
+import { db } from "@/service/firebase";
 
 export function SecuritySettings() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
   const [passwordForm, setPasswordForm] = useState({
     currentPassword: "",
     newPassword: "",
@@ -35,6 +39,34 @@ export function SecuritySettings() {
   });
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [errors, setErrors] = useState({});
+
+  // Check authentication
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const user = auth.currentUser;
+        if (user) {
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            setCurrentUser({
+              ...userData,
+              uid: user.uid,
+              email: user.email,
+            });
+          }
+        } else {
+          // Redirect to login if not authenticated
+          window.location.href = "/";
+        }
+      } catch (error) {
+        console.error("Error checking authentication:", error);
+        toast.error("Error loading user data");
+      }
+    };
+
+    checkAuth();
+  }, []);
 
   // Check if all password requirements are met
   const isPasswordValid = useMemo(() => {
@@ -200,23 +232,31 @@ export function SecuritySettings() {
 
   return (
     <div className="space-y-6">
-      <Toaster 
+      <ToastContainer
         position="top-right"
-        expand={false}
-        richColors
-        closeButton
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
       />
-      <Card>
-        <CardHeader>
-          <CardTitle>Password Settings</CardTitle>
-          <CardDescription>
+      <Card className="border-0 shadow-lg bg-gradient-to-br from-[#004225]/5 to-[#004225]/10">
+        <CardHeader className="space-y-1">
+          <CardTitle className="text-2xl font-bold bg-gradient-to-r from-[#004225] to-[#004225]/70 bg-clip-text text-transparent">
+            Password Settings
+          </CardTitle>
+          <CardDescription className="text-muted-foreground">
             Manage your password and account security
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="current-password">Current Password</Label>
-            <div className="relative">
+        <CardContent className="space-y-6">
+          <div className="space-y-3">
+            <Label htmlFor="current-password" className="text-sm font-medium">Current Password</Label>
+            <div className="relative group">
               <Input
                 id="current-password"
                 name="currentPassword"
@@ -225,18 +265,19 @@ export function SecuritySettings() {
                 value={passwordForm.currentPassword}
                 onChange={handlePasswordChange}
                 error={errors.currentPassword}
+                className="pr-10 transition-all duration-200 focus:ring-2 focus:ring-[#004225]/20"
               />
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="absolute right-0 top-0 h-full px-3"
+                className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
                 onClick={() => setShowPassword(!showPassword)}
               >
                 {showPassword ? (
-                  <EyeOff className="h-4 w-4" />
+                  <EyeOff className="h-4 w-4 text-[#004225]/60" />
                 ) : (
-                  <Eye className="h-4 w-4" />
+                  <Eye className="h-4 w-4 text-[#004225]/60" />
                 )}
                 <span className="sr-only">
                   {showPassword ? "Hide password" : "Show password"}
@@ -244,85 +285,159 @@ export function SecuritySettings() {
               </Button>
             </div>
             {errors.currentPassword && (
-              <p className="text-sm text-red-500 mt-1">{errors.currentPassword}</p>
+              <p className="text-sm text-red-500 mt-1 flex items-center gap-1">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {errors.currentPassword}
+              </p>
             )}
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="new-password">New Password</Label>
-            <Input
-              id="new-password"
-              name="newPassword"
-              type={showPassword ? "text" : "password"}
-              placeholder="Enter new password"
-              value={passwordForm.newPassword}
-              onChange={handlePasswordChange}
-              error={errors.newPassword}
-            />
+
+          <div className="space-y-3">
+            <Label htmlFor="new-password" className="text-sm font-medium">New Password</Label>
+            <div className="relative group">
+              <Input
+                id="new-password"
+                name="newPassword"
+                type={showPassword ? "text" : "password"}
+                placeholder="Enter new password"
+                value={passwordForm.newPassword}
+                onChange={handlePasswordChange}
+                error={errors.newPassword}
+                className="pr-10 transition-all duration-200 focus:ring-2 focus:ring-[#004225]/20"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4 text-[#004225]/60" />
+                ) : (
+                  <Eye className="h-4 w-4 text-[#004225]/60" />
+                )}
+                <span className="sr-only">
+                  {showPassword ? "Hide password" : "Show password"}
+                </span>
+              </Button>
+            </div>
             {errors.newPassword && (
-              <p className="text-sm text-red-500 mt-1">{errors.newPassword}</p>
+              <p className="text-sm text-red-500 mt-1 flex items-center gap-1">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {errors.newPassword}
+              </p>
             )}
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="confirm-password">Confirm New Password</Label>
-            <Input
-              id="confirm-password"
-              name="confirmPassword"
-              type={showPassword ? "text" : "password"}
-              placeholder="Confirm new password"
-              value={passwordForm.confirmPassword}
-              onChange={handlePasswordChange}
-              error={errors.confirmPassword}
-            />
+
+          <div className="space-y-3">
+            <Label htmlFor="confirm-password" className="text-sm font-medium">Confirm New Password</Label>
+            <div className="relative group">
+              <Input
+                id="confirm-password"
+                name="confirmPassword"
+                type={showPassword ? "text" : "password"}
+                placeholder="Confirm new password"
+                value={passwordForm.confirmPassword}
+                onChange={handlePasswordChange}
+                error={errors.confirmPassword}
+                className="pr-10 transition-all duration-200 focus:ring-2 focus:ring-[#004225]/20"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? (
+                  <EyeOff className="h-4 w-4 text-[#004225]/60" />
+                ) : (
+                  <Eye className="h-4 w-4 text-[#004225]/60" />
+                )}
+                <span className="sr-only">
+                  {showPassword ? "Hide password" : "Show password"}
+                </span>
+              </Button>
+            </div>
             {errors.confirmPassword && (
-              <p className="text-sm text-red-500 mt-1">{errors.confirmPassword}</p>
+              <p className="text-sm text-red-500 mt-1 flex items-center gap-1">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {errors.confirmPassword}
+              </p>
             )}
           </div>
-          <div className="space-y-2">
-            <div className="flex justify-between">
-              <Label>Password Requirements</Label>
-              <span className="text-sm font-medium">
+
+          <div className="space-y-3">
+            <div className="flex justify-between items-center">
+              <Label className="text-sm font-medium">Password Strength</Label>
+              <span className="text-sm font-medium text-[#004225]">
                 {passwordStrength === 100 ? "Strong" : 
                  passwordStrength >= 75 ? "Good" :
                  passwordStrength >= 50 ? "Fair" :
                  passwordStrength >= 25 ? "Weak" : "Very Weak"}
               </span>
             </div>
-            <Progress value={passwordStrength} className="h-2" />
-            <ul className="text-sm text-muted-foreground space-y-1 mt-2">
-              <li className="flex items-center">
-                <span className={`h-1.5 w-1.5 rounded-full ${passwordForm.newPassword.length >= 8 ? "bg-green-500" : "bg-muted"} mr-2`}></span>
-                <span className={passwordForm.newPassword.length >= 8 ? "text-green-500" : ""}>
+            <Progress 
+              value={passwordStrength} 
+              className="h-2 bg-[#004225]/10"
+              style={{
+                '--progress-foreground': 'linear-gradient(to right, #004225, rgba(0, 66, 37, 0.7))'
+              }}
+            />
+            <div className="grid grid-cols-2 gap-2 mt-2">
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${passwordForm.newPassword.length >= 8 ? "bg-[#004225]" : "bg-[#004225]/20"}`} />
+                <span className={`text-xs ${passwordForm.newPassword.length >= 8 ? "text-[#004225]" : "text-muted-foreground"}`}>
                   At least 8 characters
                 </span>
-              </li>
-              <li className="flex items-center">
-                <span className={`h-1.5 w-1.5 rounded-full ${/(?=.*[a-z])(?=.*[A-Z])/.test(passwordForm.newPassword) ? "bg-green-500" : "bg-muted"} mr-2`}></span>
-                <span className={/(?=.*[a-z])(?=.*[A-Z])/.test(passwordForm.newPassword) ? "text-green-500" : ""}>
-                  Uppercase and lowercase letters
+              </div>
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${/(?=.*[a-z])(?=.*[A-Z])/.test(passwordForm.newPassword) ? "bg-[#004225]" : "bg-[#004225]/20"}`} />
+                <span className={`text-xs ${/(?=.*[a-z])(?=.*[A-Z])/.test(passwordForm.newPassword) ? "text-[#004225]" : "text-muted-foreground"}`}>
+                  Uppercase & lowercase
                 </span>
-              </li>
-              <li className="flex items-center">
-                <span className={`h-1.5 w-1.5 rounded-full ${/\d/.test(passwordForm.newPassword) ? "bg-green-500" : "bg-muted"} mr-2`}></span>
-                <span className={/\d/.test(passwordForm.newPassword) ? "text-green-500" : ""}>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${/\d/.test(passwordForm.newPassword) ? "bg-[#004225]" : "bg-[#004225]/20"}`} />
+                <span className={`text-xs ${/\d/.test(passwordForm.newPassword) ? "text-[#004225]" : "text-muted-foreground"}`}>
                   At least one number
                 </span>
-              </li>
-              <li className="flex items-center">
-                <span className={`h-1.5 w-1.5 rounded-full ${/[!@#$%^&*(),.?":{}|<>]/.test(passwordForm.newPassword) ? "bg-green-500" : "bg-muted"} mr-2`}></span>
-                <span className={/[!@#$%^&*(),.?":{}|<>]/.test(passwordForm.newPassword) ? "text-green-500" : ""}>
-                  At least one special character
+              </div>
+              <div className="flex items-center gap-2">
+                <div className={`w-2 h-2 rounded-full ${/[!@#$%^&*(),.?":{}|<>]/.test(passwordForm.newPassword) ? "bg-[#004225]" : "bg-[#004225]/20"}`} />
+                <span className={`text-xs ${/[!@#$%^&*(),.?":{}|<>]/.test(passwordForm.newPassword) ? "text-[#004225]" : "text-muted-foreground"}`}>
+                  Special character
                 </span>
-              </li>
-            </ul>
+              </div>
+            </div>
           </div>
         </CardContent>
         <CardFooter>
           <Button 
             onClick={handleUpdatePassword} 
             disabled={!isFormValid}
-            className="w-full"
+            className="w-full bg-[#004225] hover:bg-[#004225]/90 text-white transition-all duration-200"
           >
-            {isLoading ? "Updating..." : isFormValid ? "Update Password" : "Complete All Requirements"}
+            {isLoading ? (
+              <div className="flex items-center gap-2">
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                </svg>
+                Updating...
+              </div>
+            ) : isFormValid ? (
+              "Update Password"
+            ) : (
+              "Complete All Requirements"
+            )}
           </Button>
         </CardFooter>
       </Card>
