@@ -45,6 +45,7 @@ import {
   updateDoc,
   where,
   getDoc,
+  deleteDoc,
 } from "firebase/firestore";
 import {
   Dialog,
@@ -98,6 +99,7 @@ export function UsersPermissionsSettings() {
       accessFileStorage: false
     }
   });
+  const [userToDelete, setUserToDelete] = useState(null);
 
   // Add permission check
   useEffect(() => {
@@ -313,7 +315,7 @@ export function UsersPermissionsSettings() {
     <TableRow key={user.id}>
       <TableCell>
         <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center">
+          <div className="h-8 w-8 rounded-full bg-[#96B54A]/20 text-[#496E22] flex items-center justify-center">
             <span className="text-sm font-medium">
               {user.name.split(" ").map(n => n[0]).join("").toUpperCase()}
             </span>
@@ -353,9 +355,9 @@ export function UsersPermissionsSettings() {
               setSelectedUser(user);
               setEditingPermissions(true);
             }}
+            className="group"
           >
-            <Key className="h-4 w-4" />
-            <span className="sr-only">Edit Permissions</span>
+            <Key className="h-4 w-4 text-green-600 group-hover:text-green-700" />
           </Button>
           <Button 
             variant="ghost" 
@@ -364,12 +366,17 @@ export function UsersPermissionsSettings() {
               setEditingUser(user);
               setIsEditUserOpen(true);
             }}
+            className="group"
           >
-            <Edit className="h-4 w-4" />
-            <span className="sr-only">Edit</span>
+            <Edit className="h-4 w-4 text-blue-600 group-hover:text-blue-700" />
           </Button>
-          <Button variant="ghost" size="icon">
-            <Trash2 className="h-4 w-4" />
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={() => setUserToDelete(user)}
+            className="group"
+          >
+            <Trash2 className="h-4 w-4 text-red-600 group-hover:text-red-700" />
             <span className="sr-only">Delete</span>
           </Button>
         </div>
@@ -872,6 +879,18 @@ export function UsersPermissionsSettings() {
     );
   };
 
+  // Delete user function
+  const deleteUser = async (userId) => {
+    try {
+      await deleteDoc(doc(db, "users", userId));
+      toast.success("User deleted successfully");
+      fetchUsers(); // Refresh the users list
+    } catch (error) {
+      console.error("Error deleting user:", error);
+      toast.error("Failed to delete user");
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -892,22 +911,22 @@ export function UsersPermissionsSettings() {
             onChange={(e) => handleSearch(e.target.value)}
           />
         </div>
-        <Button onClick={handleAddUserClick}>
+        <Button className="bg-[#496E22] text-white hover:bg-[#96B54A]">
           <Plus className="h-4 w-4 mr-2" />
           Add User
         </Button>
       </div>
 
-      <Card>
+      <Card className="bg-gradient-to-br from-[#C5D48A]/10 to-[#A6C060]/10 border-0 rounded-3xl shadow-green-100">
         <CardContent className="p-0">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>User</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Last Active</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+              <TableRow className="bg-gradient-to-r from-[#C5D48A]/20 to-[#A6C060]/10">
+                <TableHead className="text-[#496E22] font-semibold">User</TableHead>
+                <TableHead className="text-[#496E22] font-semibold">Role</TableHead>
+                <TableHead className="text-[#496E22] font-semibold">Status</TableHead>
+                <TableHead className="text-[#496E22] font-semibold">Last Active</TableHead>
+                <TableHead className="text-[#496E22] font-semibold text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -996,6 +1015,32 @@ export function UsersPermissionsSettings() {
           }
         }}
       />
+      
+      {/* Delete User Confirmation Dialog */}
+      <Dialog open={!!userToDelete} onOpenChange={(open) => { if (!open) setUserToDelete(null); }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="text-[#496E22]">Delete User</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete user <b>{userToDelete?.name}</b>? This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUserToDelete(null)}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={async () => {
+                await deleteUser(userToDelete.id);
+                setUserToDelete(null);
+              }}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       
       <ToastContainer
         position="top-right"

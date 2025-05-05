@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import LoadingPage from "../loading/page";
 import {
   LayoutDashboard,
@@ -54,6 +54,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { UploadActivity } from "./upload-activity";
 import { ActivityFeed } from "./activity-feed";
 import { onAuthStateChanged } from "firebase/auth";
+import { toast } from "react-toastify";
 
 export default function DashboardPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -63,6 +64,8 @@ export default function DashboardPage() {
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+  const [permissionsLoading, setPermissionsLoading] = useState(true);
 
   // Add municipalities array
   const MUNICIPALITIES = [
@@ -172,6 +175,20 @@ export default function DashboardPage() {
     setIsMobileMenuOpen(false);
   }, [pathname]);
 
+  // Security: Redirect to / if accessing unauthorized features
+  useEffect(() => {
+    const allowedPaths = [
+      "/dashboard",
+      "/vendors",
+      "/participants",
+      "/programs",
+      "/settings"
+    ];
+    if (!allowedPaths.some((path) => pathname === path || pathname.startsWith(path + "/"))) {
+      router.push("/");
+    }
+  }, [pathname, router]);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       try {
@@ -183,15 +200,57 @@ export default function DashboardPage() {
             const displayName = rawName === "255" ? "Admin DSWD" : rawName;
 
             setCurrentUser({
-              ...userData,
-              uid: user.uid,
-              email: userData.email || "admin@dswd.gov.ph",
-              name: displayName,
-              role: userData.role || "Administrator",
+              name: userData.name || user.displayName || "Admin DSWD",
+              email: userData.email || user.email || "admin@dswd.gov.ph",
+              role: userData.role || "User",
+              permissions: userData.permissions || {
+                readOnly: false,
+                accessProject: false,
+                accessParticipant: false,
+                accessFileStorage: false
+              }
             });
+            console.log('CurrentUser (from Firestore):', {
+              name: userData.name || user.displayName || "Admin DSWD",
+              email: userData.email || user.email || "admin@dswd.gov.ph",
+              role: userData.role || "User",
+              permissions: userData.permissions || {
+                readOnly: false,
+                accessProject: false,
+                accessParticipant: false,
+                accessFileStorage: false
+              }
+            });
+            setPermissionsLoading(false);
+          } else {
+            // User doc not found, fallback
+            setCurrentUser({
+              name: user.displayName || "Admin DSWD",
+              email: user.email || "admin@dswd.gov.ph",
+              role: "User",
+              permissions: {
+                readOnly: false,
+                accessProject: false,
+                accessParticipant: false,
+                accessFileStorage: false
+              }
+            });
+            console.log('CurrentUser (fallback):', {
+              name: user.displayName || "Admin DSWD",
+              email: user.email || "admin@dswd.gov.ph",
+              role: "User",
+              permissions: {
+                readOnly: false,
+                accessProject: false,
+                accessParticipant: false,
+                accessFileStorage: false
+              }
+            });
+            setPermissionsLoading(false);
           }
         } else {
           setCurrentUser(null);
+          setPermissionsLoading(false);
         }
       } catch (error) {
         console.error("Error fetching user data:", error);
@@ -203,6 +262,42 @@ export default function DashboardPage() {
     // Cleanup subscription on unmount
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (permissionsLoading || !currentUser) return; // Wait for permissions to load
+
+    // Strict security check for all paths
+    const checkAccess = () => {
+      // Always allow dashboard, settings, and participants
+      if (pathname === "/dashboard" || pathname === "/settings" || pathname.startsWith("/participants")) {
+        return true;
+      }
+
+      // Check vendors/projects access
+      if (pathname.startsWith("/vendors")) {
+        if (!currentUser?.permissions?.accessProject) {
+          window.location.href = "/";
+          return false;
+        }
+        return true;
+      }
+
+      // Check file storage access
+      if (pathname.startsWith("/programs")) {
+        if (!currentUser?.permissions?.accessFileStorage) {
+          window.location.href = "/";
+          return false;
+        }
+        return true;
+      }
+
+      // Default deny for any other paths
+      window.location.href = "/";
+      return false;
+    };
+
+    checkAccess();
+  }, [pathname, currentUser, permissionsLoading]);
 
   // Get user initials from name
   const getUserInitials = (name) => {
@@ -216,17 +311,50 @@ export default function DashboardPage() {
     return name.substring(0, 2).toUpperCase();
   };
 
-  if (loading) {
+  // Strict module access check
+  const hasModuleAccess = (moduleName) => {
+    if (!currentUser) return false;
+    
+    switch (moduleName.toLowerCase()) {
+      case 'projects':
+        return currentUser.permissions?.accessProject;
+      case 'participants':
+        return true; // Always allow access to participants
+      case 'filestorage':
+        return currentUser.permissions?.accessFileStorage;
+      default:
+        return false; // Default deny
+    }
+  };
+
+  // Strict write permissions check
+  const hasWritePermissions = (moduleName) => {
+    if (!currentUser) return false;
+    if (currentUser.permissions?.readOnly) return false;
+    return hasModuleAccess(moduleName);
+  };
+
+  // Show permission denied and redirect
+  const showPermissionDenied = (action) => {
+    toast.error(`Permission denied: You don't have access to ${action}`);
+    window.location.href = "/";
+  };
+
+  if (loading || permissionsLoading) {
     return <LoadingPage />;
   }
 
+  // Update navigation with strict access control
   const navigation = [
-    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Projects", href: "/vendors", icon: Store },
-    { name: "Participants", href: "/participants", icon: Users },
-    { name: "File Storage", href: "/programs", icon: FolderOpen },
+    { name: "Activities", href: "/dashboard", icon: LayoutDashboard },
+    { name: "Projects", href: "/vendors", icon: Store, requiresAccess: "projects" },
+    { name: "Participants", href: "/participants", icon: Users }, // Removed requiresAccess for participants
+    { name: "File Storage", href: "/programs", icon: FolderOpen, requiresAccess: "filestorage" },
     { name: "Settings", href: "/settings", icon: Settings },
-  ];
+  ].map(item => ({
+    ...item,
+    disabled: item.requiresAccess ? !hasModuleAccess(item.requiresAccess) : false
+  }));
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
@@ -247,13 +375,28 @@ export default function DashboardPage() {
                 const isActive =
                   pathname === item.href ||
                   pathname.startsWith(`${item.href}/`);
+                const hasAccess = !item.requiresAccess || hasModuleAccess(item.requiresAccess);
+                
+                if (!hasAccess) {
+                  router.replace("/");
+                  return null;
+                }
+
                 return (
                   <Link
                     key={item.name}
-                    href={item.href}
+                    href={item.disabled ? "#" : item.href}
+                    onClick={(e) => {
+                      if (item.disabled) {
+                        e.preventDefault();
+                        showPermissionDenied(item.name.toLowerCase());
+                      }
+                    }}
                     className={`${
                       isActive
                         ? "bg-white/10 text-white"
+                        : item.disabled
+                        ? "text-gray-300/50 cursor-not-allowed"
                         : "text-gray-300 hover:bg-white/5 hover:text-white"
                     } group flex items-center px-2 py-2 text-sm font-medium rounded-md`}
                   >
@@ -261,6 +404,8 @@ export default function DashboardPage() {
                       className={`${
                         isActive
                           ? "text-white"
+                          : item.disabled
+                          ? "text-gray-300/50"
                           : "text-gray-300 group-hover:text-white"
                       } mr-3 flex-shrink-0 h-5 w-5`}
                       aria-hidden="true"
@@ -328,13 +473,28 @@ export default function DashboardPage() {
                 const isActive =
                   pathname === item.href ||
                   pathname.startsWith(`${item.href}/`);
+                const hasAccess = !item.requiresAccess || hasModuleAccess(item.requiresAccess);
+                
+                if (!hasAccess) {
+                  router.replace("/");
+                  return null;
+                }
+
                 return (
                   <Link
                     key={item.name}
-                    href={item.href}
+                    href={item.disabled ? "#" : item.href}
+                    onClick={(e) => {
+                      if (item.disabled) {
+                        e.preventDefault();
+                        showPermissionDenied(item.name.toLowerCase());
+                      }
+                    }}
                     className={`${
                       isActive
                         ? "bg-white/10 text-white"
+                        : item.disabled
+                        ? "text-gray-300/50 cursor-not-allowed"
                         : "text-gray-300 hover:bg-white/5 hover:text-white"
                     } group flex items-center px-2 py-2 text-sm font-medium rounded-md`}
                   >
@@ -342,6 +502,8 @@ export default function DashboardPage() {
                       className={`${
                         isActive
                           ? "text-white"
+                          : item.disabled
+                          ? "text-gray-300/50"
                           : "text-gray-300 group-hover:text-white"
                       } mr-3 flex-shrink-0 h-5 w-5`}
                       aria-hidden="true"
@@ -404,15 +566,7 @@ export default function DashboardPage() {
               </div>
             </div>
             <div className="ml-4 flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="rounded-full relative"
-              >
-                <span className="sr-only">View notifications</span>
-                <Bell className="h-5 w-5" aria-hidden="true" />
-                <span className="absolute top-1 right-1.5 flex h-2 w-2 rounded-full bg-red-500"></span>
-              </Button>
+          
 
               {/* Profile dropdown */}
               <DropdownMenu>
@@ -461,10 +615,7 @@ export default function DashboardPage() {
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem className="rounded-lg text-red-500 focus:text-red-500 cursor-pointer">
-                    <Link href="/" className="flex w-full items-center">
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Sign out
-                    </Link>
+                  
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>

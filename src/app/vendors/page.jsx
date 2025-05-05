@@ -864,7 +864,7 @@ export default function VendorsPage() {
                   <Input
                     id="search-field"
                     className="block w-full h-full pl-10 pr-3 py-2 border-transparent text-muted-foreground placeholder-muted-foreground focus:outline-none focus:placeholder-gray-400 focus:ring-0 focus:border-transparent sm:text-sm"
-                    placeholder="Search vendors..."
+                    placeholder="Search projects..."
                     type="search"
                     value={searchQuery}
                     onChange={handleSearchChange}
@@ -926,7 +926,7 @@ export default function VendorsPage() {
               <div className="flex flex-col space-y-6">
                 <div className="flex items-center justify-between pt-4">
                   <h1 className="text-2xl font-bold tracking-tight">
-                    Vendor Management
+                    Project Management
                   </h1>
                   <div className="flex items-center gap-4">
                     <Button
@@ -960,16 +960,16 @@ export default function VendorsPage() {
                     <div className="absolute inset-0 bg-gradient-to-r from-[#B7CC60]/5 to-transparent"></div>
                     <div className="relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                       <div>
-                        <CardTitle className="text-2xl font-semibold bg-gradient-to-r from-[#96B54A] to-[#496E22] bg-clip-text text-transparent">Vendors</CardTitle>
+                        <CardTitle className="text-2xl font-semibold bg-gradient-to-r from-[#96B54A] to-[#496E22] bg-clip-text text-transparent">Projects</CardTitle>
                         <CardDescription className="text-black/70">
-                          Manage your suppliers and vendor details
+                          Manage your suppliers and Project details
                         </CardDescription>
                       </div>
                       <div className="relative w-full sm:w-auto">
                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-black/70" />
                         <Input
                           type="search"
-                          placeholder="Search vendors..."
+                          placeholder="Search projects..."
                           className="pl-8 w-full sm:w-[300px] border-[#96B54A]/20 bg-white/50 focus:border-[#96B54A] focus:ring-[#96B54A]/20 placeholder-black/50"
                           value={searchQuery}
                           onChange={handleSearchChange}

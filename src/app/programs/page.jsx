@@ -1094,17 +1094,33 @@ export default function ProgramsPage() {
     return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
   }
 
-  // Get user initials from name
+  // Helper to get double initials
   const getUserInitials = (name) => {
     if (!name) return "AD"
-    if (name === "Admin DSWD") return "AD"
-
-    const words = name.split(" ")
+    const words = name.trim().split(" ").filter(Boolean)
     if (words.length >= 2) {
       return (words[0][0] + words[1][0]).toUpperCase()
     }
     return name.substring(0, 2).toUpperCase()
   }
+
+  // Fetch current user for sidebar avatar
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const user = auth.currentUser
+        if (user) {
+          const userDoc = await getDoc(doc(db, "users", user.uid))
+          if (userDoc.exists()) {
+            setCurrentUser(userDoc.data())
+          }
+        }
+      } catch (error) {
+        // Ignore error for sidebar
+      }
+    }
+    if (!currentUser) fetchCurrentUser()
+  }, [currentUser])
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">

@@ -8,10 +8,10 @@ import {
   LayoutDashboard,
   FileBarChart,
   Settings,
-  ShoppingCart,
+  FolderOpen,
   Users,
   Menu,
-  X,
+  X,  
   Bell,
   Search,
   Building2,
@@ -57,6 +57,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { auth } from "@/service/firebase";
+import { getFirestore, doc, getDoc, updateDoc } from "firebase/firestore";
 
 
 export default function ProfilePage() {
@@ -68,6 +69,9 @@ export default function ProfilePage() {
   const [showContactDialog, setShowContactDialog] = useState(false);
   const [updatingContact, setUpdatingContact] = useState(false);
   const [newPhoneNumber, setNewPhoneNumber] = useState("");
+  const [showLocationDialog, setShowLocationDialog] = useState(false);
+  const [updatingLocation, setUpdatingLocation] = useState(false);
+  const [newAddress, setNewAddress] = useState("");
   const fileInputRef = useRef(null);
   const [isUploading, setIsUploading] = useState(false);
   const [connectivityIssue, setConnectivityIssue] = useState(false);
@@ -80,27 +84,40 @@ export default function ProfilePage() {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        // Get user data from local storage
-        const userData = JSON.parse(localStorage.getItem('user')) || {};
-        const displayName = userData?.name || "Admin DSWD";
-
-        setCurrentUser({
-          ...userData,
-          name: displayName,
-          email: userData?.email || "admin@dswd.gov.ph",
-          role: userData?.role || "Administrator",
-          phoneNumber: userData?.phoneNumber || "+63 XXX XXX XXXX",
-          address: userData?.address || "DSWD Office, Manila",
-          joinDate: userData?.joinDate || "January 2023",
-          department: userData?.department || "Administration",
-        });
-
-        // Handle photo URL from localStorage
-        const localPhotoURL = localStorage.getItem('profilePhoto');
-        if (localPhotoURL) {
-          setProfileUrl(localPhotoURL);
+        // Fetch user from Firebase Auth and Firestore
+        const user = auth.currentUser;
+        if (user) {
+          const db = getFirestore();
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            setCurrentUser({
+              ...userData,
+              name: userData?.name || "Admin DSWD",
+              email: userData?.email || user.email || "admin@dswd.gov.ph",
+              role: userData?.role || "Administrator",
+              joinDate: userData?.joinDate || (user.metadata?.creationTime ? new Date(user.metadata.creationTime).toLocaleDateString() : "N/A"),
+              status: userData?.status || "Active",
+              phoneNumber: userData?.phoneNumber || "",
+              address: userData?.address || "",
+              department: userData?.department || "SWAD AURORA",
+            });
+          } else {
+            // Fallback to Auth user if Firestore doc not found
+            setCurrentUser({
+              name: user.displayName || "Admin DSWD",
+              email: user.email || "admin@dswd.gov.ph",
+              role: "Administrator",
+              joinDate: user.metadata?.creationTime ? new Date(user.metadata.creationTime).toLocaleDateString() : "N/A",
+              status: "Active",
+              phoneNumber: user.phoneNumber || "",
+              address: "",
+              department: "SWAD AURORA",
+            });
+          }
+        } else {
+          setCurrentUser(null);
         }
-        
         setLoading(false);
       } catch (error) {
         console.error("Error fetching user data:", error);
@@ -114,25 +131,19 @@ export default function ProfilePage() {
 
   // Check for connectivity issues on component mount
   useEffect(() => {
-    const checkConnectivity = () => {
-      const hasIssues = hasFirebaseConnectivityIssues();
-      setConnectivityIssue(hasIssues);
+    const checkConnectivity = async () => {
+      // Remove or comment out these lines if you don't need them
+      // const hasIssues = hasFirebaseConnectivityIssues();
+      // setConnectivityIssue(hasIssues);
       
-      if (hasIssues) {
-        toast.warning(
-          "Connection issue detected. Some features may be limited. If you're using an ad blocker, try disabling it.",
-          { autoClose: false }
-        );
-      }
+      // Check again if user refreshes or opens a new tab
+      window.addEventListener('focus', checkConnectivity);
+      return () => {
+        window.removeEventListener('focus', checkConnectivity);
+      };
     };
     
     checkConnectivity();
-    
-    // Check again if user refreshes or opens a new tab
-    window.addEventListener('focus', checkConnectivity);
-    return () => {
-      window.removeEventListener('focus', checkConnectivity);
-    };
   }, []);
 
   // Get user initials from name
@@ -148,16 +159,14 @@ export default function ProfilePage() {
   };
 
   if (loading) {
-    return <LoadingPage />;
+    return <LoadingPage />
   }
 
   const navigation = [
-    { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-    { name: "Vendors", href: "/vendors", icon: Store },
-    { name: "Beneficiaries", href: "/beneficiaries", icon: Users },
-    { name: "Programs", href: "/programs", icon: Building2 },
-    { name: "Reports", href: "./reports", icon: FileBarChart },
-    { name: "Analytics", href: "./analytics", icon: FileBarChart },
+    { name: "Activities", href: "/dashboard", icon: LayoutDashboard },
+    { name: "Projects", href: "/vendors", icon: Store },
+    { name: "Participants", href: "/participants", icon: Users },
+    { name: "File Storage", href: "/programs", icon: FolderOpen },
     { name: "Settings", href: "./settings", icon: Settings },
   ];
 
@@ -230,26 +239,10 @@ export default function ProfilePage() {
 
     setUpdatingContact(true);
     try {
-      // Use server-side API to update profile - bypasses ad blockers
-      const response = await fetch('/api/user-profile', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userId: currentUser.uid,
-          profileData: {
-            phoneNumber: newPhoneNumber
-          }
-        }),
-      });
-
-      const result = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(result.error || 'Update failed');
-      }
-
+      const user = auth.currentUser;
+      if (!user) throw new Error("Not authenticated");
+      const db = getFirestore();
+      await updateDoc(doc(db, "users", user.uid), { phoneNumber: newPhoneNumber });
       setCurrentUser(prev => ({
         ...prev,
         phoneNumber: newPhoneNumber
@@ -264,6 +257,33 @@ export default function ProfilePage() {
     }
   };
 
+  // Handle location/address update
+  const handleLocationUpdate = async () => {
+    if (!newAddress) {
+      toast.error("Please enter a location/address");
+      return;
+    }
+    setUpdatingLocation(true);
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error("Not authenticated");
+      const db = getFirestore();
+      const userRef = doc(db, "users", user.uid);
+      await updateDoc(userRef, { address: newAddress });
+      setCurrentUser(prev => ({
+        ...prev,
+        address: newAddress
+      }));
+      setShowLocationDialog(false);
+      toast.success("Location updated successfully!");
+    } catch (error) {
+      console.error("Error updating location:", error);
+      toast.error("Failed to update location");
+    } finally {
+      setUpdatingLocation(false);
+    }
+  };
+
   const handleSignOut = async () => {
     try {
       await signOut(auth);
@@ -274,6 +294,16 @@ export default function ProfilePage() {
         autoClose: 3000,
       });
       console.error("Sign out error:", error);
+    }
+  };
+
+  const checkFirebaseConnection = async () => {
+    try {
+      const db = getFirestore();
+      // Try a simple read or write, or just return true for now
+      return true;
+    } catch (error) {
+      return false;
     }
   };
 
@@ -535,11 +565,7 @@ export default function ProfilePage() {
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex flex-col space-y-4">
                 <div className="flex items-center justify-between">
-                  <h1 className="text-2xl font-bold tracking-tight">Profile</h1>
-                  <Button>
-                    <Settings className="mr-2 h-4 w-4" />
-                    Edit Profile
-                  </Button>
+                  <h1 className="text-2xl font-bold tracking-tight">Profile</h1>  
                 </div>
 
                 {/* Show connectivity warning if issues detected */}
@@ -662,7 +688,7 @@ export default function ProfilePage() {
                         </p>
                         <div className="flex items-center">
                           <Shield className="mr-2 h-4 w-4 text-green-500" />
-                          <p className="text-green-500">Active</p>
+                          <p className="text-green-500">{currentUser?.status}</p>
                         </div>
                       </div>
                       <div className="space-y-1">
@@ -680,9 +706,6 @@ export default function ProfilePage() {
                           Quick Actions
                         </p>
                         <div className="grid grid-cols-1 gap-2">
-                          <Button variant="outline" className="w-full">
-                            Change Password
-                          </Button>
                           <Button 
                             variant="outline" 
                             className="w-full"
@@ -690,9 +713,14 @@ export default function ProfilePage() {
                           >
                             Update Contact Info
                           </Button>
-                          <Button variant="outline" className="w-full">
-                            Security Settings
+                          <Button 
+                            variant="outline" 
+                            className="w-full"
+                            onClick={() => setShowLocationDialog(true)}
+                          >
+                            Update Location
                           </Button>
+                         
                         </div>
                       </div>
                     </CardContent>
@@ -722,7 +750,7 @@ export default function ProfilePage() {
                 id="phone"
                 value={newPhoneNumber}
                 onChange={(e) => setNewPhoneNumber(e.target.value)}
-                placeholder="+63 XXX XXX XXXX"
+                placeholder=" 09XX XXX XXXX"
                 className="col-span-3"
               />
             </div>
@@ -739,6 +767,43 @@ export default function ProfilePage() {
               disabled={updatingContact}
             >
               {updatingContact ? "Updating..." : "Update"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Location Update Dialog */}
+      <Dialog open={showLocationDialog} onOpenChange={setShowLocationDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Location</DialogTitle>
+            <DialogDescription>
+              Enter your new address/location below.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <label htmlFor="address" className="text-right">
+                Address
+              </label>
+              <Input
+                id="address"
+                value={newAddress}
+                onChange={(e) => setNewAddress(e.target.value)}
+                placeholder="Enter your address"
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowLocationDialog(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleLocationUpdate}
+              disabled={updatingLocation}
+            >
+              {updatingLocation ? "Updating..." : "Update"}
             </Button>
           </DialogFooter>
         </DialogContent>
