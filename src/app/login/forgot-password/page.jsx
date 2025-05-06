@@ -1,32 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Mail, ArrowLeft, Lock, Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-import { db, auth } from "@/service/firebase";
-import { collection, query, where, getDocs, updateDoc, doc, getDoc } from "firebase/firestore";
-import { resetLocalPassword } from "@/service/auth";
+import { auth } from "@/service/firebase";
+import { sendPasswordResetEmail } from "firebase/auth";
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isEmailVerified, setIsEmailVerified] = useState(false);
-  const [userId, setUserId] = useState(null);
+  const [emailSent, setEmailSent] = useState(false);
   const router = useRouter();
 
-  const handleEmailSubmit = async (e) => {
+  const handleSendResetLink = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError("");
-    console.log("Starting password reset request for email:", email);
 
     if (!email) {
       setError("Please enter your email address");
@@ -35,74 +28,29 @@ export default function ForgotPasswordPage() {
     }
 
     try {
-      // Query users collection to find the user by email
-      const usersRef = collection(db, "users");
-      const q = query(usersRef, where("email", "==", email));
-      const querySnapshot = await getDocs(q);
-      
-      if (querySnapshot.empty) {
-        throw new Error("No account found with this email address");
-      }
-
-      // Get the first matching user document
-      const userDoc = querySnapshot.docs[0];
-      setUserId(userDoc.id);
-      
-      setIsEmailVerified(true);
-      toast.success("Email verified successfully!");
+      await sendPasswordResetEmail(auth, email);
+      setEmailSent(true);
+      toast.success("Password reset link has been sent to your email!");
     } catch (error) {
-      console.error("Error during email verification:", error);
-      let errorMessage = "Failed to verify email";
+      console.error("Error sending reset email:", error);
+      let errorMessage = "Failed to send reset email";
       
-      if (error.message === "No account found with this email address") {
-        errorMessage = "No account found with this email address";
+      switch (error.code) {
+        case 'auth/user-not-found':
+          errorMessage = "No account found with this email address";
+          break;
+        case 'auth/invalid-email':
+          errorMessage = "Invalid email address";
+          break;
+        case 'auth/too-many-requests':
+          errorMessage = "Too many attempts. Please try again later";
+          break;
+        default:
+          errorMessage = error.message;
       }
       
       toast.error(errorMessage);
       setError(errorMessage);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handlePasswordSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-
-    if (!newPassword || !confirmPassword) {
-      setError("Please enter both passwords");
-      setLoading(false);
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setError("Passwords do not match");
-      setLoading(false);
-      return;
-    }
-
-    if (newPassword.length < 6) {
-      setError("Password must be at least 6 characters long");
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const result = await resetLocalPassword(email, newPassword);
-      
-      if (result.success) {
-        toast.success("Password has been successfully reset! You can now login with your new password.");
-        setTimeout(() => {
-          router.push("/login");
-        }, 2000);
-      } else {
-        throw new Error(result.error);
-      }
-    } catch (error) {
-      console.error("Error resetting password:", error);
-      toast.error(error.message);
-      setError(error.message);
     } finally {
       setLoading(false);
     }
@@ -209,15 +157,6 @@ export default function ForgotPasswordPage() {
           color: var(--gray);
         }
 
-        .password-toggle {
-          position: absolute;
-          right: 12px;
-          top: 50%;
-          transform: translateY(-50%);
-          color: var(--gray);
-          cursor: pointer;
-        }
-
         .input {
           width: 100%;
           padding: 0.75rem 1rem 0.75rem 2.5rem;
@@ -259,6 +198,27 @@ export default function ForgotPasswordPage() {
           margin-top: 0.5rem;
           text-align: center;
         }
+
+        .success-message {
+          color: var(--green-primary);
+          font-size: 0.875rem;
+          margin-top: 0.5rem;
+          text-align: center;
+          padding: 1rem;
+          background-color: rgba(46, 125, 50, 0.1);
+          border-radius: 0.5rem;
+        }
+
+        .email-sent-container {
+          text-align: center;
+          padding: 1rem;
+        }
+
+        .email-sent-icon {
+          font-size: 3rem;
+          color: var(--green-primary);
+          margin-bottom: 1rem;
+        }
       `}</style>
 
       <div className="container">
@@ -291,82 +251,52 @@ export default function ForgotPasswordPage() {
         </div>
 
         <h1 className="title">Reset Password</h1>
-        <p className="description">
-          {!isEmailVerified 
-            ? "Enter your email address to verify your account."
-            : "Please Enter Your New Password."}
-        </p>
+        
+        {!emailSent ? (
+          <>
+            <p className="description">
+              Enter your email address and we'll send you a link to reset your password.
+            </p>
 
-        {!isEmailVerified ? (
-          <form onSubmit={handleEmailSubmit}>
-            <div className="input-container">
-              <Mail className="input-icon" size={20} />
-              <input
-                type="email"
-                className="input"
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
+            <form onSubmit={handleSendResetLink}>
+              <div className="input-container">
+                <Mail className="input-icon" size={20} />
+                <input
+                  type="email"
+                  className="input"
+                  placeholder="Email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
 
-            {error && <div className="error-message">{error}</div>}
+              {error && <div className="error-message">{error}</div>}
 
-            <button
-              type="submit"
-              className="button"
-              disabled={loading}
-            >
-              {loading ? "Verifying..." : "Verify Email"}
-            </button>
-          </form>
+              <button
+                type="submit"
+                className="button"
+                disabled={loading}
+              >
+                {loading ? "Sending..." : "Send Reset Link"}
+              </button>
+            </form>
+          </>
         ) : (
-          <form onSubmit={handlePasswordSubmit}>
-            <div className="input-container">
-              <Lock className="input-icon" size={20} />
-              <input
-                type={showPassword ? "text" : "password"}
-                className="input"
-                placeholder="New Password"
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                required
-              />
-              {showPassword ? (
-                <EyeOff className="password-toggle" size={20} onClick={() => setShowPassword(false)} />
-              ) : (
-                <Eye className="password-toggle" size={20} onClick={() => setShowPassword(true)} />
-              )}
-            </div>
-
-            <div className="input-container">
-              <Lock className="input-icon" size={20} />
-              <input
-                type={showConfirmPassword ? "text" : "password"}
-                className="input"
-                placeholder="Confirm New Password"
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                required
-              />
-              {showConfirmPassword ? (
-                <EyeOff className="password-toggle" size={20} onClick={() => setShowConfirmPassword(false)} />
-              ) : (
-                <Eye className="password-toggle" size={20} onClick={() => setShowConfirmPassword(true)} />
-              )}
-            </div>
-
-            {error && <div className="error-message">{error}</div>}
-
+          <div className="email-sent-container">
+            <Mail className="email-sent-icon" size={48} />
+            <h2 className="title">Check Your Email</h2>
+            <p className="description">
+              We've sent a password reset link to {email}. Please check your email and follow the instructions to reset your password.
+            </p>
             <button
-              type="submit"
               className="button"
-              disabled={loading}
+              onClick={() => router.push('/login')}
+              style={{ marginTop: '1rem' }}
             >
-              {loading ? "Resetting..." : "Reset Password"}
+              Return to Login
             </button>
-          </form>
+          </div>
         )}
       </div>
     </>

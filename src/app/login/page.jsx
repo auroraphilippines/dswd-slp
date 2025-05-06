@@ -589,7 +589,21 @@ export default function LoginPage() {
         }
 
         .forgot-password {
-          display: none;
+          display: block;
+          text-align: right;
+          width: 100%;
+          margin-top: 8px;
+        }
+
+        .forgot-password .form__link {
+          font-size: 13px;
+          color: var(--gray);
+          text-decoration: none;
+          transition: color 0.3s ease;
+        }
+
+        .forgot-password .form__link:hover {
+          color: var(--green-primary);
         }
       `}</style>
 
@@ -729,6 +743,17 @@ export default function LoginPage() {
               ) : (
                 <Eye className="password-toggle" size={20} onClick={() => setShowPassword(true)} />
               )}
+            </div>
+            <div className="forgot-password">
+              <span 
+                className="form__link" 
+                onClick={() => {
+                  console.log('Navigating to forgot password page');
+                  router.push('/login/forgot-password');
+                }}
+              >
+                Forgot Password?
+              </span>
             </div>
             {error && <div className="error-message">{error}</div>}
             <button
