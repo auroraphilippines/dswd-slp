@@ -46,6 +46,7 @@ import {
   where,
   getDoc,
   deleteDoc,
+  serverTimestamp,
 } from "firebase/firestore";
 import {
   Dialog,
@@ -64,11 +65,35 @@ import {
 } from "@/components/ui/select";
 import { createUserWithEmailAndPassword } from "firebase/auth";
 import { setDoc } from "firebase/firestore";
+import { getDatabase, ref, onDisconnect, set, onValue } from "firebase/database";
+const rtdb = getDatabase();
+
+auth.onAuthStateChanged(user => {
+  if (user) {
+    (async () => {
+      const userStatusRef = ref(rtdb, `/status/${user.uid}`);
+      set(userStatusRef, { state: "active", lastChanged: Date.now() });
+
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists) {
+        await updateDoc(userRef, { 
+          status: "active",
+          lastActive: serverTimestamp()
+        });
+      }
+
+      onDisconnect(userStatusRef).set({ state: "inactive", lastChanged: Date.now() });
+    })();
+  }
+});
 
 export function UsersPermissionsSettings() {
   const [users, setUsers] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredUsers, setFilteredUsers] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const usersPerPage = 5;
   const [currentUser, setCurrentUser] = useState(null);
   const [selectedUser, setSelectedUser] = useState(null);
   const [editingPermissions, setEditingPermissions] = useState(false);
@@ -100,6 +125,18 @@ export function UsersPermissionsSettings() {
     }
   });
   const [userToDelete, setUserToDelete] = useState(null);
+
+  // Calculate paginated users
+  const totalUsers = filteredUsers.length;
+  const totalPages = Math.ceil(totalUsers / usersPerPage);
+  const startIdx = (currentPage - 1) * usersPerPage;
+  const endIdx = startIdx + usersPerPage;
+  const paginatedUsers = filteredUsers.slice(startIdx, endIdx);
+
+  // Reset to first page on search/filter change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filteredUsers.length]);
 
   // Add permission check
   useEffect(() => {
@@ -136,24 +173,31 @@ export function UsersPermissionsSettings() {
       
       const fetchedUsers = querySnapshot.docs.map(doc => {
         const data = doc.data();
+        const formatTimestamp = (timestamp) => {
+          if (!timestamp) return "Never";
+          if (typeof timestamp === 'string') return timestamp;
+          if (timestamp.toDate) {
+            return new Date(timestamp.toDate()).toLocaleString('en-US', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true
+            });
+          }
+          return "Never";
+        };
+
         return {
           id: doc.id,
           name: data.name || "No Name",
           email: data.email || "No Email",
           role: data.role || "User",
-          status: data.status || "Active",
-          lastActive: typeof data.lastActive === 'object' && data.lastActive.toDate 
-            ? data.lastActive.toDate().toLocaleString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true
-              })
-            : data.lastActive || "Never",
+          status: data.status || "inactive",
+          lastActive: formatTimestamp(data.lastActive),
           avatar: data.photoURL || "/placeholder.svg?height=40&width=40",
-          createdAt: data.createdAt ? data.createdAt.toDate() : new Date(),
+          createdAt: formatTimestamp(data.createdAt),
           permissions: data.permissions || {
             readOnly: true,
             accessProject: false,
@@ -194,11 +238,17 @@ export function UsersPermissionsSettings() {
   const updateUserPermissions = async (userId, permissions) => {
     try {
       const userRef = doc(db, "users", userId);
-      await updateDoc(userRef, {
-        permissions: permissions
-      });
-      toast.success("User permissions updated successfully");
-      fetchUsers();
+      const userSnap = await getDoc(userRef);
+      if (userSnap.exists()) {
+        await updateDoc(userRef, {
+          permissions: permissions
+        });
+        toast.success("User permissions updated successfully");
+        fetchUsers();
+      } else {
+        // Optionally, create the document here
+        // await setDoc(userRef, { ... });
+      }
     } catch (error) {
       console.error("Error updating user permissions:", error);
       toast.error("Failed to update user permissions");
@@ -343,15 +393,16 @@ export function UsersPermissionsSettings() {
         </Badge>
       </TableCell>
       <TableCell>
-        <Badge
+        <span
           className={
-            user.status && user.status.toLowerCase() === "active"
-              ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
-              : "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800"
+            "inline-block px-4 py-1 rounded-full font-bold text-sm shadow-md transition-colors duration-300 " +
+            (user.status && user.status.toLowerCase() === "active"
+              ? "bg-gradient-to-r from-green-400 to-green-600 text-white border border-green-600"
+              : "bg-gradient-to-r from-red-400 to-red-600 text-white border border-red-600")
           }
         >
-          {user.status}
-        </Badge>
+          {user.status && user.status.charAt(0).toUpperCase() + user.status.slice(1)}
+        </span>
       </TableCell>
       <TableCell>{user.lastActive}</TableCell>
       <TableCell className="text-right">
@@ -899,6 +950,15 @@ export function UsersPermissionsSettings() {
     }
   };
 
+  const handleLogout = async () => {
+    const user = auth.currentUser;
+    if (user) {
+      await updateDoc(doc(db, "users", user.uid), { status: "inactive" });
+    }
+    await auth.signOut();
+    // ...any other logout logic
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -941,14 +1001,14 @@ export function UsersPermissionsSettings() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredUsers.length === 0 ? (
+              {paginatedUsers.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8">
                     {searchQuery ? "No users found matching your search" : "No users found"}
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredUsers.map((user) => (
+                paginatedUsers.map((user) => (
                   <UserTableRow key={user.id} user={user} />
                 ))
               )}
@@ -957,13 +1017,13 @@ export function UsersPermissionsSettings() {
         </CardContent>
         <CardFooter className="flex justify-between border-t p-4">
           <div className="text-sm text-muted-foreground">
-            Showing {filteredUsers.length} of {users.length} users
+            Showing {startIdx + 1}-{Math.min(endIdx, totalUsers)} of {totalUsers} users
           </div>
           <div className="flex gap-1">
-            <Button variant="outline" size="sm" disabled>
+            <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}>
               Previous
             </Button>
-            <Button variant="outline" size="sm" disabled>
+            <Button variant="outline" size="sm" onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages || totalUsers === 0}>
               Next
             </Button>
           </div>

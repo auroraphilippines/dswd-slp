@@ -35,10 +35,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { UsersPermissionsSettings } from "./user-permission";
 import { SecuritySettings } from "./security";
 import { auth, db } from "@/service/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { toast } from "react-toastify";
 import Image from "next/image";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"; 
 
 export default function SettingsPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -73,6 +73,12 @@ export default function SettingsPage() {
               role: userData.role || "Administrator",
               lastActive: userData.lastActive || "Never"
             });
+
+            // After successful login
+            await updateDoc(doc(db, "users", user.uid), { 
+              status: "active",
+              lastActive: serverTimestamp()
+            });
           }
         } else {
           // Redirect to login if not authenticated
@@ -102,6 +108,22 @@ export default function SettingsPage() {
     return name.substring(0, 2).toUpperCase();
   };
 
+  const formatTimestamp = (timestamp) => {
+    if (!timestamp) return "Never";
+    if (typeof timestamp === 'string') return timestamp;
+    if (timestamp.toDate) {
+      return new Date(timestamp.toDate()).toLocaleString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+    }
+    return "Never";
+  };
+
   const handleLogout = async () => {
     try {
       // Clear any local storage items
@@ -109,6 +131,10 @@ export default function SettingsPage() {
       sessionStorage.clear();
       
       // Sign out from Firebase
+      const user = auth.currentUser;
+      if (user) {
+        await updateDoc(doc(db, "users", user.uid), { status: "inactive" });
+      }
       await auth.signOut();
       
       // Clear any cookies
@@ -205,9 +231,6 @@ export default function SettingsPage() {
                   <p className="text-xs text-gray-300">
                     {currentUser?.role}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Last Active: {currentUser?.lastActive}
-                  </p>
                 </div>
               </div>
             </div>
@@ -299,9 +322,7 @@ export default function SettingsPage() {
                   <p className="text-xs text-muted-foreground">
                     {currentUser?.role}
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Last Active: {currentUser?.lastActive}
-                  </p>
+                 
                 </div>
               </div>
             </div>

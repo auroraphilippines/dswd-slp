@@ -144,15 +144,9 @@ export const loginUser = async (email, password) => {
             // Update last login timestamp and last active time
             const currentTime = new Date();
             await updateDoc(doc(db, "users", userDoc.id), {
+                status: "active",
                 lastLoginAt: serverTimestamp(),
-                lastActive: currentTime.toLocaleString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: true
-                })
+                lastActive: serverTimestamp()
             });
 
             return { 
@@ -173,15 +167,9 @@ export const loginUser = async (email, password) => {
             // Update last login timestamp and last active time
             const currentTime = new Date();
             await updateDoc(doc(db, "users", user.uid), {
+                status: "active",
                 lastLoginAt: serverTimestamp(),
-                lastActive: currentTime.toLocaleString('en-US', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: true
-                })
+                lastActive: serverTimestamp()
             });
 
             return { 
@@ -200,18 +188,11 @@ export const loginUser = async (email, password) => {
                 const user = userCredential.user;
 
                 // Update Firestore document with new uid and last active time
-                const currentTime = new Date();
                 await updateDoc(doc(db, "users", userDoc.id), {
                     uid: user.uid,
+                    status: "active",
                     lastLoginAt: serverTimestamp(),
-                    lastActive: currentTime.toLocaleString('en-US', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        hour12: true
-                    })
+                    lastActive: serverTimestamp()
                 });
 
                 return { 
