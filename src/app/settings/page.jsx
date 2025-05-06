@@ -71,6 +71,7 @@ export default function SettingsPage() {
               email: userData.email || "admin@dswd.gov.ph",
               name: displayName,
               role: userData.role || "Administrator",
+              lastActive: userData.lastActive || "Never"
             });
           }
         } else {
@@ -204,6 +205,9 @@ export default function SettingsPage() {
                   <p className="text-xs text-gray-300">
                     {currentUser?.role}
                   </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Last Active: {currentUser?.lastActive}
+                  </p>
                 </div>
               </div>
             </div>
@@ -293,7 +297,10 @@ export default function SettingsPage() {
                     {currentUser?.name || "Admin DSWD"}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {currentUser?.role || "Administrator"}
+                    {currentUser?.role}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Last Active: {currentUser?.lastActive}
                   </p>
                 </div>
               </div>

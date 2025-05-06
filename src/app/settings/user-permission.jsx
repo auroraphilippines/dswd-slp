@@ -142,7 +142,16 @@ export function UsersPermissionsSettings() {
           email: data.email || "No Email",
           role: data.role || "User",
           status: data.status || "Active",
-          lastActive: data.lastActive ? new Date(data.lastActive.toDate()).toLocaleString() : "Never",
+          lastActive: typeof data.lastActive === 'object' && data.lastActive.toDate 
+            ? data.lastActive.toDate().toLocaleString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+              })
+            : data.lastActive || "Never",
           avatar: data.photoURL || "/placeholder.svg?height=40&width=40",
           createdAt: data.createdAt ? data.createdAt.toDate() : new Date(),
           permissions: data.permissions || {
@@ -335,11 +344,10 @@ export function UsersPermissionsSettings() {
       </TableCell>
       <TableCell>
         <Badge
-          variant={user.status === "Active" ? "outline" : "secondary"}
           className={
-            user.status === "Active"
+            user.status && user.status.toLowerCase() === "active"
               ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
-              : "bg-muted text-muted-foreground"
+              : "bg-red-50 text-red-700 border-red-200 dark:bg-red-900/20 dark:text-red-400 dark:border-red-800"
           }
         >
           {user.status}

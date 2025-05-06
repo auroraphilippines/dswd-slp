@@ -141,9 +141,18 @@ export const loginUser = async (email, password) => {
                 throw new Error("Invalid password");
             }
 
-            // Update last login timestamp
+            // Update last login timestamp and last active time
+            const currentTime = new Date();
             await updateDoc(doc(db, "users", userDoc.id), {
-                lastLoginAt: serverTimestamp()
+                lastLoginAt: serverTimestamp(),
+                lastActive: currentTime.toLocaleString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                })
             });
 
             return { 
@@ -161,9 +170,18 @@ export const loginUser = async (email, password) => {
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
 
-            // Update last login timestamp
+            // Update last login timestamp and last active time
+            const currentTime = new Date();
             await updateDoc(doc(db, "users", user.uid), {
-                lastLoginAt: serverTimestamp()
+                lastLoginAt: serverTimestamp(),
+                lastActive: currentTime.toLocaleString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                })
             });
 
             return { 
@@ -181,10 +199,19 @@ export const loginUser = async (email, password) => {
                 const userCredential = await createUserWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
 
-                // Update Firestore document with new uid
+                // Update Firestore document with new uid and last active time
+                const currentTime = new Date();
                 await updateDoc(doc(db, "users", userDoc.id), {
                     uid: user.uid,
-                    lastLoginAt: serverTimestamp()
+                    lastLoginAt: serverTimestamp(),
+                    lastActive: currentTime.toLocaleString('en-US', {
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                    })
                 });
 
                 return { 

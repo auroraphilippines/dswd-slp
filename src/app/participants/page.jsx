@@ -8,11 +8,9 @@ import {
   LayoutDashboard,
   FileBarChart,
   Settings,
-  ShoppingCart,
   Users,
   Menu,
   X,
-  Bell,
   Search,
   FolderOpen,
   Store,
@@ -28,9 +26,6 @@ import {
   Power,
   Eye,
   Loader2,
-  AlertCircle,
-  Pencil,
-  Trash
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1061,10 +1056,7 @@ export default function ParticipantsPage() {
                 </div>
               </div>
               <div className="ml-4 flex items-center md:ml-6">
-                <Button variant="ghost" size="icon" className="rounded-full">
-                  <span className="sr-only">View notifications</span>
-                  <Bell className="h-5 w-5" aria-hidden="true" />
-                </Button>
+                
 
                 {/* Profile dropdown */}
                 <DropdownMenu>

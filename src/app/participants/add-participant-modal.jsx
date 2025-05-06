@@ -77,15 +77,6 @@ export function AddParticipantModal({ isOpen, onClose, onSubmit }) {
         // Only clear SLPA name and position when switching to INDIVIDUAL
         ...(processedValue === "INDIVIDUAL" && { slpaName: "", slpaPosition: "" })
       }));
-    } else if (name === "slpaName") {
-      // Add SLPA- prefix and ensure it's uppercase
-      const slpaValue = processedValue.startsWith("SLPA-") 
-        ? processedValue 
-        : `SLPA-${processedValue}`;
-      setFormData(prev => ({
-        ...prev,
-        [name]: slpaValue
-      }));
     } else if (name === "birthday") {
       const age = calculateAge(value);
       setFormData(prev => ({
