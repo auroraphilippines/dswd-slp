@@ -22,7 +22,7 @@ import {
   MapPin,
   Shield,
   Calendar,
-  Camera,
+  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,7 +57,10 @@ import { AlertCircle } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { auth } from "@/service/firebase";
 import { getFirestore, doc, getDoc, updateDoc } from "firebase/firestore";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { initializeApp } from "firebase/app";
 import Image from "next/image";
+import { uploadProfilePhoto, getProfilePhotoFromLocalStorage } from "@/service/storage";
 
 
 export default function ProfilePage() {
@@ -65,21 +68,59 @@ export default function ProfilePage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const pathname = usePathname();
-  const [profileUrl, setProfileUrl] = useState(null);
   const [showContactDialog, setShowContactDialog] = useState(false);
   const [updatingContact, setUpdatingContact] = useState(false);
   const [newPhoneNumber, setNewPhoneNumber] = useState("");
   const [showLocationDialog, setShowLocationDialog] = useState(false);
   const [updatingLocation, setUpdatingLocation] = useState(false);
   const [newAddress, setNewAddress] = useState("");
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef(null);
-  const [isUploading, setIsUploading] = useState(false);
-  const [connectivityIssue, setConnectivityIssue] = useState(false);
 
   // Close mobile menu when path changes
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [pathname]);
+
+  // Get user initials from name
+  const getUserInitials = (name) => {
+    if (!name) return "AD";
+    if (name === "Admin DSWD") return "AD";
+
+    const words = name.split(" ");
+    if (words.length >= 2) {
+      return (words[0][0] + words[1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  // Function to fetch user profile image
+  const fetchUserProfileImage = async (userId) => {
+    try {
+      // First try to get from Firestore
+      const db = getFirestore();
+      const userDoc = await getDoc(doc(db, "users", userId));
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        if (userData.photoURL) {
+          return userData.photoURL;
+        }
+      }
+
+      // If not in Firestore, try localStorage
+      const localPhoto = getProfilePhotoFromLocalStorage(userId);
+      if (localPhoto) {
+        return localPhoto;
+      }
+
+      return null;
+    } catch (error) {
+      console.error("Error fetching profile image:", error);
+      return null;
+    }
+  };
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -89,6 +130,10 @@ export default function ProfilePage() {
         if (user) {
           const db = getFirestore();
           const userDoc = await getDoc(doc(db, "users", user.uid));
+          
+          // Fetch profile image
+          const profileImage = await fetchUserProfileImage(user.uid);
+          
           if (userDoc.exists()) {
             const userData = userDoc.data();
             setCurrentUser({
@@ -101,6 +146,7 @@ export default function ProfilePage() {
               phoneNumber: userData?.phoneNumber || "",
               address: userData?.address || "",
               department: userData?.department || "SWAD AURORA",
+              photoURL: profileImage
             });
           } else {
             // Fallback to Auth user if Firestore doc not found
@@ -113,6 +159,7 @@ export default function ProfilePage() {
               phoneNumber: user.phoneNumber || "",
               address: "",
               department: "SWAD AURORA",
+              photoURL: profileImage
             });
           }
         } else {
@@ -129,35 +176,6 @@ export default function ProfilePage() {
     fetchUserData();
   }, []);
 
-  // Check for connectivity issues on component mount
-  useEffect(() => {
-    const checkConnectivity = async () => {
-      // Remove or comment out these lines if you don't need them
-      // const hasIssues = hasFirebaseConnectivityIssues();
-      // setConnectivityIssue(hasIssues);
-      
-      // Check again if user refreshes or opens a new tab
-      window.addEventListener('focus', checkConnectivity);
-      return () => {
-        window.removeEventListener('focus', checkConnectivity);
-      };
-    };
-    
-    checkConnectivity();
-  }, []);
-
-  // Get user initials from name
-  const getUserInitials = (name) => {
-    if (!name) return "AD";
-    if (name === "Admin DSWD") return "AD";
-
-    const words = name.split(" ");
-    if (words.length >= 2) {
-      return (words[0][0] + words[1][0]).toUpperCase();
-    }
-    return name.substring(0, 2).toUpperCase();
-  };
-
   if (loading) {
     return <LoadingPage />
   }
@@ -169,66 +187,6 @@ export default function ProfilePage() {
     { name: "File Storage", href: "/programs", icon: FolderOpen },
     { name: "Settings", href: "./settings", icon: Settings },
   ];
-
-  // Handle profile photo upload
-  const handlePhotoUpload = async (event) => {
-    const file = event.target.files[0];
-    if (!file || !currentUser?.uid) {
-      toast.error("Please select a file and ensure you're logged in");
-      return;
-    }
-
-    setIsUploading(true);
-    try {
-      // Show loading toast
-      toast.loading("Processing photo...", { id: "photoUpload" });
-
-      // Create a temporary local URL for preview
-      const localUrl = URL.createObjectURL(file);
-      setProfileUrl(localUrl);
-
-      // Create form data for API route
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('userId', currentUser.uid);
-
-      // Use server-side API route to upload - this bypasses ad blockers
-      const response = await fetch('/api/user-profile', {
-        method: 'PUT',
-        body: formData,
-      });
-
-      // Parse response
-      const result = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(result.error || 'Upload failed');
-      }
-
-      console.log("Photo processed successfully");
-
-      // Update local state with the photo URL
-      setProfileUrl(result.url);
-      setCurrentUser(prev => ({
-        ...prev,
-        photoURL: result.url
-      }));
-
-      // Show success message
-      toast.success(result.message || "Profile photo updated successfully!", { id: "photoUpload" });
-    } catch (error) {
-      console.error("Error processing photo:", error);
-      // Provide a user-friendly error message
-      toast.error(error.message || "Failed to process photo", { id: "photoUpload" });
-      
-      // Revert to original profile picture if there was an error
-      if (currentUser?.photoURL) {
-        setProfileUrl(currentUser.photoURL);
-      }
-    } finally {
-      setIsUploading(false);
-    }
-  };
 
   // Handle contact info update
   const handleContactUpdate = async () => {
@@ -307,6 +265,41 @@ export default function ProfilePage() {
     }
   };
 
+  // Handle profile picture upload
+  const handleImageUpload = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setUploadingImage(true);
+    try {
+      const user = auth.currentUser;
+      if (!user) {
+        throw new Error("Not authenticated");
+      }
+
+      // Use the existing storage implementation
+      const photoURL = await uploadProfilePhoto(file, user.uid);
+      
+      // Update local state
+      setCurrentUser(prev => ({
+        ...prev,
+        photoURL: photoURL
+      }));
+
+      toast.success("Profile picture updated successfully!");
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      toast.error(error.message || "Failed to upload profile picture");
+    } finally {
+      setUploadingImage(false);
+      setUploadProgress(0);
+      // Clear the file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Sidebar for desktop */}
@@ -360,10 +353,10 @@ export default function ProfilePage() {
           <div className="flex-shrink-0 flex border-t border-white/10 p-4">
             <div className="flex items-center w-full justify-between">
               <div className="flex items-center">
-                {profileUrl ? (
+                {currentUser?.photoURL ? (
                   <Avatar className="h-8 w-8 border-2 border-white/20">
                     <AvatarImage 
-                      src={profileUrl} 
+                      src={currentUser.photoURL} 
                       alt={currentUser?.name || "User"}
                       className="object-cover" 
                     />
@@ -382,7 +375,6 @@ export default function ProfilePage() {
                   </p>
                 </div>
               </div>
-             
             </div>
           </div>
         </div>
@@ -460,10 +452,10 @@ export default function ProfilePage() {
           <div className="flex-shrink-0 p-4">
             <div className="rounded-lg bg-muted/50 p-3">
               <div className="flex items-center">
-                {profileUrl ? (
+                {currentUser?.photoURL ? (
                   <Avatar className="h-9 w-9 border-2 border-primary/20">
                     <AvatarImage 
-                      src={profileUrl} 
+                      src={currentUser.photoURL} 
                       alt={currentUser?.name || "User"}
                       className="object-cover" 
                     />
@@ -518,67 +510,7 @@ export default function ProfilePage() {
                   />
                 </div>
               </div>
-            </div>
-            <div className="ml-4 flex items-center md:ml-6">
-           
-
-              {/* Profile dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="ml-3 rounded-full"
-                  >
-                    <span className="sr-only">Open user menu</span>
-                    {profileUrl ? (
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage 
-                          src={profileUrl} 
-                          alt={currentUser?.name || "User"}
-                          className="object-cover" 
-                        />
-                      </Avatar>
-                    ) : (
-                      <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                        <span className="text-sm font-medium">
-                          {getUserInitials(currentUser?.name)}
-                        </span>
-                      </div>
-                    )}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        {currentUser?.name || "Admin DSWD"}
-                      </p>
-                      <p className="text-xs leading-none text-muted-foreground">
-                        {currentUser?.email || "admin@dswd.gov.ph"}
-                      </p>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    <Link href="/profile" className="flex items-center">
-                      <User className="mr-2 h-4 w-4" />
-                      Profile
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Link href="/settings" className="flex items-center">
-                      <Settings className="mr-2 h-4 w-4" />
-                      Settings
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSignOut}>
-                    Sign out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+            </div>          
           </div>
         </div>
 
@@ -589,18 +521,6 @@ export default function ProfilePage() {
                 <div className="flex items-center justify-between">
                   <h1 className="text-2xl font-bold tracking-tight">Profile</h1>  
                 </div>
-
-                {/* Show connectivity warning if issues detected */}
-                {connectivityIssue && (
-                  <Alert variant="warning">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertTitle>Connection Issue Detected</AlertTitle>
-                    <AlertDescription>
-                      Your profile image may not sync with our servers. This could be caused by an ad blocker.
-                      Profile updates will be saved locally but may not persist across devices.
-                    </AlertDescription>
-                  </Alert>
-                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {/* Profile Overview */}
@@ -613,13 +533,13 @@ export default function ProfilePage() {
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="flex items-center space-x-4">
-                        <div className="relative">
-                          <Avatar className="h-20 w-20">
-                            {profileUrl ? (
+                        <div className="relative group">
+                          <Avatar className="h-20 w-20 cursor-pointer">
+                            {currentUser?.photoURL ? (
                               <AvatarImage 
-                                src={profileUrl} 
-                                alt={`${currentUser?.name}'s profile`} 
-                                className="object-cover"
+                                src={currentUser.photoURL} 
+                                alt={currentUser?.name || "User"}
+                                className="object-cover" 
                               />
                             ) : (
                               <AvatarFallback className="bg-primary text-primary-foreground text-2xl font-bold">
@@ -630,18 +550,19 @@ export default function ProfilePage() {
                           <input
                             type="file"
                             ref={fileInputRef}
-                            onChange={handlePhotoUpload}
-                            accept="image/*"
                             className="hidden"
+                            accept="image/*"
+                            onChange={handleImageUpload}
                           />
                           <Button
                             variant="outline"
-                            size="icon"
-                            className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full"
+                            size="sm"
+                            className="absolute bottom-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity"
                             onClick={() => fileInputRef.current?.click()}
-                            disabled={isUploading}
+                            disabled={uploadingImage}
                           >
-                            <Camera className="h-4 w-4" />
+                            <Upload className="h-4 w-4 mr-2" />
+                            {uploadingImage ? "Uploading..." : "Upload"}
                           </Button>
                         </div>
                         <div>

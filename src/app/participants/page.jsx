@@ -63,8 +63,9 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { ConfirmationDialog } from "@/components/ui/confirmation-dialog"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Image from "next/image";
+import { getProfilePhotoFromLocalStorage } from "@/service/storage";
 
 export default function ParticipantsPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -152,6 +153,32 @@ export default function ParticipantsPage() {
     setIsMobileMenuOpen(false);
   }, [pathname]);
 
+  // Function to fetch user profile image
+  const fetchUserProfileImage = async (userId) => {
+    try {
+      // First try to get from Firestore
+      const userDoc = await getDoc(doc(db, "users", userId));
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        if (userData.photoURL) {
+          return userData.photoURL;
+        }
+      }
+
+      // If not in Firestore, try localStorage
+      const localPhoto = getProfilePhotoFromLocalStorage(userId);
+      if (localPhoto) {
+        return localPhoto;  
+      }
+
+      return null;
+    } catch (error) {
+      console.error("Error fetching profile image:", error);
+      return null;
+    }
+  };
+
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -163,12 +190,16 @@ export default function ParticipantsPage() {
             const rawName = userData.name || "";
             const displayName = rawName === "255" ? "Admin DSWD" : rawName;
 
+            // Fetch profile image
+            const profileImage = await fetchUserProfileImage(user.uid);
+
             setCurrentUser({
               ...userData,
               uid: user.uid,
               email: userData.email || "admin@dswd.gov.ph",
               name: displayName,
               role: userData.role || "Administrator",
+              photoURL: profileImage
             });
           }
         }
@@ -575,7 +606,7 @@ export default function ParticipantsPage() {
     setShowExportDialog(false);
   };
 
-  // Modify the table header to include checkbox
+  // Modify the table header to remove the Status column
   const renderTableHeader = () => (
     <TableRow className="bg-gradient-to-r from-[#C5D48A]/20 to-[#A6C060]/10 hover:bg-[#96B54A]/5">
       <TableHead className="w-12">
@@ -592,12 +623,12 @@ export default function ParticipantsPage() {
       <TableHead className="text-[#496E22] font-semibold">Name</TableHead>
       <TableHead className="text-[#496E22] font-semibold">Address</TableHead>
       <TableHead className="text-[#496E22] font-semibold">Project</TableHead>
-      <TableHead className="text-[#496E22] font-semibold">Status</TableHead>
+      {/* Removed Status column */}
       <TableHead className="text-right text-[#496E22] font-semibold">Actions</TableHead>
     </TableRow>
   );
 
-  // Modify the renderTableRow function to include checkbox
+  // Modify the renderTableRow function to remove the Status cell
   const renderTableRow = (item) => {
     const isFamily = item.type === 'family';
     return (
@@ -639,9 +670,7 @@ export default function ParticipantsPage() {
         <TableCell className="text-black/90" onClick={() => handleViewDetails(item)}>
           {isFamily ? 'Family' : item.project}
         </TableCell>
-        <TableCell onClick={() => handleViewDetails(item)}>
-          <ParticipantStatusBadge status={item.status || 'Active'} />
-        </TableCell>
+        {/* Removed Status cell */}
         <TableCell className="text-right">
           <DropdownMenu>
             <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -905,11 +934,24 @@ export default function ParticipantsPage() {
             <div className="flex-shrink-0 flex border-t border-white/10 p-4">
               <div className="flex items-center w-full justify-between">
                 <div className="flex items-center">
-                  <div className="h-8 w-8 rounded-full bg-white/10 text-white flex items-center justify-center">
-                    <span className="text-sm font-medium">
-                      {getUserInitials(currentUser?.name)}
-                    </span>
-                  </div>
+                  {currentUser?.photoURL ? (
+                    <Avatar className="h-8 w-8 border-2 border-white/20">
+                      <AvatarImage 
+                        src={currentUser.photoURL} 
+                        alt={currentUser?.name || "User"}
+                        className="object-cover" 
+                      />
+                      <AvatarFallback className="bg-white/10 text-white">
+                        {getUserInitials(currentUser?.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                  ) : (
+                    <div className="h-8 w-8 rounded-full bg-white/10 text-white flex items-center justify-center">
+                      <span className="text-sm font-medium">
+                        {getUserInitials(currentUser?.name)}
+                      </span>
+                    </div>
+                  )}
                   <div className="ml-3">
                     <p className="text-sm font-medium text-white">{currentUser?.name}</p>
                     <p className="text-xs text-gray-300">
@@ -1004,11 +1046,24 @@ export default function ParticipantsPage() {
             <div className="flex-shrink-0 p-4">
               <div className="rounded-lg bg-white/5 p-3">
                 <div className="flex items-center">
-                  <Avatar className="h-9 w-9 border-2 border-white/20">
-                    <AvatarFallback className="bg-white/10 text-white font-medium">
-                      {getUserInitials(currentUser?.name)}
-                    </AvatarFallback>
-                  </Avatar>
+                  {currentUser?.photoURL ? (
+                    <Avatar className="h-9 w-9 border-2 border-white/20">
+                      <AvatarImage 
+                        src={currentUser.photoURL} 
+                        alt={currentUser?.name || "User"}
+                        className="object-cover" 
+                      />
+                      <AvatarFallback className="bg-white/10 text-white font-medium">
+                        {getUserInitials(currentUser?.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                  ) : (
+                    <Avatar className="h-9 w-9 border-2 border-white/20">
+                      <AvatarFallback className="bg-white/10 text-white font-medium">
+                        {getUserInitials(currentUser?.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                  )}
                   <div className="ml-3">
                     <p className="text-sm font-medium text-white">
                       {currentUser?.name || "Admin DSWD"}
@@ -1067,11 +1122,24 @@ export default function ParticipantsPage() {
                       className="ml-3 rounded-full"
                     >
                       <span className="sr-only">Open user menu</span>
-                      <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                        <span className="text-sm font-medium">
-                          {getUserInitials(currentUser?.name)}
-                        </span>
-                      </div>
+                      {currentUser?.photoURL ? (
+                        <Avatar className="h-8 w-8">
+                          <AvatarImage 
+                            src={currentUser.photoURL} 
+                            alt={currentUser?.name || "User"}
+                            className="object-cover" 
+                          />
+                          <AvatarFallback className="bg-primary text-primary-foreground">
+                            {getUserInitials(currentUser?.name)}
+                          </AvatarFallback>
+                        </Avatar>
+                      ) : (
+                        <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                          <span className="text-sm font-medium">
+                            {getUserInitials(currentUser?.name)}
+                          </span>
+                        </div>
+                      )}
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">

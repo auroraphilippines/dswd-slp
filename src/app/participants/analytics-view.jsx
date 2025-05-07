@@ -10,7 +10,6 @@ import {
   Users,  
   Menu,
   X,
-  Bell,
   Search,
   FolderOpen,
   Store,
@@ -32,10 +31,10 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { ThemeToggle } from "@/components/theme-toggle";
 import { auth, db } from "@/service/firebase";
 import { doc, getDoc, collection, query, orderBy, getDocs } from "firebase/firestore";
 import { User } from "lucide-react";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 export function AnalyticsView() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -88,6 +87,24 @@ export function AnalyticsView() {
     setIsMobileMenuOpen(false);
   }, [pathname]);
 
+  // Add fetchUserProfileImage function after the existing useEffect for mobile menu
+  const fetchUserProfileImage = async (userId) => {
+    try {
+      const userDoc = await getDoc(doc(db, "users", userId));
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        if (userData.photoURL) return userData.photoURL;
+      }
+      const localPhoto = getProfilePhotoFromLocalStorage(userId);
+      if (localPhoto) return localPhoto;
+      return null;
+    } catch (error) {
+      console.error("Error fetching profile image:", error);
+      return null;
+    }
+  };
+
+  // Update the fetchUserData useEffect to fetch and set the profile image
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -98,13 +115,15 @@ export function AnalyticsView() {
             const userData = userDoc.data();
             const rawName = userData.name || "";
             const displayName = rawName === "255" ? "Admin DSWD" : rawName;
-
+            // Fetch profile image
+            const profileImage = await fetchUserProfileImage(user.uid);
             setCurrentUser({
               ...userData,
               uid: user.uid,
               email: userData.email || "admin@dswd.gov.ph",
               name: displayName,
               role: userData.role || "Administrator",
+              photoURL: profileImage
             });
           }
         }
@@ -205,11 +224,20 @@ export function AnalyticsView() {
           <div className="flex-shrink-0 flex border-t p-4">
             <div className="flex items-center w-full justify-between">
               <div className="flex items-center">
-                <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                  <span className="text-sm font-medium">
-                    {getUserInitials(currentUser?.name)}
-                  </span>
-                </div>
+                {currentUser?.photoURL ? (
+                  <Avatar className="h-8 w-8 border-2 border-primary/20">
+                    <AvatarImage src={currentUser.photoURL} alt={currentUser?.name || "User"} className="object-cover" />
+                    <AvatarFallback className="bg-primary/10 text-primary font-medium">
+                      {getUserInitials(currentUser?.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                ) : (
+                  <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                    <span className="text-sm font-medium">
+                      {getUserInitials(currentUser?.name)}
+                    </span>
+                  </div>
+                )}
                 <div className="ml-3">
                   <p className="text-sm font-medium">{currentUser?.name}</p>
                   <p className="text-xs text-muted-foreground">
@@ -217,7 +245,6 @@ export function AnalyticsView() {
                   </p>
                 </div>
               </div>
-              <ThemeToggle />
             </div>
           </div>
         </div>
@@ -257,10 +284,6 @@ export function AnalyticsView() {
               </Button>
             </div>
             <div className="ml-4 flex items-center md:ml-6">
-              <Button variant="ghost" size="icon" className="rounded-full">
-                <span className="sr-only">View notifications</span>
-                <Bell className="h-5 w-5" aria-hidden="true" />
-              </Button>
 
               {/* Profile dropdown */}
               <DropdownMenu>
@@ -271,11 +294,20 @@ export function AnalyticsView() {
                     className="ml-3 rounded-full"
                   >
                     <span className="sr-only">Open user menu</span>
-                    <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                      <span className="text-sm font-medium">
-                        {getUserInitials(currentUser?.name)}
-                      </span>
-                    </div>
+                    {currentUser?.photoURL ? (
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={currentUser.photoURL} alt={currentUser?.name || "User"} className="object-cover" />
+                        <AvatarFallback className="bg-primary text-primary-foreground">
+                          {getUserInitials(currentUser?.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                    ) : (
+                      <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                        <span className="text-sm font-medium">
+                          {getUserInitials(currentUser?.name)}
+                        </span>
+                      </div>
+                    )}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -303,9 +335,6 @@ export function AnalyticsView() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild>
-                    <Link href="/">Sign out</Link>
-                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>

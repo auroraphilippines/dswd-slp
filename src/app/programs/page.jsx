@@ -75,7 +75,8 @@ import { cn } from "@/lib/utils"
 import { debounce } from "lodash"
 import { toast } from "react-toastify"
 import Image from "next/image"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { getProfilePhotoFromLocalStorage } from "@/service/storage"
 
 // Add a subtle variant to the Button component
 const Button = ({ variant, className, ...props }) => {
@@ -682,7 +683,7 @@ export default function ProgramsPage() {
       return (
         <div className="flex flex-col items-center justify-center py-16">
           <div className="relative mb-6">
-            <div className="absolute inset-0 bg-primary/5 rounded-full animate-pulse"></div>
+            <div className="absolute inset-0 bg-primary/10 rounded-full animate-pulse"></div>
             <div className="relative h-28 w-28 text-primary/70">
               <FolderOpen className="w-full h-full" />
             </div>
@@ -1176,11 +1177,24 @@ export default function ProgramsPage() {
           <div className="flex-shrink-0 flex border-t border-white/10 p-4">
             <div className="flex items-center w-full justify-between">
               <div className="flex items-center">
-                <div className="h-8 w-8 rounded-full bg-white/10 text-white flex items-center justify-center">
-                  <span className="text-sm font-medium">
-                    {getUserInitials(currentUser?.name)}
-                  </span>
-                </div>
+                {currentUser?.photoURL ? (
+                  <Avatar className="h-8 w-8 border-2 border-white/20">
+                    <AvatarImage 
+                      src={currentUser.photoURL} 
+                      alt={currentUser?.name || "User"}
+                      className="object-cover" 
+                    />
+                    <AvatarFallback className="bg-white/10 text-white">
+                      {getUserInitials(currentUser?.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                ) : (
+                  <div className="h-8 w-8 rounded-full bg-white/10 text-white flex items-center justify-center">
+                    <span className="text-sm font-medium">
+                      {getUserInitials(currentUser?.name)}
+                    </span>
+                  </div>
+                )}
                 <div className="ml-3">
                   <p className="text-sm font-medium text-white">{currentUser?.name}</p>
                   <p className="text-xs text-gray-300">

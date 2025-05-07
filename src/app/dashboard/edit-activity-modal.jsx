@@ -8,7 +8,8 @@ import { X, Upload, Trash2, Replace } from "lucide-react";
 import Image from "next/image";
 import { db, auth } from "@/service/firebase";
 import { doc, updateDoc, collection, addDoc } from "firebase/firestore";
-import { toast } from "@/components/ui/toast";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const compressImage = (file) => {
   return new Promise((resolve) => {
@@ -73,7 +74,7 @@ export function EditActivityModal({ isOpen, onClose, activity, onUpdate }) {
     const totalImages = existingImages.length + newImages.length;
     
     if (replaceIndex === null && files.length + totalImages > 6) {
-      toast(`Maximum 6 images allowed. You can add ${6 - totalImages} more images.`);
+      toast.error(`Maximum 6 images allowed. You can add ${6 - totalImages} more images.`);
       return;
     }
 
@@ -136,13 +137,12 @@ export function EditActivityModal({ isOpen, onClose, activity, onUpdate }) {
 
   const handleSubmit = async () => {
     if (!activity?.id || !auth.currentUser) {
-      toast("You must be logged in to update activities");
+      toast.error("You must be logged in to update activities");
       return;
     }
 
     try {
       setLoading(true);
-      toast("Processing images and saving changes...");
 
       // Get final images array by processing both existing and new images
       let finalImages = [...existingImages].filter(url => !deletedImages.includes(url));
@@ -166,7 +166,7 @@ export function EditActivityModal({ isOpen, onClose, activity, onUpdate }) {
           }
         } catch (error) {
           console.error("Error processing image:", error);
-          toast(`Failed to process image: ${imageData.file.name}`);
+          toast.error(`Failed to process image: ${imageData.file.name}`);
         }
       }
 
@@ -204,11 +204,11 @@ export function EditActivityModal({ isOpen, onClose, activity, onUpdate }) {
         ...updatedActivity,
       });
 
-      toast(`Activity updated successfully with ${finalImages.length} images`, 'success');
+      toast.success("Activity updated successfully");
       onClose();
     } catch (error) {
       console.error("Error updating activity:", error);
-      toast(error.message || "Failed to update activity. Please try with fewer or smaller images.", 'error');
+      toast.error(error.message || "Failed to update activity. Please try with fewer or smaller images.");
     } finally {
       setLoading(false);
     }

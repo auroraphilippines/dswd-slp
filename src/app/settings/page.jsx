@@ -38,7 +38,8 @@ import { auth, db } from "@/service/firebase";
 import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { toast } from "react-toastify";
 import Image from "next/image";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"; 
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getProfilePhotoFromLocalStorage } from "@/service/storage";
 
 export default function SettingsPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -54,12 +55,42 @@ export default function SettingsPage() {
     setIsMobileMenuOpen(false);
   }, [pathname]);
 
+  // Function to fetch user profile image
+  const fetchUserProfileImage = async (userId) => {
+    try {
+      // First try to get from Firestore
+      const userDoc = await getDoc(doc(db, "users", userId));
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        if (userData.photoURL) {
+          return userData.photoURL;
+        }
+      }
+
+      // If not in Firestore, try localStorage
+      const localPhoto = getProfilePhotoFromLocalStorage(userId);
+      if (localPhoto) {
+        return localPhoto;
+      }
+
+      return null;
+    } catch (error) {
+      console.error("Error fetching profile image:", error);
+      return null;
+    }
+  };
+
   useEffect(() => {
     const fetchUserData = async () => {
       try {
         const user = auth.currentUser;
         if (user) {
           const userDoc = await getDoc(doc(db, "users", user.uid));
+          
+          // Fetch profile image
+          const profileImage = await fetchUserProfileImage(user.uid);
+          
           if (userDoc.exists()) {
             const userData = userDoc.data();
             const rawName = userData.name || "";
@@ -71,7 +102,8 @@ export default function SettingsPage() {
               email: userData.email || "admin@dswd.gov.ph",
               name: displayName,
               role: userData.role || "Administrator",
-              lastActive: userData.lastActive || "Never"
+              lastActive: userData.lastActive || "Never", 
+              photoURL: profileImage
             });
 
             // After successful login
@@ -221,11 +253,21 @@ export default function SettingsPage() {
           <div className="flex-shrink-0 flex border-t border-white/10 p-4">
             <div className="flex items-center w-full justify-between">
               <div className="flex items-center">
-                <div className="h-8 w-8 rounded-full bg-white/10 text-white flex items-center justify-center">
-                  <span className="text-sm font-medium">
-                    {getUserInitials(currentUser?.name)}
-                  </span>
-                </div>
+                {currentUser?.photoURL ? (
+                  <Avatar className="h-8 w-8 border-2 border-white/20">
+                    <AvatarImage 
+                      src={currentUser.photoURL} 
+                      alt={currentUser?.name || "User"}
+                      className="object-cover" 
+                    />
+                  </Avatar>
+                ) : (
+                  <div className="h-8 w-8 rounded-full bg-white/10 text-white flex items-center justify-center">
+                    <span className="text-sm font-medium">
+                      {getUserInitials(currentUser?.name)}
+                    </span>
+                  </div>
+                )}
                 <div className="ml-3">
                   <p className="text-sm font-medium text-white">{currentUser?.name}</p>
                   <p className="text-xs text-gray-300">
@@ -372,11 +414,21 @@ export default function SettingsPage() {
                     className="ml-3 rounded-full"
                   >
                     <span className="sr-only">Open user menu</span>
-                    <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                      <span className="text-sm font-medium">
-                        {getUserInitials(currentUser?.name)}
-                      </span>
-                    </div>
+                    {currentUser?.photoURL ? (
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage 
+                          src={currentUser.photoURL} 
+                          alt={currentUser?.name || "User"}
+                          className="object-cover" 
+                        />
+                      </Avatar>
+                    ) : (
+                      <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
+                        <span className="text-sm font-medium">
+                          {getUserInitials(currentUser?.name)}
+                        </span>
+                      </div>
+                    )}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">

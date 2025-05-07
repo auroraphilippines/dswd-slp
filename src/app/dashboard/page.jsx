@@ -51,6 +51,7 @@ import { doc, getDoc, collection, query, where, getDocs } from "firebase/firesto
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { UploadActivity } from "./upload-activity";
 import { ActivityFeed } from "./activity-feed";
+import { getProfilePhotoFromLocalStorage } from "@/service/storage";
 
 export default function DashboardPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -169,6 +170,33 @@ export default function DashboardPage() {
     setIsMobileMenuOpen(false);
   }, [pathname]);
 
+  // Add fetchUserProfileImage function
+  const fetchUserProfileImage = async (userId) => {
+    try {
+      // First try to get from Firestore
+      const userDoc = await getDoc(doc(db, "users", userId));
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        if (userData.photoURL) {
+          return userData.photoURL;
+        }
+      }
+
+      // If not in Firestore, try localStorage
+      const localPhoto = getProfilePhotoFromLocalStorage(userId);
+      if (localPhoto) {
+        return localPhoto;
+      }
+
+      return null;
+    } catch (error) {
+      console.error("Error fetching profile image:", error);
+      return null;
+    }
+  };
+
+  // Update the useEffect for fetching user data
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -180,12 +208,16 @@ export default function DashboardPage() {
             const rawName = userData.name || "";
             const displayName = rawName === "255" ? "Admin DSWD" : rawName;
 
+            // Fetch profile image
+            const profileImage = await fetchUserProfileImage(user.uid);
+
             setCurrentUser({
               ...userData,
               uid: user.uid,
               email: userData.email || "admin@dswd.gov.ph",
               name: displayName,
               role: userData.role || "Administrator",
+              photoURL: profileImage
             });
           }
         }
@@ -276,11 +308,23 @@ export default function DashboardPage() {
           <div className="flex-shrink-0 flex border-t border-white/10 p-4">
             <div className="flex items-center w-full justify-between">
               <div className="flex items-center">
-                <div className="h-8 w-8 rounded-full bg-black text-white flex items-center justify-center">
-                  <span className="text-sm font-medium">
-                    {getUserInitials(currentUser?.name)}
-                  </span>
-                </div>
+                {currentUser?.photoURL ? (
+                  <div className="h-8 w-8 rounded-full overflow-hidden">
+                    <Image
+                      src={currentUser.photoURL}
+                      alt={currentUser.name}
+                      width={32}
+                      height={32}
+                      className="object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="h-8 w-8 rounded-full bg-black text-white flex items-center justify-center">
+                    <span className="text-sm font-medium">
+                      {getUserInitials(currentUser?.name)}
+                    </span>
+                  </div>
+                )}
                 <div className="ml-3">
                   <p className="text-sm font-medium text-white">{currentUser?.name}</p>
                   <p className="text-xs text-gray-300">
@@ -288,7 +332,6 @@ export default function DashboardPage() {
                   </p>
                 </div>
               </div>
-             
             </div>
           </div>
         </div>
@@ -366,11 +409,23 @@ export default function DashboardPage() {
           <div className="flex-shrink-0 p-4">
             <div className="rounded-lg bg-muted/50 p-3">
               <div className="flex items-center">
-                <Avatar className="h-9 w-9 border-2 border-green-200">
-                  <AvatarFallback className="bg-black text-white font-medium">
-                    {getUserInitials(currentUser?.name)}
-                  </AvatarFallback>
-                </Avatar>
+                {currentUser?.photoURL ? (
+                  <div className="h-9 w-9 rounded-full overflow-hidden border-2 border-green-200">
+                    <Image
+                      src={currentUser.photoURL}
+                      alt={currentUser.name}
+                      width={36}
+                      height={36}
+                      className="object-cover"
+                    />
+                  </div>
+                ) : (
+                  <Avatar className="h-9 w-9 border-2 border-green-200">
+                    <AvatarFallback className="bg-black text-white font-medium">
+                      {getUserInitials(currentUser?.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                )}
                 <div className="ml-3">
                   <p className="text-sm font-medium">
                     {currentUser?.name || "Admin DSWD"}
@@ -423,58 +478,6 @@ export default function DashboardPage() {
               >
                 
               </Button>
-
-              {/* Profile dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="rounded-full flex items-center gap-2 px-2 hover:bg-black-50"
-                  >
-                    <Avatar className="h-8 w-8 border-2 border-black">
-                      <AvatarFallback className="bg-black text-black font-medium">
-                        {getUserInitials(currentUser?.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="hidden sm:inline text-sm font-medium">
-                      {currentUser?.name || "Admin DSWD"}
-                    </span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  className="w-56 mt-1 rounded-xl p-1 border-green-100"
-                >
-                  <DropdownMenuLabel className="px-2 py-1.5">
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        {currentUser?.name || "Admin DSWD"}
-                      </p>
-                      <p className="text-xs leading-none text-muted-foreground">
-                        {currentUser?.email || "admin@dswd.gov.ph"}
-                      </p>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="rounded-lg cursor-pointer">
-                    <Link href="/profile" className="flex w-full items-center">
-                      <User className="mr-2 h-4 w-4" />
-                      Profile
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="rounded-lg cursor-pointer">
-                    <Link href="/settings" className="flex w-full items-center">
-                      <Settings className="mr-2 h-4 w-4" />
-                      Settings
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="rounded-lg text-red-500 focus:text-red-500 cursor-pointer">
-                
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
             </div>
           </div>
         </header>
@@ -521,4 +524,4 @@ export default function DashboardPage() {
       </div>
     </div>
   );
-}
+}   

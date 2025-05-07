@@ -96,6 +96,7 @@ import { Chart } from 'react-chartjs-2';
 import { Checkbox } from "@/components/ui/checkbox";
 import XLSX from 'xlsx';
 import Image from "next/image";
+import { getProfilePhotoFromLocalStorage } from "@/service/storage";
 
 // Register ChartJS components
 ChartJS.register(
@@ -140,6 +141,32 @@ const navigation = [
     icon: Settings,
   }
 ];
+
+// Add fetchUserProfileImage function
+const fetchUserProfileImage = async (userId) => {
+  try {
+    // First try to get from Firestore
+    const userDoc = await getDoc(doc(db, "users", userId));
+    
+    if (userDoc.exists()) {
+      const userData = userDoc.data();
+      if (userData.photoURL) {
+        return userData.photoURL;
+      }
+    }
+
+    // If not in Firestore, try localStorage
+    const localPhoto = getProfilePhotoFromLocalStorage(userId);
+    if (localPhoto) {
+      return localPhoto;
+    }
+
+    return null;
+  } catch (error) {
+    console.error("Error fetching profile image:", error);
+    return null;
+  }
+};
 
 export default function VendorsPage() {
   const router = useRouter();
@@ -212,6 +239,7 @@ export default function VendorsPage() {
     };
   }, [router]);
 
+  // Update the useEffect for fetching user data
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -223,12 +251,16 @@ export default function VendorsPage() {
             const rawName = userData.name || "";
             const displayName = rawName === "255" ? "Admin DSWD" : rawName;
 
+            // Fetch profile image
+            const profileImage = await fetchUserProfileImage(user.uid);
+
             setCurrentUser({
               ...userData,
               uid: user.uid,
               email: userData.email || "admin@dswd.gov.ph",
               name: displayName,
               role: userData.role || "Administrator",
+              photoURL: profileImage
             });
           }
         }
@@ -722,11 +754,23 @@ export default function VendorsPage() {
           <div className="flex-shrink-0 flex border-t border-white/10 p-4">
             <div className="flex items-center w-full justify-between">
               <div className="flex items-center">
-                <div className="h-8 w-8 rounded-full bg-white/10 text-white flex items-center justify-center">
-                  <span className="text-sm font-medium">
-                    {getUserInitials(currentUser?.name)}
-                  </span>
-                </div>
+                {currentUser?.photoURL ? (
+                  <div className="h-8 w-8 rounded-full overflow-hidden">
+                    <Image
+                      src={currentUser.photoURL}
+                      alt={currentUser.name}
+                      width={32}
+                      height={32}
+                      className="object-cover"
+                    />
+                  </div>
+                ) : (
+                  <div className="h-8 w-8 rounded-full bg-white/10 text-white flex items-center justify-center">
+                    <span className="text-sm font-medium">
+                      {getUserInitials(currentUser?.name)}
+                    </span>
+                  </div>
+                )}
                 <div className="ml-3">
                   <p className="text-sm font-medium text-white">{currentUser?.name}</p>
                   <p className="text-xs text-gray-300">
@@ -821,11 +865,23 @@ export default function VendorsPage() {
           <div className="flex-shrink-0 p-4">
             <div className="rounded-lg bg-white/5 p-3">
               <div className="flex items-center">
-                <Avatar className="h-9 w-9 border-2 border-white/20">
-                  <AvatarFallback className="bg-white/10 text-white font-medium">
-                    {getUserInitials(currentUser?.name)}
-                  </AvatarFallback>
-                </Avatar>
+                {currentUser?.photoURL ? (
+                  <div className="h-9 w-9 rounded-full overflow-hidden border-2 border-white/20">
+                    <Image
+                      src={currentUser.photoURL}
+                      alt={currentUser.name}
+                      width={36}
+                      height={36}
+                      className="object-cover"
+                    />
+                  </div>
+                ) : (
+                  <Avatar className="h-9 w-9 border-2 border-white/20">
+                    <AvatarFallback className="bg-white/10 text-white font-medium">
+                      {getUserInitials(currentUser?.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                )}
                 <div className="ml-3">
                   <p className="text-sm font-medium text-white">
                     {currentUser?.name || "Admin DSWD"}
@@ -879,11 +935,23 @@ export default function VendorsPage() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="rounded-full flex items-center gap-2 px-2">
-                    <Avatar className="h-8 w-8 border-2 border-primary/20">
-                      <AvatarFallback className="bg-primary/10 text-primary font-medium">
-                        {getUserInitials(currentUser?.name)}
-                      </AvatarFallback>
-                    </Avatar>
+                    {currentUser?.photoURL ? (
+                      <div className="h-8 w-8 rounded-full overflow-hidden border-2 border-primary/20">
+                        <Image
+                          src={currentUser.photoURL}
+                          alt={currentUser.name}
+                          width={32}
+                          height={32}
+                          className="object-cover"
+                        />
+                      </div>
+                    ) : (
+                      <Avatar className="h-8 w-8 border-2 border-primary/20">
+                        <AvatarFallback className="bg-primary/10 text-primary font-medium">
+                          {getUserInitials(currentUser?.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
                     <span className="hidden sm:inline text-sm font-medium">
                       {currentUser?.name || "Admin DSWD"}
                     </span>

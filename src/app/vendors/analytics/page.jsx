@@ -18,7 +18,6 @@ import {
   Users,
   FolderOpen,
   Settings,
-  Bell,
   Search,
   Menu,
   X,
@@ -39,7 +38,7 @@ import {
 } from 'chart.js';
 import { Chart } from 'react-chartjs-2';
 
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { auth, db } from "@/service/firebase";
 import { doc, getDoc } from "firebase/firestore";
 import { ToastContainer, toast } from "react-toastify";
@@ -130,13 +129,15 @@ export default function VendorsAnalyticsPage() {
             const userData = userDoc.data();
             const rawName = userData.name || "";
             const displayName = rawName === "255" ? "Admin DSWD" : rawName;
-
+            // Fetch profile image
+            const profileImage = await fetchUserProfileImage(user.uid);
             setCurrentUser({
               ...userData,
               uid: user.uid,
               email: userData.email || "admin@dswd.gov.ph",
               name: displayName,
               role: userData.role || "Administrator",
+              photoURL: profileImage
             });
           }
         }
@@ -329,6 +330,23 @@ export default function VendorsAnalyticsPage() {
     return stats;
   };
 
+  // Add fetchUserProfileImage function after the existing useEffect for mobile menu
+  const fetchUserProfileImage = async (userId) => {
+    try {
+      const userDoc = await getDoc(doc(db, "users", userId));
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        if (userData.photoURL) return userData.photoURL;
+      }
+      const localPhoto = getProfilePhotoFromLocalStorage(userId);
+      if (localPhoto) return localPhoto;
+      return null;
+    } catch (error) {
+      console.error("Error fetching profile image:", error);
+      return null;
+    }
+  };
+
   if (loading) {
     return <LoadingPage />;
   }
@@ -397,11 +415,20 @@ export default function VendorsAnalyticsPage() {
           <div className="flex-shrink-0 flex border-t border-white/10 p-4">
             <div className="flex items-center w-full justify-between">
               <div className="flex items-center">
-                <div className="h-8 w-8 rounded-full bg-white/10 text-white flex items-center justify-center">
-                  <span className="text-sm font-medium">
-                    {getUserInitials(currentUser?.name)}
-                  </span>
-                </div>
+                {currentUser?.photoURL ? (
+                  <Avatar className="h-8 w-8 border-2 border-white/20">
+                    <AvatarImage src={currentUser.photoURL} alt={currentUser?.name || "User"} className="object-cover" />
+                    <AvatarFallback className="bg-white/10 text-white font-medium">
+                      {getUserInitials(currentUser?.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                ) : (
+                  <div className="h-8 w-8 rounded-full bg-white/10 text-white flex items-center justify-center">
+                    <span className="text-sm font-medium">
+                      {getUserInitials(currentUser?.name)}
+                    </span>
+                  </div>
+                )}
                 <div className="ml-3">
                   <p className="text-sm font-medium text-white">{currentUser?.name}</p>
                   <p className="text-xs text-gray-300">
@@ -496,11 +523,20 @@ export default function VendorsAnalyticsPage() {
           <div className="flex-shrink-0 p-4">
             <div className="rounded-lg bg-muted/50 p-3">
               <div className="flex items-center">
-                <Avatar className="h-9 w-9 border-2 border-primary/20">
-                  <AvatarFallback className="bg-primary/10 text-primary font-medium">
-                    {getUserInitials(currentUser?.name)}
-                  </AvatarFallback>
-                </Avatar>
+                {currentUser?.photoURL ? (
+                  <Avatar className="h-9 w-9 border-2 border-primary/20">
+                    <AvatarImage src={currentUser.photoURL} alt={currentUser?.name || "User"} className="object-cover" />
+                    <AvatarFallback className="bg-primary/10 text-primary font-medium">
+                      {getUserInitials(currentUser?.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                ) : (
+                  <div className="h-8 w-8 rounded-full bg-white/10 text-white flex items-center justify-center">
+                    <span className="text-sm font-medium">
+                      {getUserInitials(currentUser?.name)}
+                    </span>
+                  </div>
+                )}
                 <div className="ml-3">
                   <p className="text-sm font-medium">
                     {currentUser?.name || "Admin DSWD"}
@@ -542,11 +578,20 @@ export default function VendorsAnalyticsPage() {
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="sm" className="rounded-full flex items-center gap-2 px-2">
-                    <Avatar className="h-8 w-8 border-2 border-primary/20">
-                      <AvatarFallback className="bg-primary/10 text-primary font-medium">
-                        {getUserInitials(currentUser?.name)}
-                      </AvatarFallback>
-                    </Avatar>
+                    {currentUser?.photoURL ? (
+                      <Avatar className="h-8 w-8 border-2 border-primary/20">
+                        <AvatarImage src={currentUser.photoURL} alt={currentUser?.name || "User"} className="object-cover" />
+                        <AvatarFallback className="bg-primary/10 text-primary font-medium">
+                          {getUserInitials(currentUser?.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                    ) : (
+                      <Avatar className="h-8 w-8 border-2 border-primary/20">
+                        <AvatarFallback className="bg-primary/10 text-primary font-medium">
+                          {getUserInitials(currentUser?.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
                     <span className="hidden sm:inline text-sm font-medium">
                       {currentUser?.name || "Admin DSWD"}
                     </span>
@@ -577,12 +622,7 @@ export default function VendorsAnalyticsPage() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem className="rounded-lg text-red-500 focus:text-red-500 cursor-pointer">
-                    <Link href="/" className="flex w-full items-center">
-                      <X className="mr-2 h-4 w-4" />
-                      Sign out
-                    </Link>
-                  </DropdownMenuItem>
+                
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>

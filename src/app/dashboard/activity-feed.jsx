@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { formatDistanceToNow, format } from "date-fns";
 import NextImage from "next/image";
 import { Progress } from "@/components/ui/progress";
-import { toast } from "@/components/ui/toast";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 import { ImageModal } from "./image-modal";
 import { EditActivityModal } from "./edit-activity-modal";
 import { MoreVertical, Edit, Trash2, Loader2, MapPin, Filter, Calendar } from "lucide-react";
@@ -26,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { getProfilePhotoFromLocalStorage } from "@/service/storage";
 
 const ITEMS_PER_PAGE = 20;
 
@@ -68,17 +70,6 @@ const MONTHS = [
     year: year
   };
 });
-
-const showToast = (message, type = 'default') => {
-  toast(message, {
-    className: type === 'success' 
-      ? 'bg-green-500 text-white border-green-600'
-      : type === 'error'
-      
-        ? 'bg-red-500 text-white border-red-600'
-        : '',
-  });
-};
 
 export function ActivityFeed() {
   const [activities, setActivities] = useState([]);
@@ -159,7 +150,6 @@ export function ActivityFeed() {
         activity.id === updatedActivity.id ? updatedActivity : activity
       )
     );
-    showToast("Activity updated successfully", 'success');
   };
 
   const handleDelete = async (activityId) => {
@@ -172,10 +162,10 @@ export function ActivityFeed() {
       await deleteDoc(doc(db, "activities", activityId));
       
       setActivities(prev => prev.filter(a => a.id !== activityId));
-      showToast("Activity deleted successfully", 'success');
+      toast("Activity deleted successfully");
     } catch (error) {
       console.error("Error deleting activity:", error);
-      showToast("Failed to delete activity", 'error');
+      toast("Failed to delete activity");
     } finally {
       setLoading(false);
     }
@@ -238,7 +228,7 @@ export function ActivityFeed() {
 
         if (filteredDocs.length === 0 && !loadMore) {
           setActivities([]);
-          showToast("No activities found for the selected filters", 'error');
+          toast("No activities found for the selected filters");
           setHasMore(false);
           return;
         }
@@ -247,15 +237,20 @@ export function ActivityFeed() {
           filteredDocs.map(async (docSnapshot) => {
             const activityData = docSnapshot.data();
             let userData = null;
+            let photoURL = null;
 
             try {
               const userDocRef = doc(db, "users", activityData.userId);
               const userDoc = await getDoc(userDocRef);
               if (userDoc.exists()) {
                 userData = userDoc.data();
+                photoURL = userData.photoURL || getProfilePhotoFromLocalStorage(activityData.userId);
+              } else {
+                photoURL = getProfilePhotoFromLocalStorage(activityData.userId);
               }
             } catch (error) {
               console.error("Error fetching user data:", error);
+              photoURL = getProfilePhotoFromLocalStorage(activityData.userId);
             }
 
             return {
@@ -265,8 +260,8 @@ export function ActivityFeed() {
               role: userData?.role || activityData.role || "User",
               email: userData?.email || activityData.email,
               createdAt: activityData.createdAt?.toDate() || new Date(),
-              // Ensure we use the proper case municipality name from the database
-              municipalityName: activityData.municipalityName || MUNICIPALITIES.find(m => m.id === activityData.municipality)?.name || activityData.municipality
+              municipalityName: activityData.municipalityName || MUNICIPALITIES.find(m => m.id === activityData.municipality)?.name || activityData.municipality,
+              photoURL: photoURL || null
             };
           })
         );
@@ -283,11 +278,11 @@ export function ActivityFeed() {
 
       } catch (error) {
         console.error("Query error:", error);
-        showToast("Error loading activities. Please try again.", 'error');
+        toast("Error loading activities. Please try again.");
       }
     } catch (error) {
       console.error("Fatal error:", error);
-      showToast("Error loading activities. Please try refreshing the page.", 'error');
+      toast("Error loading activities. Please try refreshing the page.");
     } finally {
       if (loadMore) {
         setLoadingMore(false);
@@ -316,6 +311,7 @@ export function ActivityFeed() {
   if (loading) {
     return (
       <div className="space-y-4">
+        <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover theme="light" limit={3} />
         <div className="w-full space-y-2">
           <Progress value={progress} className="w-full" />
           <p className="text-sm text-center text-muted-foreground">
@@ -347,6 +343,7 @@ export function ActivityFeed() {
 
   return (
     <div className="space-y-4">
+      <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop={false} closeOnClick rtl={false} pauseOnFocusLoss draggable pauseOnHover theme="light" limit={3} />
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
         <div className="flex-1">
           <Select value={selectedMonth} onValueChange={setSelectedMonth}>
@@ -422,9 +419,17 @@ export function ActivityFeed() {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
                 <Avatar>
-                  <AvatarFallback className="bg-primary/10 text-primary">
-                    {getUserInitials(activity.name)}
-                  </AvatarFallback>
+                  {activity.photoURL ? (
+                    <img
+                      src={activity.photoURL}
+                      alt={activity.name}
+                      className="object-cover w-full h-full rounded-full"
+                    />
+                  ) : (
+                    <AvatarFallback className="bg-primary/10 text-primary">
+                      {getUserInitials(activity.name)}
+                    </AvatarFallback>
+                  )}
                 </Avatar>
                 <div>
                   <p className="text-sm font-medium leading-none">{activity.name}</p>
