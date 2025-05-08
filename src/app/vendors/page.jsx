@@ -187,7 +187,8 @@ export default function VendorsPage() {
     readOnly: false,
     accessProject: true,
     accessParticipant: true,
-    accessFileStorage: true
+    accessFileStorage: true,
+    accessActivities: true
   });
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [selectedItems, setSelectedItems] = useState([]);

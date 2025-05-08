@@ -88,6 +88,10 @@ export function UploadActivity() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [userData, setUserData] = useState(null);
   const [selectedMunicipality, setSelectedMunicipality] = useState("");
+  const [userPermissions, setUserPermissions] = useState({
+    readOnly: true,
+    accessActivities: false
+  });
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -96,7 +100,13 @@ export function UploadActivity() {
           const userDocRef = doc(db, "users", auth.currentUser.uid);
           const userDoc = await getDoc(userDocRef);
           if (userDoc.exists()) {
-            setUserData(userDoc.data());
+            const userData = userDoc.data();
+            setUserData(userData);
+            // Set user permissions
+            setUserPermissions({
+              readOnly: userData.permissions?.readOnly ?? true,
+              accessActivities: userData.permissions?.accessActivities ?? false
+            });
           }
         } catch (error) {
           console.error("Error fetching user data:", error);
@@ -108,7 +118,19 @@ export function UploadActivity() {
     fetchUserData();
   }, []);
 
+  // Add permission check function
+  const canUploadActivity = () => {
+    // Admin users can always upload
+    if (userData?.role === "Administrator") return true;
+    // Check if user has activity access and is not read-only
+    return !userPermissions.readOnly && userPermissions.accessActivities;
+  };
+
   const handleImageChange = (e) => {
+    if (!canUploadActivity()) {
+      showToast("You don't have permission to upload activities", 'error');
+      return;
+    }
     const files = Array.from(e.target.files);
     if (files.length + selectedImages.length > MAX_IMAGES) {
       showToast(`Maximum ${MAX_IMAGES} images allowed`, 'error');
@@ -142,6 +164,11 @@ export function UploadActivity() {
   };
 
   const handleUpload = async () => {
+    if (!canUploadActivity()) {
+      showToast("You don't have permission to upload activities", 'error');
+      return;
+    }
+
     if (!auth.currentUser) {
       showToast("Please log in to upload activities", 'error');
       return;
@@ -204,6 +231,16 @@ export function UploadActivity() {
       setIsUploading(false);
     }
   };
+
+  // If user can't upload, show a message instead of the upload form
+  if (!canUploadActivity()) {
+    return (
+      <div className="p-4 text-center text-muted-foreground">
+        <p>You don't have permission to upload activities.</p>
+        <p className="text-sm">Please contact your administrator for access.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">

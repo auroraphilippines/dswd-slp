@@ -107,7 +107,8 @@ export function UsersPermissionsSettings() {
       readOnly: true,
       accessProject: false,
       accessParticipant: false,
-      accessFileStorage: false
+      accessFileStorage: false,
+      accessActivities: false
     }
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -121,7 +122,8 @@ export function UsersPermissionsSettings() {
       readOnly: true,
       accessProject: false,
       accessParticipant: false,
-      accessFileStorage: false
+      accessFileStorage: false,
+      accessActivities: false
     }
   });
   const [userToDelete, setUserToDelete] = useState(null);
@@ -202,7 +204,8 @@ export function UsersPermissionsSettings() {
             readOnly: true,
             accessProject: false,
             accessParticipant: false,
-            accessFileStorage: false
+            accessFileStorage: false,
+            accessActivities: false
           }
         };
       });
@@ -261,18 +264,20 @@ export function UsersPermissionsSettings() {
       readOnly: true,
       accessProject: false,
       accessParticipant: false,
-      accessFileStorage: false
+      accessFileStorage: false,
+      accessActivities: false
     });
 
     const handleTogglePermission = (permission) => {
       if (permission === 'readOnly') {
-        // When enabling readOnly, disable all other permissions
+        // When enabling readOnly, allow access to all modules but disable write operations
         if (!permissions.readOnly) {
           setPermissions({
             readOnly: true,
-            accessProject: false,
-            accessParticipant: false,
-            accessFileStorage: false
+            accessProject: true,
+            accessParticipant: true,
+            accessFileStorage: true,
+            accessActivities: true
           });
         } else {
           // When disabling readOnly, keep other permissions as they are
@@ -302,7 +307,7 @@ export function UsersPermissionsSettings() {
           <DialogHeader>
             <DialogTitle>Edit User Permissions - {user?.name}</DialogTitle>
             <DialogDescription>
-              Manage individual permissions for this user
+              Manage individual permissions for this user. Read-only users can view all modules but cannot make changes.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -310,7 +315,7 @@ export function UsersPermissionsSettings() {
               <div className="flex items-center justify-between">
                 <Label htmlFor={`readonly-${user?.id}`} className="flex items-center">
                   <Search className="h-4 w-4 mr-2 text-muted-foreground" />
-                  Read Only
+                  Read Only (View Only)
                 </Label>
                 <Switch
                   id={`readonly-${user?.id}`}
@@ -351,6 +356,18 @@ export function UsersPermissionsSettings() {
                   id={`storage-${user?.id}`}
                   checked={permissions.accessFileStorage}
                   onCheckedChange={() => handleTogglePermission('accessFileStorage')}
+                  disabled={permissions.readOnly}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor={`activities-${user?.id}`} className="flex items-center">
+                  <Users className="h-4 w-4 mr-2 text-muted-foreground" />
+                  Access Activities
+                </Label>
+                <Switch
+                  id={`activities-${user?.id}`}
+                  checked={permissions.accessActivities}
+                  onCheckedChange={() => handleTogglePermission('accessActivities')}
                   disabled={permissions.readOnly}
                 />
               </div>
@@ -481,7 +498,8 @@ export function UsersPermissionsSettings() {
           readOnly: true,
           accessProject: false,
           accessParticipant: false,
-          accessFileStorage: false
+          accessFileStorage: false,
+          accessActivities: false
         }
       });
       fetchUsers(); // Refresh the users list
@@ -504,7 +522,8 @@ export function UsersPermissionsSettings() {
         readOnly: true,
         accessProject: false,
         accessParticipant: false,
-        accessFileStorage: false
+        accessFileStorage: false,
+        accessActivities: false
       }
     });
 
@@ -545,7 +564,8 @@ export function UsersPermissionsSettings() {
             readOnly: true,
             accessProject: false,
             accessParticipant: false,
-            accessFileStorage: false
+            accessFileStorage: false,
+            accessActivities: false
           }
         });
         fetchUsers(); // Refresh the users list
@@ -569,7 +589,8 @@ export function UsersPermissionsSettings() {
             readOnly: true,
             accessProject: false,
             accessParticipant: false,
-            accessFileStorage: false
+            accessFileStorage: false,
+            accessActivities: false
           }
         });
       }
@@ -626,12 +647,14 @@ export function UsersPermissionsSettings() {
                       readOnly: false,
                       accessProject: true,
                       accessParticipant: true,
-                      accessFileStorage: true
+                      accessFileStorage: true,
+                      accessActivities: true
                     } : {
                       readOnly: true,
                       accessProject: false,
                       accessParticipant: false,
-                      accessFileStorage: false
+                      accessFileStorage: false,
+                      accessActivities: false
                     }
                   }));
                 }}  
@@ -663,7 +686,8 @@ export function UsersPermissionsSettings() {
                           readOnly: true,
                           accessProject: false,
                           accessParticipant: false,
-                          accessFileStorage: false
+                          accessFileStorage: false,
+                          accessActivities: false
                         } : {
                           ...prev.permissions,
                           readOnly: false
@@ -729,6 +753,27 @@ export function UsersPermissionsSettings() {
                           ...prev.permissions,
                           readOnly: false,
                           accessFileStorage: checked
+                        }
+                      }));
+                    }}
+                    disabled={localUserData.permissions.readOnly}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="accessActivities" className="flex items-center">
+                    <Users className="h-4 w-4 mr-2 text-muted-foreground" />
+                    Access Activities
+                  </Label>
+                  <Switch
+                    id="accessActivities"
+                    checked={localUserData.permissions.accessActivities}
+                    onCheckedChange={(checked) => {
+                      setLocalUserData(prev => ({
+                        ...prev,
+                        permissions: {
+                          ...prev.permissions,
+                          readOnly: false,
+                          accessActivities: checked
                         }
                       }));
                     }}
@@ -807,7 +852,8 @@ export function UsersPermissionsSettings() {
         readOnly: true,
         accessProject: false,
         accessParticipant: false,
-        accessFileStorage: false
+        accessFileStorage: false,
+        accessActivities: false
       }
     });
 
@@ -892,12 +938,14 @@ export function UsersPermissionsSettings() {
                       readOnly: false,
                       accessProject: true,
                       accessParticipant: true,
-                      accessFileStorage: true
+                      accessFileStorage: true,
+                      accessActivities: true
                     } : {
                       readOnly: true,
                       accessProject: false,
                       accessParticipant: false,
-                      accessFileStorage: false
+                      accessFileStorage: false,
+                      accessActivities: false
                     }
                   });
                 }}
@@ -957,6 +1005,11 @@ export function UsersPermissionsSettings() {
     }
     await auth.signOut();
     // ...any other logout logic
+  };
+
+  const hasActivitiesAccess = (user) => {
+    if (!user || !user.permissions) return false;
+    return user.permissions.accessActivities || user.role === "SLP Administrator";
   };
 
   return (
@@ -1057,7 +1110,8 @@ export function UsersPermissionsSettings() {
                 readOnly: true,
                 accessProject: false,
                 accessParticipant: false,
-                accessFileStorage: false
+                accessFileStorage: false,
+                accessActivities: false
               }
             });
           }
@@ -1080,7 +1134,8 @@ export function UsersPermissionsSettings() {
                 readOnly: true,
                 accessProject: false,
                 accessParticipant: false,
-                accessFileStorage: false
+                accessFileStorage: false,
+                accessActivities: false
               }
             });
           }

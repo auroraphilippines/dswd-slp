@@ -798,35 +798,23 @@ export default function ParticipantsPage() {
 
   // Update hasModuleAccess to check specific access permissions
   const hasModuleAccess = (moduleName) => {
-    // If no module name is provided, always allow access
-    if (!moduleName) return true;
-    
-    // For admin users, always allow access
-    if (currentUser?.role === "Administrator") return true;
-    
-    switch (moduleName.toLowerCase()) {
-      case 'projects':
-        return userPermissions.accessProject;
-      case 'participants':
-        return userPermissions.accessParticipant;
-      case 'filestorage':
-        return userPermissions.accessFileStorage;
-      default:
-        return true;
-    }
+    // Always allow access to everything
+    return true;
   };
 
-  // Update hasWritePermissions to check both readOnly and specific access
+  // Update hasWritePermissions to only check readOnly
   const hasWritePermissions = () => {
     // For admin users, always allow write access
     if (currentUser?.role === "Administrator") return true;
-    return !userPermissions.readOnly && userPermissions.accessParticipant;
+    // If user is read-only, deny write access
+    if (userPermissions.readOnly) return false;
+    return true;
   };
 
-  // Update isReadOnly to check both readOnly flag and access permission
+  // Update isReadOnly to only check readOnly flag
   const isReadOnly = () => {
-    // For admin users, never read-only
     if (currentUser?.role === "Administrator") return false;
+    // User is read-only if readOnly is true OR accessParticipant is false
     return userPermissions.readOnly || !userPermissions.accessParticipant;
   };
 
@@ -900,28 +888,18 @@ export default function ParticipantsPage() {
                   return (
                     <Link
                       key={item.name}
-                      href={hasAccess ? item.href : "#"}
-                      onClick={(e) => {
-                        if (!hasAccess) {
-                          e.preventDefault();
-                          toast.error(`You don't have access to ${item.name.toLowerCase()}.`);
-                        }
-                      }}
+                      href={item.href}
                       className={`${
                         isActive
                           ? "bg-white/10 text-white"
-                          : hasAccess
-                          ? "text-white/70 hover:bg-white/10 hover:text-white"
-                          : "text-white/50 cursor-not-allowed"
+                          : "text-white/70 hover:bg-white/10 hover:text-white"
                       } group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ease-in-out`}
                     >
                       <item.icon
                         className={`${
                           isActive
                             ? "text-white"
-                            : hasAccess
-                            ? "text-white/70 group-hover:text-white"
-                            : "text-white/50"
+                            : "text-white/70 group-hover:text-white"
                         } mr-3 flex-shrink-0 h-5 w-5`}
                         aria-hidden="true"
                       />
@@ -1012,28 +990,18 @@ export default function ParticipantsPage() {
                   return (
                     <Link
                       key={item.name}
-                      href={hasAccess ? item.href : "#"}
-                      onClick={(e) => {
-                        if (!hasAccess) {
-                          e.preventDefault();
-                          toast.error(`You don't have access to ${item.name.toLowerCase()}.`);
-                        }
-                      }}
+                      href={item.href}
                       className={`${
                         isActive
                           ? "bg-white/10 text-white"
-                          : hasAccess
-                          ? "text-white/70 hover:bg-white/10 hover:text-white"
-                          : "text-white/50 cursor-not-allowed"
+                          : "text-white/70 hover:bg-white/10 hover:text-white"
                       } group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ease-in-out`}
                     >
                       <item.icon
                         className={`${
                           isActive
                             ? "text-white"
-                            : hasAccess
-                            ? "text-white/70 group-hover:text-white"
-                            : "text-white/50"
+                            : "text-white/70 group-hover:text-white"
                         } mr-3 flex-shrink-0 h-5 w-5`}
                         aria-hidden="true"
                       />
@@ -1198,7 +1166,7 @@ export default function ParticipantsPage() {
                         <Download className="mr-2 h-4 w-4" />
                         Export to Excel
                       </Button>
-                      {!isReadOnly() && (
+                      {!isReadOnly() && userPermissions.accessParticipant && (
                         <Button onClick={handleAddParticipant}>
                           <Plus className="mr-2 h-4 w-4" />
                           Add Participant

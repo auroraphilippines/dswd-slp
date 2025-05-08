@@ -83,7 +83,13 @@ export function ActivityFeed() {
   const [selectedMonth, setSelectedMonth] = useState("all");
   const [selectedMunicipality, setSelectedMunicipality] = useState("all");
   const [availableMunicipalities, setAvailableMunicipalities] = useState([]);
-  const [userPermissions, setUserPermissions] = useState({});
+  const [userPermissions, setUserPermissions] = useState({
+    readOnly: false,
+    accessProject: true,
+    accessParticipant: true,
+    accessFileStorage: true,
+    accessActivities: true
+  });
 
   useEffect(() => {
     fetchActivities();
@@ -97,6 +103,30 @@ export function ActivityFeed() {
       updateAvailableMunicipalities();
     }
   }, [selectedMonth]);
+
+  useEffect(() => {
+    const fetchUserPermissions = async () => {
+      try {
+        const user = auth.currentUser;
+        if (user) {
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            setUserPermissions({
+              readOnly: userData.permissions?.readOnly ?? false,
+              accessProject: userData.permissions?.accessProject ?? true,
+              accessParticipant: userData.permissions?.accessParticipant ?? true,
+              accessFileStorage: userData.permissions?.accessFileStorage ?? true,
+              accessActivities: userData.permissions?.accessActivities ?? true
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching user permissions:", error);
+      }
+    };
+    fetchUserPermissions();
+  }, []);
 
   const updateAvailableMunicipalities = async () => {
     if (selectedMonth === "all") {
@@ -308,6 +338,10 @@ export function ActivityFeed() {
     return name.substring(0, 2).toUpperCase();
   };
 
+  const isReadOnly = () => {
+    return userPermissions.readOnly || !userPermissions.accessActivities;
+  };
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -448,7 +482,7 @@ export function ActivityFeed() {
                 </div>
               </div>
 
-              {auth.currentUser && activity.userId === auth.currentUser.uid && (
+              {auth.currentUser && activity.userId === auth.currentUser.uid && !isReadOnly() && (
                 <DropdownMenu>
                   <DropdownMenuTrigger className="hover:bg-muted p-2 rounded-full">
                     <MoreVertical className="h-5 w-5" />

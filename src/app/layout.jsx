@@ -15,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata = {
   title: "DSWD Social Welfare Capital Fund",
   description:
-    "Inventory Management System for DSWD Social Welfare Capital Fund",
+    "SLP-DSWD-AURORA",
 };
 
 export default function RootLayout({ children }) {

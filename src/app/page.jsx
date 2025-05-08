@@ -305,22 +305,6 @@ export default function LandingPage() {
                     <NavLink href="#platform-users" icon={<Users className="w-4 h-4" />} text="Users" />
                     <NavLink href="#account-creation" icon={<UserPlus className="w-4 h-4" />} text="Accounts" />
                     <NavLink href="#service-access" icon={<Compass className="w-4 h-4" />} text="Services" />
-                    <NavLink href="#faqs" icon={<HelpCircle className="w-4 h-4" />} text="FAQs" />
-                  </motion.div>
-                  
-                  <motion.div
-                    className="ml-6"
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.6, duration: 0.3 }}
-                  >
-                    <button
-                      onClick={() => router.push("/login")}
-                      className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-full py-2 px-5 text-sm font-medium shadow-sm hover:shadow-md transition-all flex items-center gap-1 group"
-                    >
-                      <span>Login</span>
-                      <ArrowUpRight className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
-                    </button>
                   </motion.div>
                 </nav>
 
@@ -407,31 +391,15 @@ export default function LandingPage() {
                             text="Service Access" 
                             onClick={() => handleNavLinkClick("service-access")}
                           />
-                          <MobileNavLink 
-                            href="#faqs" 
-                            icon={<HelpCircle className="mr-3 h-5 w-5" />} 
-                            text="FAQs" 
-                            onClick={() => handleNavLinkClick("faqs")}
-                          />
                         </nav>
                       </div>
                       <div className="p-4 border-t border-emerald-100">
                         <button
                           onClick={() => {
                             setMobileMenuOpen(false);
-                            router.push("/login");
-                          }}
-                          className="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-medium py-3 px-4 rounded-xl text-base shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 flex items-center justify-center gap-2"
-                        >
-                          <span>Login to System</span>
-                          <ArrowUpRight className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => {
-                            setMobileMenuOpen(false);
                             router.push("/about");
                           }}
-                          className="w-full mt-3 bg-white border border-emerald-200 hover:bg-emerald-50 text-emerald-700 font-medium py-3 px-4 rounded-xl text-base shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
+                          className="w-full bg-white border border-emerald-200 hover:bg-emerald-50 text-emerald-700 font-medium py-3 px-4 rounded-xl text-base shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"
                         >
                           Learn More
                         </button>
@@ -555,7 +523,7 @@ export default function LandingPage() {
                       transition={{ delay: 0.8, duration: 0.8 }}
                     >
                       <motion.button
-                        onClick={() => router.push("/login")}
+                        onClick={() => router.push("/about")}
                         className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-medium py-3.5 px-8 rounded-xl text-base shadow-md transition-all hover:shadow-lg hover:shadow-emerald-600/20 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 flex items-center justify-center gap-2 group"
                         whileHover={{ scale: 1.03 }}
                         whileTap={{ scale: 0.97 }}
@@ -591,20 +559,19 @@ export default function LandingPage() {
                       animate={{ opacity: 1 }}
                       transition={{ delay: 1.2, duration: 0.8 }}
                     >
-                      <div className="flex -space-x-2">
-                        {[1, 2, 3, 4].map(num => (
-                          <div 
-                            key={num} 
-                            className="w-10 h-10 rounded-full border-2 border-emerald-800 overflow-hidden"
-                          >
-                            <div className="w-full h-full bg-gradient-to-br from-emerald-500 to-teal-600"></div>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="text-emerald-100 text-sm">
-                        <span className="font-semibold text-white">1,000+</span> communities
-                        <br/>empowered nationwide
-                      </div>
+                      <motion.div
+                        animate={{
+                          y: [0, -10, 0],
+                        }}
+                        transition={{
+                          duration: 2,
+                          repeat: Infinity,
+                          repeatType: "reverse",
+                        }}
+                      >
+                        <ChevronDown className="w-8 h-8 text-emerald-400" />
+                      </motion.div>
+                      <p className="text-emerald-200 mt-2 text-sm">Scroll to explore</p>
                     </motion.div>
                   </motion.div>
                   
@@ -626,98 +593,85 @@ export default function LandingPage() {
                         repeatType: "reverse",
                       }}
                     ></motion.div>
-                    <div className="relative bg-emerald-900/40 backdrop-blur-sm border border-emerald-700/50 rounded-2xl overflow-hidden p-6">
-                      <div className="mb-6 flex justify-between items-center">
+                    <div className="relative bg-emerald-900/40 backdrop-blur-sm border border-emerald-700/50 rounded-2xl overflow-hidden p-4">
+                      <div className="mb-3 flex justify-between items-center">
                         <div className="flex items-center gap-2">
-                          <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                            <Layers className="w-4 h-4 text-emerald-300" />
+                          <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                            <LifeBuoy className="w-3.5 h-3.5 text-emerald-300" />
                           </div>
-                          <span className="text-emerald-100 font-medium">Program Statistics</span>
-                        </div>
-                        <div className="text-xs text-emerald-300 bg-emerald-900/50 py-1 px-2 rounded-md">
-                          Live Data
+                          <span className="text-emerald-100 font-medium text-sm">DSWD SLP Program Highlights</span>
                         </div>
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-4 mb-6">
-                        {[
-                          { label: "Communities Served", value: "1,248", icon: <Users className="w-4 h-4" /> },
-                          { label: "Programs Active", value: "36", icon: <Settings className="w-4 h-4" /> },
-                          { label: "Success Rate", value: "94%", icon: <ArrowUpRight className="w-4 h-4" /> },
-                          { label: "Funding Released", value: "₱28.3M", icon: <Download className="w-4 h-4" /> }
-                        ].map((stat, index) => (
-                          <motion.div
-                            key={stat.label}
-                            className="bg-emerald-900/30 border border-emerald-800/50 rounded-xl p-4"
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: 0.8 + (index * 0.1), duration: 0.5 }}
-                          >
-                            <div className="flex items-center gap-2 mb-2">
-                              <div className="w-6 h-6 rounded-full bg-emerald-800/50 flex items-center justify-center text-emerald-400">
-                                {stat.icon}
-                              </div>
-                              <span className="text-xs text-emerald-300">{stat.label}</span>
-                            </div>
-                            <p className="text-2xl font-bold text-white">{stat.value}</p>
-                          </motion.div>
-                        ))}
+                      <div className="space-y-3">
+                        <motion.div 
+                          className="bg-emerald-900/30 border border-emerald-800/50 rounded-lg p-3"
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.8, duration: 0.5 }}
+                        >
+                          <h3 className="text-emerald-200 font-medium text-xs mb-1 flex items-center gap-1.5">
+                            <Users className="w-3.5 h-3.5 text-emerald-400" />
+                            Microenterprise Development (MD)
+                          </h3>
+                          <p className="text-xs text-emerald-100/80 leading-relaxed">
+                            Provides access to micro-financing for microenterprise development through the provision of seed capital fund in the amount of P10,000 (individual) or up to P15,000 per participant (group).
+                          </p>
+                        </motion.div>
+                        
+                        <motion.div 
+                          className="bg-emerald-900/30 border border-emerald-800/50 rounded-lg p-3"
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.9, duration: 0.5 }}
+                        >
+                          <h3 className="text-emerald-200 font-medium text-xs mb-1 flex items-center gap-1.5">
+                            <Settings className="w-3.5 h-3.5 text-emerald-400" />
+                            Employment Facilitation (EF)
+                          </h3>
+                          <p className="text-xs text-emerald-100/80 leading-relaxed">
+                            Facilitates opportunities for wage employment through pre-employment assistance such as skills training, career guidance and coaching, and job referral with TESDA, DOLE, and partners.
+                          </p>
+                        </motion.div>
+                        
+                        <motion.div 
+                          className="bg-emerald-900/30 border border-emerald-800/50 rounded-lg p-3"
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 1.0, duration: 0.5 }}
+                        >
+                          <h3 className="text-emerald-200 font-medium text-xs mb-1 flex items-center gap-1.5">
+                            <BookOpen className="w-3.5 h-3.5 text-emerald-400" />
+                            SLP Associations & Cooperatives
+                          </h3>
+                          <p className="text-xs text-emerald-100/80 leading-relaxed">
+                            SLP organizes target participants in groups called SLP Associations (SLPAs) to improve program delivery efficiency and facilitate sustainable interventions.
+                          </p>
+                        </motion.div>
                       </div>
                       
                       <motion.div
-                        className="bg-gradient-to-r from-emerald-800/40 to-teal-800/40 rounded-xl p-4 border border-emerald-700/30"
+                        className="mt-3 bg-gradient-to-r from-emerald-800/40 to-teal-800/40 rounded-lg p-2.5 border border-emerald-700/30"
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: 1.2, duration: 0.8 }}
                       >
-                        <div className="flex justify-between items-center mb-3">
-                          <span className="text-emerald-100 text-sm font-medium">Monthly Progress</span>
-                          <span className="text-xs text-emerald-400">+18.2%</span>
-                        </div>
-                        <div className="h-12 flex items-end gap-1">
-                          {[35, 48, 40, 60, 55, 70, 65, 90, 85, 75, 80, 95].map((height, i) => (
-                            <motion.div
-                              key={i}
-                              className="flex-1 bg-gradient-to-t from-emerald-500 to-teal-400 rounded-sm"
-                              initial={{ height: 0 }}
-                              animate={{ height: `${height}%` }}
-                              transition={{ 
-                                delay: 1.3 + (i * 0.05), 
-                                duration: 0.7,
-                                ease: "easeOut" 
-                              }}
-                            ></motion.div>
-                          ))}
-                        </div>
-                        <div className="flex justify-between mt-1">
-                          <span className="text-xs text-emerald-400">Jan</span>
-                          <span className="text-xs text-emerald-400">Dec</span>
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-emerald-100 font-medium text-xs">Target: 4Ps/CCT Beneficiaries</h3>
+                          <motion.button
+                            className="bg-emerald-600/80 hover:bg-emerald-600 text-white text-[10px] px-2 py-1 rounded-md flex items-center gap-1"
+                            whileHover={{ scale: 1.03 }}
+                            whileTap={{ scale: 0.97 }}
+                            onClick={() => router.push("/about")}
+                          >
+                            <span>Learn More</span>
+                            <ArrowUpRight className="w-2.5 h-2.5" />
+                          </motion.button>
                         </div>
                       </motion.div>
                     </div>
                   </motion.div>
                 </div>
-                
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 1.5, duration: 0.8 }}
-                  className="mt-16 flex flex-col items-center"
-                >
-                  <motion.div
-                    animate={{
-                      y: [0, -10, 0],
-                    }}
-                    transition={{
-                      duration: 2,
-                      repeat: Infinity,
-                      repeatType: "reverse",
-                    }}
-                  >
-                    <ChevronDown className="w-8 h-8 text-emerald-400" />
-                  </motion.div>
-                  <p className="text-emerald-200 mt-2 text-sm">Scroll to explore</p>
-                </motion.div>
               </div>
             </section>
 
@@ -741,39 +695,39 @@ export default function LandingPage() {
                   <div className="inline-block mb-4">
                     <div className="flex items-center justify-center gap-2 px-3 py-1 bg-emerald-50 rounded-full text-emerald-700 text-sm font-medium border border-emerald-100">
                       <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
-                      Platform Features
+                      SLP Program Tracks
                     </div>
                   </div>
                   <h2 className="text-3xl md:text-4xl font-bold mb-6 text-gray-900">
-                    Designed for efficiency, built for impact
+                    Empowering communities through sustainable livelihoods
                   </h2>
                   <p className="text-lg text-gray-600">
-                    Our platform empowers DSWD staff with the tools they need to effectively manage sustainable livelihood programs
+                    DSWD SLP offers comprehensive support through modular interventions designed to help participants achieve economic self-sufficiency and resilience
                   </p>
                 </motion.div>
                 
                 {/* Features Grid */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                   <FeatureCard 
-                    icon={<Code />}
-                    title="Developer Friendly"
-                    description="Built with modern technologies for seamless integration and development experience."
+                    icon={<Users />}
+                    title="Microenterprise Development"
+                    description="Provides seed capital fund of ₱10,000-₱15,000 with business skills training to help participants establish or expand income-generating activities."
                     gradient="from-blue-500 to-indigo-600"
                     delay={0}
                   />
                   
                   <FeatureCard 
-                    icon={<Settings />}
-                    title="Highly Configurable"
-                    description="Customize and adapt the system to meet your specific needs and requirements."
+                    icon={<BookOpen />}
+                    title="Skills Development"
+                    description="Partners with TESDA and other agencies to provide vocational and technical training, ensuring participants gain marketable skills for employment."
                     gradient="from-emerald-500 to-teal-600"
                     delay={0.2}
                   />
                   
                   <FeatureCard 
-                    icon={<Shield />}
-                    title="Secure & Reliable"
-                    description="Built with security in mind, ensuring your data is protected and always available."
+                    icon={<MapPin />}
+                    title="Community Engagement"
+                    description="Organizes participants into SLP Associations (SLPAs) to foster collaboration, resource-sharing, and long-term community economic development."
                     gradient="from-amber-500 to-orange-600"
                     delay={0.4}
                   />
@@ -798,13 +752,13 @@ export default function LandingPage() {
                   
                   <div className="relative z-10 flex flex-col md:flex-row gap-10 items-center">
                     <div className="flex-1">
-                      <h3 className="text-2xl font-bold mb-6 text-emerald-800">Why choose our platform?</h3>
+                      <h3 className="text-2xl font-bold mb-6 text-emerald-800"> Sustainable Livelihood Program Tracks</h3>
                       <div className="space-y-4">
                         {[
-                          { title: "Real-time Data Analytics", description: "Access up-to-date information and insights to make informed decisions" },
-                          { title: "Seamless Collaboration", description: "Connect teams across departments for better coordination" },
-                          { title: "Scalable Infrastructure", description: "Grows with your needs from local to national implementation" },
-                          { title: "Responsive Support", description: "24/7 assistance from our dedicated support team" }
+                          { title: "Sustainable Income Generation", description: "Develop microenterprises that provide stable income sources for long-term economic self-sufficiency" },
+                          { title: "Skills Enhancement & Training", description: "Access to vocational and technical training programs with TESDA certification opportunities" },
+                          { title: "Financial & Technical Support", description: "Receive seed capital funding and ongoing mentoring from experienced business development officers" },
+                          { title: "Community-Based Approach", description: "Participate in SLP Associations that strengthen local economic development and social capital" }
                         ].map((item, index) => (
                           <motion.div 
                             key={item.title}
@@ -850,22 +804,22 @@ export default function LandingPage() {
                         >
                           <div className="bg-emerald-50 rounded-lg p-4 mb-6">
                             <div className="flex justify-between items-center mb-4">
-                              <div className="text-emerald-800 font-medium">System Status</div>
+                              <div className="text-emerald-800 font-medium">SLP Program Impact</div>
                               <div className="text-xs bg-emerald-100 text-emerald-800 px-2 py-1 rounded-full">
-                                Active
+                                2023 Data
                               </div>
                             </div>
                             <div className="space-y-3">
                               {[
-                                { name: "Database", status: 100 },
-                                { name: "API Services", status: 99 },
-                                { name: "Web Portal", status: 100 },
-                                { name: "Mobile App", status: 97 }
+                                { name: "Participants Served", status: 92, value: "15,840+" },
+                                { name: "Microenterprises", status: 85, value: "8,750+" },
+                                { name: "Employment Rate", status: 76, value: "76%" },
+                                { name: "Income Increase", status: 83, value: "83%" }
                               ].map((service) => (
                                 <div key={service.name}>
                                   <div className="flex justify-between text-sm mb-1">
                                     <span className="text-gray-700">{service.name}</span>
-                                    <span className="text-emerald-800 font-medium">{service.status}%</span>
+                                    <span className="text-emerald-800 font-medium">{service.value}</span>
                                   </div>
                                   <div className="h-1.5 bg-emerald-100 rounded-full overflow-hidden">
                                     <motion.div 
@@ -882,11 +836,16 @@ export default function LandingPage() {
                           </div>
                           
                           <div className="flex justify-between items-center text-sm">
-                            <div className="text-gray-500">Updated 2 minutes ago</div>
-                            <button className="text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1">
-                              <span>View details</span>
+                            <div className="text-gray-500">Source: DSWD Annual Report</div>
+                            <a 
+                              href="https://www.dswd.gov.ph/sustainable-livelihood-program/"
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1 hover:underline transition-colors"
+                            >
+                              <span>Program details</span>
                               <ArrowUpRight className="w-3 h-3" />
-                            </button>
+                            </a>
                           </div>
                         </motion.div>
                       </div>
@@ -906,44 +865,43 @@ export default function LandingPage() {
                       <Users className="w-7 h-7 text-sky-700" />
                     </div>
                     <h2 className="text-2xl md:text-3xl font-bold text-slate-900">
-                      Platform Users
+                      DSWD SLP System Users
                     </h2>
                   </div>
                   <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
                     <p className="text-slate-700 mb-8 text-lg">
-                      The DSWD Sustanable Livelihood Program - Proposal System
-                      serves various stakeholders involved in social welfare
-                      programs:
+                      The DSWD Sustainable Livelihood Program - Proposal System is exclusively accessible to DSWD SLP employees. 
+                      No third parties are permitted to use the system:
                     </p>
 
-                    <div className="grid md:grid-cols-3 gap-6">
+                    <div className="grid md:grid-cols-2 gap-6">
                       <div className="bg-sky-50 p-6 rounded-xl border border-sky-100 transition-all hover:shadow-md">
                         <h3 className="font-bold text-lg mb-4 text-sky-800">
-                          DSWD Administrators
+                          DSWD SLP Administrators
                         </h3>
                         <ul className="space-y-3 text-slate-700">
                           <li className="flex items-start">
                             <span className="text-sky-500 mr-2 text-lg">•</span>
-                            <span>Manage overall system configuration</span>
+                            <span>Manage overall system configuration and access</span>
                           </li>
                           <li className="flex items-start">
                             <span className="text-sky-500 mr-2 text-lg">•</span>
-                            <span>Create and manage user accounts</span>
+                            <span>Review and approve proposal submissions</span>
                           </li>
                           <li className="flex items-start">
                             <span className="text-sky-500 mr-2 text-lg">•</span>
-                            <span>Generate comprehensive reports</span>
+                            <span>Administer budget allocations and disbursements</span>
                           </li>
                           <li className="flex items-start">
                             <span className="text-sky-500 mr-2 text-lg">•</span>
                             <span>
-                              Oversee program implementation nationwide
+                              Generate system-wide reports and analytics
                             </span>
                           </li>
                           <li className="flex items-start">
                             <span className="text-sky-500 mr-2 text-lg">•</span>
                             <span>
-                              Manage system security and access controls
+                              Manage user accounts for all DSWD SLP staff
                             </span>
                           </li>
                         </ul>
@@ -951,61 +909,31 @@ export default function LandingPage() {
 
                       <div className="bg-sky-50 p-6 rounded-xl border border-sky-100 transition-all hover:shadow-md">
                         <h3 className="font-bold text-lg mb-4 text-sky-800">
-                          Inventory Managers
+                          DSWD SLP Staff Members
                         </h3>
                         <ul className="space-y-3 text-slate-700">
                           <li className="flex items-start">
                             <span className="text-sky-500 mr-2 text-lg">•</span>
-                            <span>Track and manage inventory items</span>
+                            <span>Input and manage beneficiary information</span>
                           </li>
                           <li className="flex items-start">
                             <span className="text-sky-500 mr-2 text-lg">•</span>
-                            <span>Process incoming and outgoing stock</span>
+                            <span>Process and track livelihood project proposals</span>
                           </li>
                           <li className="flex items-start">
                             <span className="text-sky-500 mr-2 text-lg">•</span>
-                            <span>Monitor stock levels and alerts</span>
+                            <span>Document training activities and outcomes</span>
                           </li>
                           <li className="flex items-start">
                             <span className="text-sky-500 mr-2 text-lg">•</span>
                             <span>
-                              Conduct inventory audits and reconciliation
+                              Monitor project implementation and results
                             </span>
                           </li>
                           <li className="flex items-start">
                             <span className="text-sky-500 mr-2 text-lg">•</span>
                             <span>
-                              Generate inventory forecasts and reports
-                            </span>
-                          </li>
-                        </ul>
-                      </div>
-
-                      <div className="bg-sky-50 p-6 rounded-xl border border-sky-100 transition-all hover:shadow-md">
-                        <h3 className="font-bold text-lg mb-4 text-sky-800">
-                          Program Coordinators
-                        </h3>
-                        <ul className="space-y-3 text-slate-700">
-                          <li className="flex items-start">
-                            <span className="text-sky-500 mr-2 text-lg">•</span>
-                            <span>Manage participants information</span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="text-sky-500 mr-2 text-lg">•</span>
-                            <span>Process disbursement requests</span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="text-sky-500 mr-2 text-lg">•</span>
-                            <span>Track program implementation</span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="text-sky-500 mr-2 text-lg">•</span>
-                            <span>Coordinate with local government units</span>
-                          </li>
-                          <li className="flex items-start">
-                            <span className="text-sky-500 mr-2 text-lg">•</span>
-                            <span>
-                              Facilitate participants training and support
+                              Generate field reports for assigned projects
                             </span>
                           </li>
                         </ul>
@@ -1029,11 +957,10 @@ export default function LandingPage() {
                         </div>
                         <div className="ml-3">
                           <p className="text-sm text-amber-700">
-                            <strong>Note:</strong> All users must complete
-                            mandatory security training and sign confidentiality
-                            agreements before accessing the system. User
-                            activities are logged for security and audit
-                            purposes.
+                            <strong>Important:</strong> System access is strictly limited to authorized DSWD SLP employees only. 
+                            Training is provided for SLP employee staff who are transitioning to this system. 
+                            Only DSWD SLP Admin staff can add new SLP members to grant access to the system. 
+                            Third-party access is not permitted under any circumstances.
                           </p>
                         </div>
                       </div>
@@ -1061,7 +988,7 @@ export default function LandingPage() {
                       <div className="flex flex-col md:flex-row gap-8">
                         <div className="bg-sky-50 p-6 rounded-xl border border-sky-100 flex-1 transition-all hover:shadow-md">
                           <h3 className="font-bold text-lg mb-4 text-sky-800">
-                            For DSWD Staff
+                            For DSWD SLP Staff
                           </h3>
                           <ol className="space-y-4 text-slate-700 list-decimal pl-5">
                             <li>
@@ -1069,15 +996,7 @@ export default function LandingPage() {
                               head
                             </li>
                             <li>
-                              Complete the user registration form with your
-                              official DSWD email
-                            </li>
-                            <li>
                               Await approval from the system administrator
-                            </li>
-                            <li>
-                              Receive account credentials via your official
-                              email
                             </li>
                             <li>
                               Complete mandatory system training before full
@@ -1088,86 +1007,35 @@ export default function LandingPage() {
 
                         <div className="bg-sky-50 p-6 rounded-xl border border-sky-100 flex-1 transition-all hover:shadow-md">
                           <h3 className="font-bold text-lg mb-4 text-sky-800">
-                            For Partner Agencies
+                            Important System Access Notice
                           </h3>
-                          <ol className="space-y-4 text-slate-700 list-decimal pl-5">
-                            <li>
-                              Submit an official letter of request to the DSWD
-                              SWCF office
-                            </li>
-                            <li>
-                              Complete the partner agency registration form
-                            </li>
-                            <li>
-                              Provide required documentation for verification
-                            </li>
-                            <li>
-                              Attend orientation on system usage and protocols
-                            </li>
-                            <li>
-                              Receive limited access credentials based on
-                              partnership agreement
-                            </li>
-                          </ol>
-                        </div>
-                      </div>
-
-                      <div className="bg-gradient-to-r from-sky-50 to-indigo-50 p-8 rounded-xl border border-sky-100">
-                        <h3 className="font-bold text-xl mb-6 text-sky-800 text-center">
-                          Account Approval Process
-                        </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                          <div className="bg-white p-6 rounded-xl shadow-sm text-center">
-                            <div className="w-14 h-14 bg-sky-700 rounded-full flex items-center justify-center mx-auto mb-4 shadow-md">
-                              <span className="text-white font-bold text-xl">
-                                1
-                              </span>
+                          <div className="space-y-4 text-slate-700">
+                            <p>The DSWD SLP Proposal System is exclusively available to authorized DSWD SLP Staff employees only.</p>
+                            
+                            <div className="bg-amber-50 border-l-4 border-amber-400 p-4 rounded-r-lg">
+                              <div className="flex">
+                                <div className="flex-shrink-0">
+                                  <svg
+                                    className="h-5 w-5 text-amber-400"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                  >
+                                    <path
+                                      fillRule="evenodd"
+                                      d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+                                      clipRule="evenodd"
+                                    />
+                                  </svg>
+                                </div>
+                                <div className="ml-3">
+                                  <p className="text-sm text-amber-700">
+                                    <strong>Please Note:</strong> No external partner agencies or third parties are granted access to this system. Only DSWD SLP Admin staff can add new SLP members to grant access to the system.
+                                  </p>
+                                </div>
+                              </div>
                             </div>
-                            <h4 className="font-semibold text-sky-800 mb-2">
-                              Request Submission
-                            </h4>
-                            <p className="text-sm text-slate-600">
-                              Submit request with required documentation
-                            </p>
-                          </div>
-                          <div className="bg-white p-6 rounded-xl shadow-sm text-center">
-                            <div className="w-14 h-14 bg-sky-700 rounded-full flex items-center justify-center mx-auto mb-4 shadow-md">
-                              <span className="text-white font-bold text-xl">
-                                2
-                              </span>
-                            </div>
-                            <h4 className="font-semibold text-sky-800 mb-2">
-                              Verification
-                            </h4>
-                            <p className="text-sm text-slate-600">
-                              Information and eligibility verification
-                            </p>
-                          </div>
-                          <div className="bg-white p-6 rounded-xl shadow-sm text-center">
-                            <div className="w-14 h-14 bg-sky-700 rounded-full flex items-center justify-center mx-auto mb-4 shadow-md">
-                              <span className="text-white font-bold text-xl">
-                                3
-                              </span>
-                            </div>
-                            <h4 className="font-semibold text-sky-800 mb-2">
-                              Approval
-                            </h4>
-                            <p className="text-sm text-slate-600">
-                              Review and approval by system administrator
-                            </p>
-                          </div>
-                          <div className="bg-white p-6 rounded-xl shadow-sm text-center">
-                            <div className="w-14 h-14 bg-sky-700 rounded-full flex items-center justify-center mx-auto mb-4 shadow-md">
-                              <span className="text-white font-bold text-xl">
-                                4
-                              </span>
-                            </div>
-                            <h4 className="font-semibold text-sky-800 mb-2">
-                              Account Creation
-                            </h4>
-                            <p className="text-sm text-slate-600">
-                              Account setup and credential delivery
-                            </p>
+                            
+                            <p className="italic text-slate-600 text-sm">If you are a DSWD SLP employee and need system access, please contact your department head to initiate the account request process.</p>
                           </div>
                         </div>
                       </div>
@@ -1189,11 +1057,10 @@ export default function LandingPage() {
                           </div>
                           <div className="ml-3">
                             <p className="text-sm text-amber-700">
-                              <strong>Important:</strong> Account creation is
-                              strictly controlled for security purposes.
-                              Self-registration is not available. All accounts
-                              must be authorized by the DSWD SLP-PS
-                              administration.
+                              <strong>Important:</strong> System access is strictly limited to authorized DSWD SLP employees only. 
+                              Training is provided for SLP employee staff who are transitioning to this system. 
+                              Only DSWD SLP Admin staff can add new SLP members to grant access to the system. 
+                              Third-party access is not permitted under any circumstances.
                             </p>
                           </div>
                         </div>
@@ -1395,103 +1262,110 @@ export default function LandingPage() {
                   </div>
                 </div>
 
-                {/* FAQs */}
-                <div id="faqs" className="scroll-mt-24">
+                {/* System Support */}
+                <div id="system-support" className="scroll-mt-24">
                   <div className="flex items-center mb-10">
                     <div className="bg-sky-100 p-3 rounded-full mr-4">
-                      <HelpCircle className="w-7 h-7 text-sky-700" />
+                      <LifeBuoy className="w-7 h-7 text-sky-700" />
                     </div>
                     <h2 className="text-2xl md:text-3xl font-bold text-slate-900">
-                      Frequently Asked Questions
+                      System Support & Resources
                     </h2>
                   </div>
                   <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
-                    <div className="space-y-6 max-w-4xl mx-auto">
-                      <div className="border-b border-slate-200 pb-5">
-                        <h3 className="font-bold text-lg mb-3 text-sky-800">
-                          How do I request an account for the DSWD SLP-PS
-                          system?
+                    <div className="grid md:grid-cols-2 gap-8">
+                      <div className="bg-sky-50 p-6 rounded-xl border border-sky-100 transition-all hover:shadow-md">
+                        <h3 className="font-bold text-lg mb-4 text-sky-800 flex items-center gap-2">
+                          <Mail className="w-5 h-5 text-sky-600" />
+                          Technical Support
                         </h3>
-                        <p className="text-slate-700">
-                          DSWD staff should submit a request through their
-                          department head. Partner agencies need to send an
-                          official letter to the DSWD SLP-PS office.
-                          Self-registration is not available for security
-                          reasons.
+                        <p className="text-slate-700 mb-4">
+                          Our dedicated support team is available to assist with any technical issues or questions you may have about the system.
                         </p>
+                        <div className="space-y-3 mt-6">
+                          <div className="flex items-start">
+                            <div className="flex-shrink-0 w-10 flex justify-center">
+                              <Mail className="h-5 w-5 text-sky-500" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-sky-800">Email Support</p>
+                              <p className="text-slate-600 text-sm">support@dswdslp.gov.ph</p>
+                            </div>
+                          </div>
+                          <div className="flex items-start">
+                            <div className="flex-shrink-0 w-10 flex justify-center">
+                              <Phone className="h-5 w-5 text-sky-500" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-sky-800">Phone Support</p>
+                              <p className="text-slate-600 text-sm">(02) 8931-8101</p>
+                            </div>
+                          </div>
+                          <div className="flex items-start">
+                            <div className="flex-shrink-0 w-10 flex justify-center">
+                              <Clock className="h-5 w-5 text-sky-500" />
+                            </div>
+                            <div>
+                              <p className="font-medium text-sky-800">Support Hours</p>
+                              <p className="text-slate-600 text-sm">Monday - Friday: 8:00 AM - 5:00 PM</p>
+                            </div>
+                          </div>
+                        </div>
                       </div>
 
-                      <div className="border-b border-slate-200 pb-5">
-                        <h3 className="font-bold text-lg mb-3 text-sky-800">
-                          What should I do if I forgot my password?
+                      <div className="bg-sky-50 p-6 rounded-xl border border-sky-100 transition-all hover:shadow-md">
+                        <h3 className="font-bold text-lg mb-4 text-sky-800 flex items-center gap-2">
+                          <BookOpen className="w-5 h-5 text-sky-600" />
+                          Training Resources
                         </h3>
-                        <p className="text-slate-700">
-                          Click on the "Forgot Password" link on the login page.
-                          You will receive password reset instructions on your
-                          registered email. If you cannot access your email,
-                          contact the system administrator.
+                        <p className="text-slate-700 mb-4">
+                          Access our comprehensive training materials to help you get the most out of the DSWD SLP Proposal System.
                         </p>
+                        <div className="mt-4 space-y-3">
+                          <div className="bg-white p-4 rounded-lg border border-sky-100 flex items-start space-x-3">
+                            <div className="bg-sky-100 p-2 rounded-full">
+                              <Download className="h-4 w-4 text-sky-700" />
+                            </div>
+                            <div>
+                              <h4 className="font-medium text-sky-800">User Manual</h4>
+                              <p className="text-sm text-slate-600">Comprehensive guide to all system features and workflows</p>
+                            </div>
+                          </div>
+                          <div className="bg-white p-4 rounded-lg border border-sky-100 flex items-start space-x-3">
+                            <div className="bg-sky-100 p-2 rounded-full">
+                              <Download className="h-4 w-4 text-sky-700" />
+                            </div>
+                            <div>
+                              <h4 className="font-medium text-sky-800">Video Tutorials</h4>
+                              <p className="text-sm text-slate-600">Step-by-step video guides for common system tasks</p>
+                            </div>
+                          </div>
+                          <div className="bg-white p-4 rounded-lg border border-sky-100 flex items-start space-x-3">
+                            <div className="bg-sky-100 p-2 rounded-full">
+                              <Download className="h-4 w-4 text-sky-700" />
+                            </div>
+                            <div>
+                              <h4 className="font-medium text-sky-800">Quick Reference Cards</h4>
+                              <p className="text-sm text-slate-600">Printable guides for essential functions</p>
+                            </div>
+                          </div>
+                        </div>
                       </div>
+                    </div>
 
-                      <div className="border-b border-slate-200 pb-5">
-                        <h3 className="font-bold text-lg mb-3 text-sky-800">
-                          How do I report technical issues with the system?
-                        </h3>
-                        <p className="text-slate-700">
-                          For technical issues, contact the DSWD SLP-PS support
-                          team via email at support@dswdswcf.gov.ph or call the
-                          helpdesk at (02) 8931-8101. Please provide detailed
-                          information about the issue.
-                        </p>
-                      </div>
-
-                      <div className="border-b border-slate-200 pb-5">
-                        <h3 className="font-bold text-lg mb-3 text-sky-800">
-                          Can I access the system outside the DSWD network?
-                        </h3>
-                        <p className="text-slate-700">
-                          Yes, the system is accessible via the internet, but
-                          you must use secure, authorized devices and
-                          connections. For security reasons, some functions may
-                          be limited when accessing from external networks.
-                        </p>
-                      </div>
-
-                      <div className="border-b border-slate-200 pb-5">
-                        <h3 className="font-bold text-lg mb-3 text-sky-800">
-                          How often is inventory data updated in the system?
-                        </h3>
-                        <p className="text-slate-700">
-                          Inventory data is updated in real-time as transactions
-                          occur. Stock levels, disbursements, and other
-                          inventory movements are reflected immediately to
-                          ensure accurate reporting and decision-making.
-                        </p>
-                      </div>
-
-                      <div className="border-b border-slate-200 pb-5">
-                        <h3 className="font-bold text-lg mb-3 text-sky-800">
-                          What training is available for new users?
-                        </h3>
-                        <p className="text-slate-700">
-                          New users must complete mandatory system training
-                          before gaining full access. Training sessions are
-                          conducted monthly, and additional resources including
-                          user manuals and video tutorials are available in the
-                          Help section.
-                        </p>
-                      </div>
-
-                      <div>
-                        <h3 className="font-bold text-lg mb-3 text-sky-800">
-                          Is the system available in multiple languages?
-                        </h3>
-                        <p className="text-slate-700">
-                          Currently, the system interface is available in
-                          English and Filipino. Regional language support is
-                          under development and will be available in future
-                          updates to better serve local communities.
-                        </p>
+                    <div className="bg-gradient-to-r from-sky-50 to-indigo-50 p-6 rounded-xl border border-sky-100 mt-8">
+                      <h3 className="font-bold text-xl mb-4 text-sky-800 text-center">
+                        System Updates & Maintenance
+                      </h3>
+                      <p className="text-slate-700 text-center max-w-2xl mx-auto mb-6">
+                        The DSWD SLP Proposal System is regularly updated to improve functionality and security. 
+                        Scheduled maintenance typically occurs on weekends to minimize disruption.
+                      </p>
+                      <div className="flex justify-center">
+                        <div className="bg-white px-6 py-3 rounded-lg border border-sky-100 inline-flex items-center gap-2">
+                          <Code className="h-5 w-5 text-sky-600" />
+                          <span className="text-sky-800 font-medium">Current System Version: 2.4.1</span>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1546,12 +1420,12 @@ export default function LandingPage() {
                         </p>
                         <div className="flex flex-wrap gap-4 md:gap-6">
                           <motion.button
-                            onClick={() => router.push("/login")}
+                            onClick={() => router.push("/about")}
                             className="bg-white hover:bg-emerald-50 text-emerald-800 font-medium py-3.5 px-8 rounded-xl text-base shadow-xl transition-all hover:shadow-emerald-500/30 focus:outline-none focus:ring-2 focus:ring-white/50 flex items-center gap-2 group"
                             whileHover={{ scale: 1.03 }}
                             whileTap={{ scale: 0.97 }}
                           >
-                            <span>Login to System</span>
+                            <span>Learn More</span>
                             <motion.span
                               animate={{ x: [0, 5, 0] }}
                               transition={{ 
@@ -1700,7 +1574,7 @@ export default function LandingPage() {
                         { name: "Platform Users", href: "#platform-users" },
                         { name: "Account Creation", href: "#account-creation" },
                         { name: "Service Access", href: "#service-access" },
-                        { name: "FAQs", href: "#faqs" },
+                        { name: "System Support", href: "#system-support" },
                         { name: "DSWD Official Website", href: "https://www.dswd.gov.ph" },
                         { name: "Livelihood Program", href: "https://fo3.dswd.gov.ph/slp/" },
                         { name: "Contact Support", href: "/about/contact" }

@@ -180,6 +180,16 @@ export function AnalyticsView() {
     { name: "Settings", href: "./settings", icon: Settings },
   ];
 
+  // Get all unique sector keys, in a fixed order
+  const allSectors = [
+    "Indigenous People (IP)",
+    "Senior Citizen",
+    "Solo Parent",
+    "Internally Displaced Person (IDP)",
+    "Overseas Filipino Worker (OFW)",
+    "Homeless Individual"
+  ];
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {/* Sidebar for desktop */}
@@ -851,12 +861,12 @@ export function AnalyticsView() {
 
                                 const total = data.reduce((sum, item) => sum + item.value, 0);
                                 const typeColors = {
-                                  "SLP Means Test": "#8CAF42",
                                   "Poor - Exiting 4Ps": "#90BE6D",
-                                  "No Match": "#37794C",
                                   "Poor - 4Ps": "#6C9331",
                                   "Poor - Listahanan": "#496E22",
                                   "Non-Poor": "#5BA45F",
+                                  "No Match": "#37794C",
+                                  "SLP Means Test": "#8CAF42",
                                   "N/A": "#A6C060"
                                 };
 
@@ -1003,64 +1013,63 @@ export function AnalyticsView() {
                           </defs>
 
                           {/* Background Bars */}
-                          {Object.entries(analytics.sectorDistribution)
-                            .map(([sector, count], index, array) => {
-                              const width = 720;
-                              const height = 400;
-                              const gap = width / (Math.max(array.length - 1, 1));
-                              const maxCount = Math.max(1, 
-                                ...Object.values(analytics.sectorDistribution),
-                                ...Object.values(analytics.previousSectorDistribution || {})
-                              );
-                              const x = 40 + (index * gap);
-                              const barWidth = 40;
-                              const barHeight = count ? ((count / maxCount) * (height - 120)) : 0;
-                              
-                              return (
-                                <g key={`bar-group-${sector}`}>
-                                  {/* Bar Shadow */}
-                                  <rect
-                                    x={x - barWidth/2}
-                                    y={350 - barHeight + 4}
-                                    width={barWidth}
-                                    height={barHeight}
-                                    fill="#0A2815"
-                                    opacity="0.3"
-                                    rx="4"
-                                    filter="blur(4px)"
-                                  />
-                                  {/* Main Bar */}
-                                  <rect
-                                    key={`bar-${sector}`}
-                                    x={x - barWidth/2}
-                                    y={350 - barHeight}
-                                    width={barWidth}
-                                    height={barHeight}
-                                    fill={`url(#barGradient${index % 2 === 0 ? 'Even' : 'Odd'})`}
-                                    rx="4"
-                                    className="transition-all duration-500 hover:opacity-90"
-                                  />
-                                </g>
-                              );
-                            })}
+                          {allSectors.map((sector, index, array) => {
+                            const width = 720;
+                            const height = 400;
+                            const gap = width / (Math.max(array.length - 1, 1));
+                            const maxCount = Math.max(1, 
+                              ...Object.values(analytics.sectorDistribution),
+                              ...Object.values(analytics.previousSectorDistribution || {})
+                            );
+                            const x = 40 + (index * gap);
+                            const barWidth = 40;
+                            const currentCount = analytics.sectorDistribution[sector] || 0;
+                            const previousCount = (analytics.previousSectorDistribution || {})[sector] || 0;
+                            const barHeight = currentCount ? ((currentCount / maxCount) * (height - 120)) : 0;
+                            
+                            return (
+                              <g key={`bar-group-${sector}`}>
+                                {/* Bar Shadow */}
+                                <rect
+                                  x={x - barWidth/2}
+                                  y={350 - barHeight + 4}
+                                  width={barWidth}
+                                  height={barHeight}
+                                  fill="#0A2815"
+                                  opacity="0.3"
+                                  rx="4"
+                                  filter="blur(4px)"
+                                />
+                                {/* Main Bar */}
+                                <rect
+                                  key={`bar-${sector}`}
+                                  x={x - barWidth/2}
+                                  y={350 - barHeight}
+                                  width={barWidth}
+                                  height={barHeight}
+                                  fill={`url(#barGradient${index % 2 === 0 ? 'Even' : 'Odd'})`}
+                                  rx="4"
+                                  className="transition-all duration-500 hover:opacity-90"
+                                />
+                              </g>
+                            );
+                          })}
 
                           {/* Primary Line (Current Month) */}
                           <path
                             d={(() => {
-                              const sectors = Object.entries(analytics.sectorDistribution);
-                              if (sectors.length === 0) return '';
-                              
                               const width = 720;
                               const height = 400;
-                              const gap = width / (Math.max(sectors.length - 1, 1));
-                              const maxCount = Math.max(1,
+                              const gap = width / (Math.max(allSectors.length - 1, 1));
+                              const maxCount = Math.max(
+                                1,
                                 ...Object.values(analytics.sectorDistribution),
                                 ...Object.values(analytics.previousSectorDistribution || {})
                               );
-                              
-                              return sectors.map(([sector, count], index) => {
+                              return allSectors.map((sector, index) => {
+                                const currentCount = analytics.sectorDistribution[sector] || 0;
                                 const x = 40 + (index * gap);
-                                const y = 350 - (((count || 0) / maxCount) * (height - 120));
+                                const y = 350 - (((currentCount || 0) / maxCount) * (height - 120));
                                 return `${index === 0 ? 'M' : 'L'} ${x},${y}`;
                               }).join(' ');
                             })()}
@@ -1070,109 +1079,45 @@ export function AnalyticsView() {
                             className="transition-all duration-500"
                           />
 
-                          {/* Secondary Line (Previous Month) */}
-                          <path
-                            d={(() => {
-                              const sectors = Object.entries(analytics.previousSectorDistribution || {});
-                              if (sectors.length === 0) return '';
-                              
-                              const width = 720;
-                              const height = 400;
-                              const gap = width / (Math.max(sectors.length - 1, 1));
-                              const maxCount = Math.max(1,
-                                ...Object.values(analytics.sectorDistribution),
-                                ...Object.values(analytics.previousSectorDistribution || {})
-                              );
-                              
-                              return sectors.map(([sector, count], index) => {
-                                const x = 40 + (index * gap);
-                                const y = 350 - (((count || 0) / maxCount) * (height - 120));
-                                return `${index === 0 ? 'M' : 'L'} ${x},${y}`;
-                              }).join(' ');
-                            })()}
-                            fill="none"
-                            stroke="#5BA45F"
-                            strokeWidth="3"
-                            className="transition-all duration-500"
-                          />
-
                           {/* Data Points and Labels - Current Line */}
-                          {Object.entries(analytics.sectorDistribution)
-                            .map(([sector, count], index, array) => {
-                              const width = 720;
-                              const height = 400;
-                              const gap = width / (Math.max(array.length - 1, 1));
-                              const maxCount = Math.max(1,
-                                ...Object.values(analytics.sectorDistribution),
-                                ...Object.values(analytics.previousSectorDistribution || {})
-                              );
-                              const x = 40 + (index * gap);
-                              const y = 350 - (((count || 0) / maxCount) * (height - 120));
-                              
-                              return (
-                                <g key={`point-current-${sector}`}>
-                                  <circle
-                                    cx={x}
-                                    cy={y}
-                                    r="6"
-                                    fill="#0A2815"
-                                    stroke="#90BE6D"
-                                    strokeWidth="3"
-                                    className="transition-all duration-500"
-                                  />
-                                  <text
-                                    x={x}
-                                    y={y - 15}
-                                    textAnchor="middle"
-                                    fill="#90BE6D"
-                                    fontSize="14"
-                                    fontWeight="600"
-                                    className="transition-all duration-500"
-                                  >
-                                    {count || 0}
-                                  </text>
-                                </g>
-                              );
-                            })}
-
-                          {/* Data Points and Labels - Previous Line */}
-                          {Object.entries(analytics.previousSectorDistribution || {})
-                            .map(([sector, count], index, array) => {
-                              const width = 720;
-                              const height = 400;
-                              const gap = width / (Math.max(array.length - 1, 1));
-                              const maxCount = Math.max(1,
-                                ...Object.values(analytics.sectorDistribution),
-                                ...Object.values(analytics.previousSectorDistribution || {})
-                              );
-                              const x = 40 + (index * gap);
-                              const y = 350 - (((count || 0) / maxCount) * (height - 120));
-                              
-                              return (
-                                <g key={`point-previous-${sector}`}>
-                                  <circle
-                                    cx={x}
-                                    cy={y}
-                                    r="6"
-                                    fill="#0A2815"
-                                    stroke="#5BA45F"
-                                    strokeWidth="3"
-                                    className="transition-all duration-500"
-                                  />
-                                  <text
-                                    x={x}
-                                    y={y + 25}
-                                    textAnchor="middle"
-                                    fill="#5BA45F"
-                                    fontSize="14"
-                                    fontWeight="600"
-                                    className="transition-all duration-500"
-                                  >
-                                    {count || 0}
-                                  </text>
-                                </g>
-                              );
-                            })}
+                          {allSectors.map((sector, index, array) => {
+                            const width = 720;
+                            const height = 400;
+                            const gap = width / (Math.max(array.length - 1, 1));
+                            const maxCount = Math.max(1,
+                              ...Object.values(analytics.sectorDistribution),
+                              ...Object.values(analytics.previousSectorDistribution || {})
+                            );
+                            const x = 40 + (index * gap);
+                            const currentCount = analytics.sectorDistribution[sector] || 0;
+                            const previousCount = (analytics.previousSectorDistribution || {})[sector] || 0;
+                            const y = 350 - (((currentCount || 0) / maxCount) * (height - 120));
+                            
+                            return (
+                              <g key={`point-current-${sector}`}>
+                                <circle
+                                  cx={x}
+                                  cy={y}
+                                  r="6"
+                                  fill="#0A2815"
+                                  stroke="#90BE6D"
+                                  strokeWidth="3"
+                                  className="transition-all duration-500"
+                                />
+                                <text
+                                  x={x}
+                                  y={y - 15}
+                                  textAnchor="middle"
+                                  fill="#90BE6D"
+                                  fontSize="14"
+                                  fontWeight="600"
+                                  className="transition-all duration-500"
+                                >
+                                  {currentCount || 0}
+                                </text>
+                              </g>
+                            );
+                          })}
 
                           {/* Grid Lines */}
                           <g className="grid-lines">
@@ -1203,56 +1148,55 @@ export function AnalyticsView() {
                           />
 
                           {/* X-Axis Labels */}
-                          {Object.entries(analytics.sectorDistribution)
-                            .map(([sector, count], index, array) => {
-                              const width = 720;
-                              const gap = width / (Math.max(array.length - 1, 1));
-                              const x = 40 + (index * gap);
-                              
-                              const formatSectorLabel = (sector) => {
-                                const sectorMap = {
-                                  "Indigenous People (IP)": ["Indigenous", "(IP)"],
-                                  "Senior Citizen": ["Senior", "Citizen"],
-                                  "Solo Parent": ["Solo", "Parent"],
-                                  "Internally Displaced Person (IDP)": ["Displaced", "(IDP)"],
-                                  "Overseas Filipino Worker (OFW)": ["OFW", ""],
-                                  "Homeless Individual": ["Homeless", "Individual"]
-                                };
-                                
-                                return sectorMap[sector] || [sector, ""];
+                          {allSectors.map((sector, index, array) => {
+                            const width = 720;
+                            const gap = width / (Math.max(array.length - 1, 1));
+                            const x = 40 + (index * gap);
+                            
+                            const formatSectorLabel = (sector) => {
+                              const sectorMap = {
+                                "Indigenous People (IP)": ["Indigenous", "(IP)"],
+                                "Senior Citizen": ["Senior", "Citizen"],
+                                "Solo Parent": ["Solo", "Parent"],
+                                "Internally Displaced Person (IDP)": ["Displaced", "(IDP)"],
+                                "Overseas Filipino Worker (OFW)": ["OFW", ""],
+                                "Homeless Individual": ["Homeless", "Individual"]
                               };
-
-                              const [line1, line2] = formatSectorLabel(sector);
                               
-                              return (
-                                <g key={`x-label-${sector}`}>
+                              return sectorMap[sector] || [sector, ""];
+                            };
+
+                            const [line1, line2] = formatSectorLabel(sector);
+                            
+                            return (
+                              <g key={`x-label-${sector}`}>
+                                <text
+                                  x={x}
+                                  y={375}
+                                  textAnchor="middle"
+                                  fill="#90BE6D"
+                                  fontSize="11"
+                                  fontWeight="500"
+                                  className="transition-all duration-500 opacity-80"
+                                >
+                                  {line1}
+                                </text>
+                                {line2 && (
                                   <text
                                     x={x}
-                                    y={375}
+                                    y={390}
                                     textAnchor="middle"
                                     fill="#90BE6D"
                                     fontSize="11"
                                     fontWeight="500"
                                     className="transition-all duration-500 opacity-80"
                                   >
-                                    {line1}
+                                    {line2}
                                   </text>
-                                  {line2 && (
-                                    <text
-                                      x={x}
-                                      y={390}
-                                      textAnchor="middle"
-                                      fill="#90BE6D"
-                                      fontSize="11"
-                                      fontWeight="500"
-                                      className="transition-all duration-500 opacity-80"
-                                    >
-                                      {line2}
-                                    </text>
-                                  )}
-                                </g>
-                              );
-                            })}
+                                )}
+                              </g>
+                            );
+                          })}
                         </svg>
 
                         {/* Legend */}
@@ -1260,10 +1204,6 @@ export function AnalyticsView() {
                           <div className="flex items-center">
                             <div className="w-3 h-3 rounded-full bg-[#90BE6D] mr-2"></div>
                             <span className="text-sm font-medium text-[#90BE6D]/80">Current Month</span>
-                          </div>
-                          <div className="flex items-center">
-                            <div className="w-3 h-3 rounded-full bg-[#5BA45F] mr-2"></div>
-                            <span className="text-sm font-medium text-[#90BE6D]/80">Previous Month</span>
                           </div>
                         </div>
                       </div>
