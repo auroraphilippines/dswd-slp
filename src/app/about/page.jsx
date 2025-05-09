@@ -1053,32 +1053,6 @@ export default function AboutPage() {
         </div>
       </section>
 
-      {/* Call to Action */}
-      <section className="bg-[#0F4C81] text-white py-16">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-2xl md:text-3xl font-bold mb-6">
-            Ready to Get Started?
-          </h2>
-          <p className="text-lg mb-8 max-w-2xl mx-auto">
-            Access the DSWD Sustainable Livelihood Program - Proposal System to
-            manage inventory, process disbursements, and support beneficiaries.
-          </p>
-          <div className="flex flex-col sm:flex-row justify-center gap-4">
-            <div onClick={() => router.push("/login")}>
-              <button className="bg-[#FFC612] hover:bg-[#ffffff] text-[#0F4C81] font-bold py-3 px-6 rounded-lg text-lg shadow-lg transform transition-transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-yellow-300 w-full sm:w-auto">
-                Login to System
-              </button>
-            </div>
-            <div onClick={() => router.push("/about/contact")}>
-              <button
-                className="bg-transparent border-2 border-white hover:bg-red-700 text-white font-bold py-3 px-6 rounded-lg text-lg shadow-lg transform transition-transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-white/30 w-full sm:w-auto mt-3 sm:mt-0">
-                Contact Support
-              </button>
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* Footer */}
       <footer className="bg-gray-900 text-white pt-20 pb-10 relative overflow-hidden">
         {/* Background patterns */}
