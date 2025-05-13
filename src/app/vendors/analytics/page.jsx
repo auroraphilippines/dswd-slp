@@ -14,7 +14,7 @@ import {
 import {
   ArrowLeft,
   LayoutDashboard,
-  Building2,
+  Store,
   Users,
   FolderOpen,
   Settings,
@@ -52,6 +52,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import Image from "next/image";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // Register ChartJS components
 ChartJS.register(
@@ -76,7 +83,7 @@ const navigation = [
   {
     name: "Projects",
     href: "/vendors",
-    icon: Building2,
+    icon: Store,
     requiresAccess: 'projects'
   },
   {
@@ -104,19 +111,24 @@ export default function VendorsAnalyticsPage() {
   const [loading, setLoading] = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(null);
+  const currentYear = new Date().getFullYear(); // Dynamic current year
+  const [selectedYear, setSelectedYear] = useState(currentYear.toString());
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const [userPermissions, setUserPermissions] = useState({
     readOnly: false,
     accessProject: true,
     accessParticipant: true,
     accessFileStorage: true
   });
+  const [allVendors, setAllVendors] = useState([]);
   const [analytics, setAnalytics] = useState({
     total: 0,
     programDistribution: {},
     totalManpowerCost: 0,
     totalMaterialsCost: 0,
     totalEquipmentCost: 0,
-    monthlyInvestments: []
+    monthlyInvestments: [],
+    hasData: false
   });
 
   useEffect(() => {
@@ -218,9 +230,15 @@ export default function VendorsAnalyticsPage() {
           );
           
           // Calculate analytics
-          const vendorAnalytics = calculateVendorAnalytics(sortedVendors);
-          setAnalytics(vendorAnalytics);
+          const filteredAnalytics = calculateVendorAnalytics(
+            sortedVendors.filter(vendor => {
+              const vendorDate = vendor.createdAt?.toDate();
+              return vendorDate && vendorDate.getFullYear() === selectedYear;
+            })
+          );
+          setAnalytics(filteredAnalytics);
           
+          setAllVendors(sortedVendors);
           setLoading(false);
         });
       } catch (error) {
@@ -234,8 +252,63 @@ export default function VendorsAnalyticsPage() {
     return () => {
       unsubscribe();
     };
-  }, []);
+  }, [selectedYear]);
 
+  // Add fetchUserProfileImage function after the existing useEffect for mobile menu
+  const fetchUserProfileImage = async (userId) => {
+    try {
+      const userDoc = await getDoc(doc(db, "users", userId));
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        if (userData.photoURL) return userData.photoURL;
+      }
+      const localPhoto = getProfilePhotoFromLocalStorage(userId);
+      if (localPhoto) return localPhoto;
+      return null;
+    } catch (error) {
+      console.error("Error fetching profile image:", error);
+      return null;
+    }
+  };
+
+  // Add this function to handle year changes with animation
+  const handleYearChange = (newYear) => {
+    setIsTransitioning(true);
+    setTimeout(() => {
+      setSelectedYear(newYear);
+      setIsTransitioning(false);
+    }, 300); // Match this with the CSS transition duration
+  };
+
+  // Add this function to get available years
+  const getAvailableYears = () => {
+    const years = [];
+    const startYear = 2024;
+    const endYear = currentYear;
+    for (let year = endYear; year >= startYear; year--) {
+      years.push(year);
+    }
+    years.unshift("all"); // Add "All Years" at the top
+    return years;
+  };
+
+  const getMonthLabels = (year) => {
+    if (year === "all") {
+      // Use the months from filteredAnalytics
+      return filteredAnalytics.monthlyInvestments.map(item =>
+        item.month instanceof Date
+          ? item.month.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
+          : String(item.month)
+      );
+    }
+    // Otherwise, use Jan-Dec of the selected year
+    return Array.from({ length: 12 }, (_, i) => {
+      const date = new Date(Number(year), i, 1);
+      return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+    });
+  };
+
+  // 2. Define the function FIRST
   const calculateVendorAnalytics = (vendors) => {
     const stats = {
       total: vendors.length,
@@ -243,29 +316,49 @@ export default function VendorsAnalyticsPage() {
       totalManpowerCost: 0,
       totalMaterialsCost: 0,
       totalEquipmentCost: 0,
-      monthlyInvestments: []
+      monthlyInvestments: [],
+      hasData: false
     };
 
-    // Create a map to store monthly totals with proper date handling
-    const monthlyTotals = new Map();
-    
-    // Start from January 2025 and get next 12 months
-    const startDate = new Date(2025, 0, 1); // January 2025
-    const months = Array.from({length: 12}, (_, i) => {
-      const date = new Date(startDate.getFullYear(), startDate.getMonth() + i, 1);
-      return date.toISOString().slice(0, 7); // Format: YYYY-MM
-    });
+    let months = [];
+    let monthlyTotals = new Map();
 
-    // Initialize all months with zero
-    months.forEach(month => {
-      monthlyTotals.set(month, {
-        total: 0,
-        manpowerCost: 0,
-        materialsCost: 0,
-        equipmentCost: 0,
-        count: 0
+    if (selectedYear === "all") {
+      // Group by year-month for all years present in the data
+      const allMonthKeys = new Set();
+      vendors.forEach(vendor => {
+        if (vendor.createdAt) {
+          const vendorDate = vendor.createdAt.toDate();
+          const monthKey = vendorDate.toISOString().slice(0, 7); // YYYY-MM
+          allMonthKeys.add(monthKey);
+        }
       });
-    });
+      months = Array.from(allMonthKeys).sort();
+      months.forEach(month => {
+        monthlyTotals.set(month, {
+          total: 0,
+          manpowerCost: 0,
+          materialsCost: 0,
+          equipmentCost: 0,
+          count: 0
+        });
+      });
+    } else {
+      // Use January to December of the selected year
+      months = Array.from({length: 12}, (_, i) => {
+        const date = new Date(Number(selectedYear), i, 1);
+        return date.toISOString().slice(0, 7); // Format: YYYY-MM
+      });
+      months.forEach(month => {
+        monthlyTotals.set(month, {
+          total: 0,
+          manpowerCost: 0,
+          materialsCost: 0,
+          equipmentCost: 0,
+          count: 0
+        });
+      });
+    }
 
     vendors.forEach(vendor => {
       // Program distribution
@@ -301,25 +394,25 @@ export default function VendorsAnalyticsPage() {
       if (!vendor.createdAt) return;
 
       const vendorDate = vendor.createdAt.toDate();
-      // Adjust vendor date to 2025 if it's in the past
-      if (vendorDate < startDate) {
-        vendorDate.setFullYear(2025);
-      }
-      const monthKey = vendorDate.toISOString().slice(0, 7); // Format: YYYY-MM
+      const monthKey = vendorDate.toISOString().slice(0, 7);
 
-      // Only process if the vendor is in our target months
-      if (monthlyTotals.has(monthKey)) {
-        // Update monthly totals
+      // For "all" years, always process; for a specific year, check range
+      if (
+        selectedYear === "all" ||
+        (vendorDate.getFullYear() === Number(selectedYear))
+      ) {
         const monthData = monthlyTotals.get(monthKey);
-        monthData.manpowerCost += manpowerCost;
-        monthData.materialsCost += materialsCost;
-        monthData.equipmentCost += equipmentCost;
-        monthData.total += (manpowerCost + materialsCost + equipmentCost);
-        monthData.count += 1;
+        if (monthData) {
+          monthData.manpowerCost += manpowerCost;
+          monthData.materialsCost += materialsCost;
+          monthData.equipmentCost += equipmentCost;
+          monthData.total += (manpowerCost + materialsCost + equipmentCost);
+          monthData.count += 1;
+          stats.hasData = true;
+        }
       }
     });
 
-    // Convert monthly totals to sorted array
     stats.monthlyInvestments = Array.from(monthlyTotals.entries())
       .map(([month, data]) => ({
         month: new Date(month),
@@ -330,22 +423,24 @@ export default function VendorsAnalyticsPage() {
     return stats;
   };
 
-  // Add fetchUserProfileImage function after the existing useEffect for mobile menu
-  const fetchUserProfileImage = async (userId) => {
-    try {
-      const userDoc = await getDoc(doc(db, "users", userId));
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
-        if (userData.photoURL) return userData.photoURL;
-      }
-      const localPhoto = getProfilePhotoFromLocalStorage(userId);
-      if (localPhoto) return localPhoto;
-      return null;
-    } catch (error) {
-      console.error("Error fetching profile image:", error);
-      return null;
-    }
-  };
+  // 3. Now you can use it
+  const previousYearStats = calculateVendorAnalytics(
+    allVendors.filter(vendor => {
+      const vendorDate = vendor.createdAt?.toDate();
+      return vendorDate && vendorDate.getFullYear() === selectedYear - 1;
+    })
+  );
+
+  const filteredAnalytics = calculateVendorAnalytics(
+    selectedYear === "all"
+      ? allVendors
+      : allVendors.filter(vendor => {
+          const vendorDate = vendor.createdAt?.toDate();
+          return vendorDate && vendorDate.getFullYear() === Number(selectedYear);
+        })
+  );
+
+  const totalProjectsAllYears = allVendors.length;
 
   if (loading) {
     return <LoadingPage />;
@@ -627,429 +722,615 @@ export default function VendorsAnalyticsPage() {
               </DropdownMenu>
             </div>
           </div>
-        </div>
+        </div>              
 
         <main className="flex-1 relative overflow-y-auto focus:outline-none">
           <div className="py-6">
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 md:px-8">
-              <div className="flex items-center justify-between mb-8">
-                <h1 className="text-2xl font-bold">Project Analytics</h1>
-                <Button
-                  variant="outline"
-                  onClick={() => router.back()}
-                  className="flex items-center gap-2"
-                >
-                  <ArrowLeft className="h-4 w-4" />
-                  Back to Vendors
-                </Button>
-              </div>
+            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+              <div className="flex flex-col space-y-4">
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-[#496E22] to-[#6C9331] bg-clip-text text-transparent">
+                  Analytics Dashboard
+                </h1>
+                <div className="flex justify-end">
+                  <Select 
+                    value={selectedYear}
+                    onValueChange={setSelectedYear}
+                    defaultValue={currentYear.toString()}
+                  >
+                    <SelectTrigger
+                      className="w-[120px] !bg-green-600 !text-white rounded-lg border-none shadow-none focus:ring-2 focus:ring-green-700"
+                    >
+                      <SelectValue placeholder="Select year" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      <SelectItem value="all" className="rounded-lg text-black">All Years</SelectItem>
+                      {getAvailableYears().filter(y => y !== "all").map((year) => (
+                        <SelectItem
+                          key={year}
+                          value={year.toString()}
+                          className="rounded-lg"
+                        >
+                          {year} {year === currentYear ? '(Current)' : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {/* Analytics cards grid */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  {/* Total Projects Card */}
+                  <Card className="bg-gradient-to-br from-[#0B3D2E] to-[#1B4D2E] border-0 relative overflow-hidden md:col-span-2 shadow-xl">
+                    {/* Background decorative elements */}
+                    <div className="absolute inset-0 w-full h-full overflow-hidden">
+                      <div className="absolute -right-16 -top-16 w-64 h-64 bg-white/5 rounded-full blur-3xl"></div>
+                      <div className="absolute -left-16 -bottom-16 w-64 h-64 bg-white/5 rounded-full blur-3xl"></div>
+                      <div className="absolute right-0 bottom-0 w-full h-32 bg-gradient-to-t from-black/20 to-transparent"></div>
+                    </div>
+                    
+                    <div className="relative z-10">
+                      <CardHeader className="pb-0">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-lg font-medium text-white">
+                            Total Projects
+                          </CardTitle>
+                          <div className="flex items-center gap-2">
+                            <div className="bg-white/10 backdrop-blur-sm p-2 rounded-full">
+                              <Store className="h-5 w-5 text-white" />
+                            </div>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      
+                      <CardContent className="pt-6">
+                        <div className="flex flex-col">
+                          <div className="flex items-baseline gap-2 mb-10">
+                            <div className="text-7xl font-bold text-white">{filteredAnalytics.total}</div>
+                          </div>
+                          <div className="h-20"></div>
+                          {/* Mini chart at the bottom */}
+                          <div className="mt-6 h-16 relative">
+                            <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-white/20"></div>
+                            {Array.from({ length: 20 }).map((_, i) => (
+                              <div
+                                key={i}
+                                className="absolute bottom-0 bg-emerald-400"
+                                style={{
+                                  left: `${i * 5}%`,
+                                  height: `${100 + Math.random() * 50}%`,
+                                  width: "4%",
+                                  opacity: 0.5 + Math.random() * 0.5,
+                                  borderRadius: "1px 1px 0 0",
+                                }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </div>
+                  </Card>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                {/* Total Vendors Card */}
-                <Card className="bg-gradient-to-br from-[#C5D48A] to-[#A6C060] border-0 relative overflow-hidden h-[220px] rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200">
-                  <div className="absolute inset-0 bg-white/5 w-full h-full">
-                    <div className="absolute -inset-2 bg-gradient-to-r from-[#B7CC60]/20 to-transparent blur-3xl"></div>
-                  </div>
+                  {/* Total Investment Card */}
+                  <Card className="bg-gradient-to-br from-[#0B3D2E] to-[#1B4D2E] border-0 relative overflow-hidden md:col-span-2 shadow-xl">
+                    {/* Background decorative elements */}
+                    <div className="absolute inset-0 w-full h-full overflow-hidden">
+                      <div className="absolute -right-16 -top-16 w-64 h-64 bg-white/5 rounded-full blur-3xl"></div>
+                      <div className="absolute -left-16 -bottom-16 w-64 h-64 bg-white/5 rounded-full blur-3xl"></div>
+                      <div className="absolute right-0 bottom-0 w-full h-32 bg-gradient-to-t from-black/20 to-transparent"></div>
+                    </div>
+                    
+                    <div className="relative z-10">
+                      <CardHeader className="pb-0">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-lg font-medium text-white">
+                            Total Investment
+                          </CardTitle>
+                          <div className="bg-white/10 backdrop-blur-sm p-2 rounded-full">
+                            <span className="text-2xl text-white font-bold">₱</span>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      
+                      <CardContent className="pt-6">
+                        <div className="flex flex-col">
+                          <div className="flex items-baseline gap-2">
+                            <div className="text-5xl font-bold text-white">
+                              ₱{(filteredAnalytics.totalManpowerCost + filteredAnalytics.totalMaterialsCost + filteredAnalytics.totalEquipmentCost).toLocaleString()}
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-3 gap-4 mt-8">
+                            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
+                              <div className="text-sm text-white/70 mb-1">Manpower</div>
+                              <div className="text-xl font-bold text-white">₱{filteredAnalytics.totalManpowerCost.toLocaleString()}</div>
+                              <div className="text-xs text-white/50 mt-1">
+                                {Math.round((filteredAnalytics.totalManpowerCost / (filteredAnalytics.totalManpowerCost + filteredAnalytics.totalMaterialsCost + filteredAnalytics.totalEquipmentCost)) * 100)}% of total
+                              </div>
+                            </div>
+                        
+                            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
+                              <div className="text-sm text-white/70 mb-1">Materials</div>
+                              <div className="text-xl font-bold text-white">₱{filteredAnalytics.totalMaterialsCost.toLocaleString()}</div>
+                              <div className="text-xs text-white/50 mt-1">
+                                {Math.round((filteredAnalytics.totalMaterialsCost / (filteredAnalytics.totalManpowerCost + filteredAnalytics.totalMaterialsCost + filteredAnalytics.totalEquipmentCost)) * 100)}% of total
+                              </div>
+                            </div>
+
+                            <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3">
+                              <div className="text-sm text-white/70 mb-1">Equipment</div>
+                              <div className="text-xl font-bold text-white">₱{filteredAnalytics.totalEquipmentCost.toLocaleString()}</div>
+                              <div className="text-xs text-white/50 mt-1">
+                                {Math.round((filteredAnalytics.totalEquipmentCost / (filteredAnalytics.totalManpowerCost + filteredAnalytics.totalMaterialsCost + filteredAnalytics.totalEquipmentCost)) * 100)}% of total
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Graph at the bottom */}
+                          <div className="mt-6 h-16 relative">
+                            <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-white/20"></div>
+                            <Chart
+                              type="line"
+                              data={{
+                                labels: getMonthLabels(selectedYear),
+                                datasets: [
+                                  {
+                                    data: filteredAnalytics.monthlyInvestments.map(item => item.total),
+                                    borderColor: 'rgba(255, 255, 255, 0.8)',
+                                    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+                                    borderWidth: 2,
+                                    pointRadius: 0,
+                                    fill: true,
+                                    tension: 0.5,
+                                  },
+                                  {
+                                    data: filteredAnalytics.monthlyInvestments.map((item, index, arr) => {
+                                      const shiftedIndex = (index + 4) % arr.length;
+                                      return arr[shiftedIndex]?.total ?? 0;
+                                    }),
+                                    borderColor: 'rgba(255, 255, 255, 0.6)',
+                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                    borderWidth: 2,
+                                    pointRadius: 0,
+                                    fill: true,
+                                    tension: 0.5,
+                                  },
+                                  {
+                                    data: filteredAnalytics.monthlyInvestments.map((item, index, arr) => {
+                                      const shiftedIndex = (index + 8) % arr.length;
+                                      return arr[shiftedIndex]?.total ?? 0;
+                                    }),
+                                    borderColor: 'rgba(255, 255, 255, 0.4)',
+                                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                                    borderWidth: 2,
+                                    pointRadius: 0,
+                                    fill: true,
+                                    tension: 0.5,
+                                  }
+                                ]
+                              }}
+                              options={{
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                plugins: { 
+                                  legend: { display: false }, 
+                                  tooltip: { enabled: false } 
+                                },
+                                scales: { 
+                                  x: { display: false }, 
+                                  y: { display: false } 
+                                }
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </div>
+                  </Card>
+                </div>
+
+                {/* Monthly Investment Chart */}
+                <Card className="mb-8 bg-gradient-to-br from-white to-[#496E22] border-0 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200">
                   <CardHeader className="pb-2 pt-6">
-                    <CardTitle className="text-2xl font-medium text-white">
-                      Total Projects
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-col justify-center h-full pt-4">
-                      <div className="text-[52px] font-bold text-white leading-none tracking-tight">{analytics.total}</div>
-                      <p className="text-xl text-white/90 mt-3">Registered vendors</p>
-                      <div className="absolute bottom-6 left-0 right-0 h-[60px]">
-                        <svg className="w-full h-full text-white/10" viewBox="0 0 400 100" preserveAspectRatio="none">
-                          <path 
-                            d="M0,50 Q100,80 200,50 T400,50"
-                            fill="none" 
-                            stroke="currentColor" 
-                            strokeWidth="3"
-                          />
-                        </svg>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <CardTitle className="text-2xl font-medium text-[#1E3B0C]">Monthly Investments</CardTitle>
+                        <CardDescription className="text-[#1E3B0C]/70 text-base">
+                          {filteredAnalytics.hasData 
+                            ? `Investment trends for ${selectedYear}`
+                            : `No investment data available for ${selectedYear}`
+                          }
+                        </CardDescription>
                       </div>
+                      <div className="bg-white/10 backdrop-blur-sm p-2 rounded-full">
+                        <span className="text-2xl text-white font-bold">₱</span>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-6">
+                    <div className={`h-[400px] relative transition-opacity duration-300 ${isTransitioning ? 'opacity-50' : 'opacity-100'}`}>
+                      <Chart
+                        type="line"
+                        data={{
+                          labels: getMonthLabels(selectedYear),
+                          datasets: filteredAnalytics.hasData ? [
+                            {
+                              label: 'Total Investment',
+                              data: filteredAnalytics.monthlyInvestments.map(item => item.total),
+                              borderColor: '#2E8B57',
+                              borderWidth: 4,
+                              fill: {
+                                target: 'origin',
+                                above: (context) => {
+                                  const chart = context.chart;
+                                  const {ctx, chartArea} = chart;
+                                  if (!chartArea) return null;
+                                  
+                                  const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                                  gradient.addColorStop(0, 'rgba(46, 139, 87, 0.5)');
+                                  gradient.addColorStop(0.5, 'rgba(46, 139, 87, 0.3)');
+                                  gradient.addColorStop(1, 'rgba(46, 139, 87, 0)');
+                                  return gradient;
+                                }
+                              },
+                              tension: 0.4,
+                              pointRadius: 5,
+                              pointBackgroundColor: '#2E8B57',
+                              pointBorderColor: '#fff',
+                              pointBorderWidth: 3,
+                              cubicInterpolationMode: 'monotone',
+                              animation: {
+                                duration: 1000,
+                                easing: 'easeInOutQuart'
+                              }
+                            },
+                            {
+                              label: 'Average Investment',
+                              data: filteredAnalytics.monthlyInvestments.map(item => item.total * 0.75),
+                              borderColor: '#3CB371',
+                              borderWidth: 4,
+                              fill: {
+                                target: '-1',
+                                above: (context) => {
+                                  const chart = context.chart;
+                                  const {ctx, chartArea} = chart;
+                                  if (!chartArea) return null;
+                                  
+                                  const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                                  gradient.addColorStop(0, 'rgba(60, 179, 113, 0.4)');
+                                  gradient.addColorStop(0.5, 'rgba(60, 179, 113, 0.2)');
+                                  gradient.addColorStop(1, 'rgba(60, 179, 113, 0)');
+                                  return gradient;
+                                }
+                              },
+                              tension: 0.4,
+                              pointRadius: 5,
+                              pointBackgroundColor: '#3CB371',
+                              pointBorderColor: '#fff',
+                              pointBorderWidth: 3,
+                              cubicInterpolationMode: 'monotone',
+                              animation: {
+                                duration: 1000,
+                                easing: 'easeInOutQuart'
+                              }
+                            },
+                            {
+                              label: 'Minimum Investment',
+                              data: filteredAnalytics.monthlyInvestments.map(item => item.total * 0.5),
+                              borderColor: '#90EE90',
+                              borderWidth: 4,
+                              fill: {
+                                target: '-1',
+                                above: (context) => {
+                                  const chart = context.chart;
+                                  const {ctx, chartArea} = chart;
+                                  if (!chartArea) return null;
+                                  
+                                  const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                                  gradient.addColorStop(0, 'rgba(144, 238, 144, 0.3)');
+                                  gradient.addColorStop(0.5, 'rgba(144, 238, 144, 0.15)');
+                                  gradient.addColorStop(1, 'rgba(144, 238, 144, 0)');
+                                  return gradient;
+                                }
+                              },
+                              tension: 0.4,
+                              pointRadius: 5,
+                              pointBackgroundColor: '#90EE90',
+                              pointBorderColor: '#fff',
+                              pointBorderWidth: 3,
+                              cubicInterpolationMode: 'monotone',
+                              animation: {
+                                duration: 1000,
+                                easing: 'easeInOutQuart'
+                              }
+                            }
+                          ] : [
+                            {
+                              label: 'Total Investment',
+                              data: Array(12).fill(null),
+                              borderColor: '#2E8B57',
+                              borderWidth: 4,
+                              fill: false,
+                              pointRadius: 0,
+                              pointHoverRadius: 0,
+                            },
+                            {
+                              label: 'Average Investment',
+                              data: Array(12).fill(null),
+                              borderColor: '#3CB371',
+                              borderWidth: 4,
+                              fill: false,
+                              pointRadius: 0,
+                              pointHoverRadius: 0,
+                            },
+                            {
+                              label: 'Minimum Investment',
+                              data: Array(12).fill(null),
+                              borderColor: '#90EE90',
+                              borderWidth: 4,
+                              fill: false,
+                              pointRadius: 0,
+                              pointHoverRadius: 0,
+                            }
+                          ]
+                        }}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          layout: {
+                            padding: {
+                              left: 20,
+                              right: 20,
+                              top: 40,
+                              bottom: 20
+                            }
+                          },
+                          animation: {
+                            duration: 1000,
+                            easing: 'easeInOutQuart'
+                          },
+                          transitions: {
+                            active: {
+                              animation: {
+                                duration: 400
+                              }
+                            }
+                          },
+                          scales: {
+                            y: {
+                              min: 0,
+                              max: 600000,
+                              position: 'left',
+                              display: true,
+                              grid: {
+                                color: 'rgba(0, 0, 0, 0.1)',
+                                drawBorder: false,
+                                lineWidth: 1
+                              },
+                              border: {
+                                display: true,
+                                color: 'rgba(0, 0, 0, 0.1)'
+                              },
+                              ticks: {
+                                stepSize: 200000,
+                                callback: (value) => `₱${value/1000}k`,
+                                font: {
+                                  size: 12,
+                                  family: "'Inter', sans-serif"
+                                },
+                                color: 'rgba(0, 0, 0, 0.7)',
+                                padding: 10
+                              }
+                            },
+                            x: {
+                              display: true,
+                              offset: true,
+                              grid: {
+                                display: true,
+                                color: 'rgba(0, 0, 0, 0.05)',
+                                drawBorder: false
+                              },
+                              border: {
+                                display: true,
+                                color: 'rgba(0, 0, 0, 0.1)'
+                              },
+                              ticks: {
+                                font: {
+                                  size: 12,
+                                  family: "'Inter', sans-serif"
+                                },
+                                color: 'rgba(0, 0, 0, 0.7)',
+                                padding: 10,
+                                maxRotation: 0,
+                                autoSkip: false
+                              }
+                            }
+                          },
+                          plugins: {
+                            legend: {
+                              display: true,
+                              position: 'top',
+                              align: 'start',
+                              labels: {
+                                boxWidth: 12,
+                                boxHeight: 12,
+                                padding: 20,
+                                font: {
+                                  size: 12,
+                                  family: "'Inter', sans-serif"
+                                },
+                                color: 'rgba(0, 0, 0, 0.7)',
+                                usePointStyle: true,
+                                pointStyle: 'circle'
+                              }
+                            },
+                            tooltip: {
+                              enabled: true,
+                              mode: 'index',
+                              intersect: false,
+                              backgroundColor: 'rgba(255, 255, 255, 0.95)',
+                              titleColor: '#1E3B0C',
+                              bodyColor: '#2C4A1B',
+                              borderColor: 'rgba(0, 0, 0, 0.1)',
+                              borderWidth: 1,
+                              padding: 8,
+                              boxPadding: 4,
+                              callbacks: {
+                                label: function(context) {
+                                  return `${context.dataset.label}: ₱${context.raw.toLocaleString()}`;
+                                }
+                              }
+                            }
+                          },
+                          interaction: {
+                            intersect: false,
+                            mode: 'index'
+                          }
+                        }}
+                      />
                     </div>
                   </CardContent>
                 </Card>
 
-                {/* Total Investment Card */}
-                <Card className="bg-gradient-to-br from-[#96B54A] to-[#496E22] border-0 relative overflow-hidden h-[220px] rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200">
-                  <div className="absolute inset-0 bg-white/5 w-full h-full">
-                    <div className="absolute -inset-2 bg-gradient-to-r from-[#5F862C]/20 to-transparent blur-3xl"></div>
-                  </div>
+                {/* Program Distribution Chart */}
+                <Card className="mb-8 bg-gradient-to-br from-[#1E3B0C] to-[#2C4A1B] border-0 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200">
                   <CardHeader className="pb-2 pt-6">
-                    <CardTitle className="text-2xl font-medium text-white">
-                      Total Investment
-                    </CardTitle>
+                    <CardTitle className="text-lg font-semibold text-white">Program Distribution</CardTitle>
+                    <CardDescription className="text-white/70">Distribution of vendors across different programs</CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <div className="flex flex-col justify-center h-full pt-4">
-                      <div className="text-[52px] font-bold text-white leading-none tracking-tight">
-                        ₱{(analytics.totalManpowerCost + analytics.totalMaterialsCost + analytics.totalEquipmentCost).toLocaleString()}
-                      </div>
-                      <p className="text-xl text-white/90 mt-3">Combined costs</p>
-                      <div className="absolute bottom-6 left-0 right-0 h-[60px]">
-                        <svg className="w-full h-full text-white/10" viewBox="0 0 400 100" preserveAspectRatio="none">
-                          <path 
-                            d="M0,50 Q100,80 200,50 T400,50"
-                            fill="none" 
-                            stroke="currentColor" 
-                            strokeWidth="3"
-                          />
-                        </svg>
-                      </div>
+                  <CardContent className="p-6">
+                    <div className="h-[300px] relative">
+                      <Chart
+                        type="bar"
+                        data={{
+                          labels: Object.keys(filteredAnalytics.programDistribution || {}),
+                          datasets: [
+                            {
+                              type: 'bar',
+                              label: 'Vendors',
+                              data: Object.values(filteredAnalytics.programDistribution || {}),
+                              backgroundColor: [
+                                'rgba(197, 212, 138, 0.8)', // lightest green
+                                'rgba(183, 204, 96, 0.8)',  // light green
+                                'rgba(150, 181, 74, 0.8)',  // medium green
+                                'rgba(121, 159, 58, 0.8)',  // green
+                                'rgba(95, 134, 44, 0.8)',   // dark green
+                                'rgba(73, 110, 34, 0.8)',   // darkest green
+                              ],
+                              borderColor: [
+                                'rgb(197, 212, 138)', // lightest green
+                                'rgb(183, 204, 96)',  // light green
+                                'rgb(150, 181, 74)',  // medium green
+                                'rgb(121, 159, 58)',  // green
+                                'rgb(95, 134, 44)',   // dark green
+                                'rgb(73, 110, 34)',   // darkest green
+                              ],
+                              borderWidth: 1,
+                              borderRadius: 4,
+                            },
+                            {
+                              type: 'line',
+                              label: 'Trend',
+                              data: Object.values(filteredAnalytics.programDistribution || {}),
+                              borderColor: 'rgba(197, 212, 138, 0.8)', // light green
+                              borderWidth: 2,
+                              fill: true,
+                              backgroundColor: (context) => {
+                                const chart = context.chart;
+                                const { ctx, chartArea } = chart;
+                                if (!chartArea) return null;
+                                
+                                const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                                gradient.addColorStop(0, 'rgba(197, 212, 138, 0.4)');
+                                gradient.addColorStop(0.5, 'rgba(197, 212, 138, 0.1)');
+                                gradient.addColorStop(1, 'rgba(197, 212, 138, 0)');
+                                return gradient;
+                              },
+                              tension: 0.4,
+                              pointBackgroundColor: 'rgb(197, 212, 138)',
+                              pointBorderColor: '#2C4A1B',
+                              pointBorderWidth: 2,
+                              pointRadius: 4,
+                            },
+                            {
+                              type: 'line',
+                              label: 'Trend Overlay',
+                              data: Object.values(filteredAnalytics.programDistribution || {}),
+                              borderColor: 'rgba(183, 204, 96, 0.8)', // light green
+                              borderWidth: 2,
+                              fill: true,
+                              backgroundColor: (context) => {
+                                const chart = context.chart;
+                                const { ctx, chartArea } = chart;
+                                if (!chartArea) return null;
+                                
+                                const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+                                gradient.addColorStop(0, 'rgba(183, 204, 96, 0.4)');
+                                gradient.addColorStop(0.5, 'rgba(183, 204, 96, 0.1)');
+                                gradient.addColorStop(1, 'rgba(183, 204, 96, 0)');
+                                return gradient;
+                              },
+                              tension: 0.4,
+                              pointBackgroundColor: 'rgb(183, 204, 96)',
+                              pointBorderColor: '#2C4A1B',
+                              pointBorderWidth: 2,
+                              pointRadius: 4,
+                            }
+                          ],
+                        }}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          scales: {
+                            y: {
+                              beginAtZero: true,
+                              grid: {
+                                color: 'rgba(255, 255, 255, 0.1)',
+                              },
+                              ticks: {
+                                color: 'rgba(255, 255, 255, 0.8)',
+                                font: {
+                                  weight: '500'
+                                }
+                              }
+                            },
+                            x: {
+                              grid: {
+                                display: false
+                              },
+                              ticks: {
+                                color: 'rgba(255, 255, 255, 0.8)',
+                                font: {
+                                  weight: '500'
+                                }
+                              }
+                            }
+                          },
+                          plugins: {
+                            legend: {
+                              display: true,
+                              position: 'top',
+                              labels: {
+                                color: 'rgba(255, 255, 255, 0.9)',
+                                font: {
+                                  weight: '500'
+                                }
+                              }
+                            },
+                            tooltip: {
+                              mode: 'index',
+                              intersect: false,
+                              backgroundColor: 'rgba(46, 74, 27, 0.9)',
+                              titleColor: 'rgba(255, 255, 255, 1)',
+                              bodyColor: 'rgba(255, 255, 255, 0.8)',
+                              borderColor: 'rgba(197, 212, 138, 0.3)',
+                              borderWidth: 1,
+                            },
+                          },
+                        }}
+                      />
                     </div>
                   </CardContent>
                 </Card>
               </div>
-
-              {/* Monthly Investment Chart */}
-              <Card className="mb-8 bg-gradient-to-br from-white to-[#496E22] border-0 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200">
-                <CardHeader className="pb-2 pt-6">
-                  <CardTitle className="text-2xl font-medium text-[#1E3B0C]">Monthly Investments</CardTitle>
-                  <CardDescription className="text-[#1E3B0C]/70 text-base">Investment trends over time</CardDescription>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="h-[400px] relative">
-                    <Chart
-                      type="line"
-                      data={{
-                        labels: analytics.monthlyInvestments.map(item => {
-                          const date = new Date(item.month);
-                          return date.toLocaleDateString('en-US', { 
-                            month: 'short',
-                            year: 'numeric'
-                          });
-                        }),
-                        datasets: [
-                          {
-                            label: 'Total Investment',
-                            data: analytics.monthlyInvestments.map(item => item.total),
-                            borderColor: '#2E8B57',
-                            borderWidth: 4,
-                            fill: {
-                              target: 'origin',
-                              above: (context) => {
-                                const chart = context.chart;
-                                const {ctx, chartArea} = chart;
-                                if (!chartArea) return null;
-                                
-                                const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-                                gradient.addColorStop(0, 'rgba(46, 139, 87, 0.5)');
-                                gradient.addColorStop(0.5, 'rgba(46, 139, 87, 0.3)');
-                                gradient.addColorStop(1, 'rgba(46, 139, 87, 0)');
-                                return gradient;
-                              }
-                            },
-                            tension: 0.4,
-                            pointRadius: 5,
-                            pointBackgroundColor: '#2E8B57',
-                            pointBorderColor: '#fff',
-                            pointBorderWidth: 3,
-                            cubicInterpolationMode: 'monotone'
-                          },
-                          {
-                            label: 'Average Investment',
-                            data: analytics.monthlyInvestments.map(item => item.total * 0.75),
-                            borderColor: '#3CB371',
-                            borderWidth: 4,
-                            fill: {
-                              target: '-1',
-                              above: (context) => {
-                                const chart = context.chart;
-                                const {ctx, chartArea} = chart;
-                                if (!chartArea) return null;
-                                
-                                const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-                                gradient.addColorStop(0, 'rgba(60, 179, 113, 0.4)');
-                                gradient.addColorStop(0.5, 'rgba(60, 179, 113, 0.2)');
-                                gradient.addColorStop(1, 'rgba(60, 179, 113, 0)');
-                                return gradient;
-                              }
-                            },
-                            tension: 0.4,
-                            pointRadius: 5,
-                            pointBackgroundColor: '#3CB371',
-                            pointBorderColor: '#fff',
-                            pointBorderWidth: 3,
-                            cubicInterpolationMode: 'monotone'
-                          },
-                          {
-                            label: 'Minimum Investment',
-                            data: analytics.monthlyInvestments.map(item => item.total * 0.5),
-                            borderColor: '#90EE90',
-                            borderWidth: 4,
-                            fill: {
-                              target: '-1',
-                              above: (context) => {
-                                const chart = context.chart;
-                                const {ctx, chartArea} = chart;
-                                if (!chartArea) return null;
-                                
-                                const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-                                gradient.addColorStop(0, 'rgba(144, 238, 144, 0.3)');
-                                gradient.addColorStop(0.5, 'rgba(144, 238, 144, 0.15)');
-                                gradient.addColorStop(1, 'rgba(144, 238, 144, 0)');
-                                return gradient;
-                              }
-                            },
-                            tension: 0.4,
-                            pointRadius: 5,
-                            pointBackgroundColor: '#90EE90',
-                            pointBorderColor: '#fff',
-                            pointBorderWidth: 3,
-                            cubicInterpolationMode: 'monotone'
-                          }
-                        ],
-                      }}
-                      options={{
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        layout: {
-                          padding: {
-                            left: 20,
-                            right: 20,
-                            top: 40,
-                            bottom: 20
-                          }
-                        },
-                        scales: {
-                          y: {
-                            min: 0,
-                            max: 600000,
-                            position: 'left',
-                            display: true,
-                            grid: {
-                              color: 'rgba(0, 0, 0, 0.1)',
-                              drawBorder: false,
-                              lineWidth: 1
-                            },
-                            border: {
-                              display: true,
-                              color: 'rgba(0, 0, 0, 0.1)'
-                            },
-                            ticks: {
-                              stepSize: 200000,
-                              callback: (value) => `₱${value/1000}k`,
-                              font: {
-                                size: 12,
-                                family: "'Inter', sans-serif"
-                              },
-                              color: 'rgba(0, 0, 0, 0.7)',
-                              padding: 10
-                            }
-                          },
-                          x: {
-                            display: true,
-                            offset: true,
-                            grid: {
-                              display: true,
-                              color: 'rgba(0, 0, 0, 0.05)',
-                              drawBorder: false
-                            },
-                            border: {
-                              display: true,
-                              color: 'rgba(0, 0, 0, 0.1)'
-                            },
-                            ticks: {
-                              font: {
-                                size: 12,
-                                family: "'Inter', sans-serif"
-                              },
-                              color: 'rgba(0, 0, 0, 0.7)',
-                              padding: 10,
-                              maxRotation: 0,
-                              autoSkip: false
-                            }
-                          }
-                        },
-                        plugins: {
-                          legend: {
-                            display: true,
-                            position: 'top',
-                            align: 'start',
-                            labels: {
-                              boxWidth: 12,
-                              boxHeight: 12,
-                              padding: 20,
-                              font: {
-                                size: 12,
-                                family: "'Inter', sans-serif"
-                              },
-                              color: 'rgba(0, 0, 0, 0.7)',
-                              usePointStyle: true,
-                              pointStyle: 'circle'
-                            }
-                          },
-                          tooltip: {
-                            enabled: true,
-                            mode: 'index',
-                            intersect: false,
-                            backgroundColor: 'rgba(255, 255, 255, 0.95)',
-                            titleColor: '#1E3B0C',
-                            bodyColor: '#2C4A1B',
-                            borderColor: 'rgba(0, 0, 0, 0.1)',
-                            borderWidth: 1,
-                            padding: 8,
-                            boxPadding: 4,
-                            callbacks: {
-                              label: function(context) {
-                                return `${context.dataset.label}: ₱${context.raw.toLocaleString()}`;
-                              }
-                            }
-                          }
-                        },
-                        interaction: {
-                          intersect: false,
-                          mode: 'index'
-                        }
-                      }}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Program Distribution Chart */}
-              <Card className="mb-8 bg-gradient-to-br from-[#1E3B0C] to-[#2C4A1B] border-0 rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200">
-                <CardHeader className="pb-2 pt-6">
-                  <CardTitle className="text-lg font-semibold text-white">Program Distribution</CardTitle>
-                  <CardDescription className="text-white/70">Distribution of vendors across different programs</CardDescription>
-                </CardHeader>
-                <CardContent className="p-6">
-                  <div className="h-[300px] relative">
-                    <Chart
-                      type="bar"
-                      data={{
-                        labels: Object.keys(analytics.programDistribution || {}),
-                        datasets: [
-                          {
-                            type: 'bar',
-                            label: 'Vendors',
-                            data: Object.values(analytics.programDistribution || {}),
-                            backgroundColor: [
-                              'rgba(197, 212, 138, 0.8)', // lightest green
-                              'rgba(183, 204, 96, 0.8)',  // light green
-                              'rgba(150, 181, 74, 0.8)',  // medium green
-                              'rgba(121, 159, 58, 0.8)',  // green
-                              'rgba(95, 134, 44, 0.8)',   // dark green
-                              'rgba(73, 110, 34, 0.8)',   // darkest green
-                            ],
-                            borderColor: [
-                              'rgb(197, 212, 138)', // lightest green
-                              'rgb(183, 204, 96)',  // light green
-                              'rgb(150, 181, 74)',  // medium green
-                              'rgb(121, 159, 58)',  // green
-                              'rgb(95, 134, 44)',   // dark green
-                              'rgb(73, 110, 34)',   // darkest green
-                            ],
-                            borderWidth: 1,
-                            borderRadius: 4,
-                          },
-                          {
-                            type: 'line',
-                            label: 'Trend',
-                            data: Object.values(analytics.programDistribution || {}),
-                            borderColor: 'rgba(197, 212, 138, 0.8)', // light green
-                            borderWidth: 2,
-                            fill: true,
-                            backgroundColor: (context) => {
-                              const chart = context.chart;
-                              const { ctx, chartArea } = chart;
-                              if (!chartArea) return null;
-                              
-                              const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-                              gradient.addColorStop(0, 'rgba(197, 212, 138, 0.4)');
-                              gradient.addColorStop(0.5, 'rgba(197, 212, 138, 0.1)');
-                              gradient.addColorStop(1, 'rgba(197, 212, 138, 0)');
-                              return gradient;
-                            },
-                            tension: 0.4,
-                            pointBackgroundColor: 'rgb(197, 212, 138)',
-                            pointBorderColor: '#2C4A1B',
-                            pointBorderWidth: 2,
-                            pointRadius: 4,
-                          },
-                          {
-                            type: 'line',
-                            label: 'Trend Overlay',
-                            data: Object.values(analytics.programDistribution || {}),
-                            borderColor: 'rgba(183, 204, 96, 0.8)', // light green
-                            borderWidth: 2,
-                            fill: true,
-                            backgroundColor: (context) => {
-                              const chart = context.chart;
-                              const { ctx, chartArea } = chart;
-                              if (!chartArea) return null;
-                              
-                              const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-                              gradient.addColorStop(0, 'rgba(183, 204, 96, 0.4)');
-                              gradient.addColorStop(0.5, 'rgba(183, 204, 96, 0.1)');
-                              gradient.addColorStop(1, 'rgba(183, 204, 96, 0)');
-                              return gradient;
-                            },
-                            tension: 0.4,
-                            pointBackgroundColor: 'rgb(183, 204, 96)',
-                            pointBorderColor: '#2C4A1B',
-                            pointBorderWidth: 2,
-                            pointRadius: 4,
-                          }
-                        ],
-                      }}
-                      options={{
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        scales: {
-                          y: {
-                            beginAtZero: true,
-                            grid: {
-                              color: 'rgba(255, 255, 255, 0.1)',
-                            },
-                            ticks: {
-                              color: 'rgba(255, 255, 255, 0.8)',
-                              font: {
-                                weight: '500'
-                              }
-                            }
-                          },
-                          x: {
-                            grid: {
-                              display: false
-                            },
-                            ticks: {
-                              color: 'rgba(255, 255, 255, 0.8)',
-                              font: {
-                                weight: '500'
-                              }
-                            }
-                          }
-                        },
-                        plugins: {
-                          legend: {
-                            display: true,
-                            position: 'top',
-                            labels: {
-                              color: 'rgba(255, 255, 255, 0.9)',
-                              font: {
-                                weight: '500'
-                              }
-                            }
-                          },
-                          tooltip: {
-                            mode: 'index',
-                            intersect: false,
-                            backgroundColor: 'rgba(46, 74, 27, 0.9)',
-                            titleColor: 'rgba(255, 255, 255, 1)',
-                            bodyColor: 'rgba(255, 255, 255, 0.8)',
-                            borderColor: 'rgba(197, 212, 138, 0.3)',
-                            borderWidth: 1,
-                          },
-                        },
-                      }}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
             </div>
           </div>
         </main>

@@ -496,211 +496,211 @@ export default function AboutPage() {
                 professionals committed to improving the lives of vulnerable
                 Filipinos through sustainable livelihood opportunities.
               </p>
-
-              {/* Director */}
-              <div className="mb-10">
-                <h3 className="text-xl font-bold text-[#0F4C81] mb-6 pb-2 border-b border-gray-200">
-                  Program Leadership
-                </h3>
-                <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
-                  <div className="w-32 h-32 overflow-hidden rounded-full flex-shrink-0">
-                    <img
-                      src="/images/avatar1.png"
-                      alt="SLP Director"
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-lg text-[#0F4C81]">
-                      Dr. Maria Santos
-                    </h4>
-                    <p className="text-gray-600 font-medium mb-3">
-                      Director, Sustainable Livelihood Program
-                    </p>
-                    <p className="text-gray-700">
-                      Dr. Santos leads the Sustainable Livelihood Program and
-                      its affiliated colleges with over 15 years of experience
-                      in social welfare and community development. She oversees
-                      all strategic initiatives and ensures the program's
-                      alignment with DSWD's mission to empower vulnerable
-                      communities across the Philippines.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Developers */}
-              <div className="mb-10">
-                <h3 className="text-xl font-bold text-[#0F4C81] mb-6 pb-2 border-b border-gray-200">
-                  System Developers
-                </h3>
-                <div className="grid md:grid-cols-2 gap-6">
-                  <div className="bg-blue-50 p-6 rounded-lg flex flex-col md:flex-row items-center md:items-start gap-4">
-                    <div className="w-24 h-24 overflow-hidden rounded-full flex-shrink-0">
-                      <img
-                        src="/images/avatar2.png"
-                        alt="Lead Developer"
-                        className="w-full h-full object-cover"
-                      />
+              {/* Gradient Org Chart */}
+              <div className="relative flex flex-col items-center w-full max-w-5xl mx-auto pt-8 pb-16">
+                {/* Top Level */}
+                <div className="flex justify-center z-10">
+                  <div className="org-card-gradient relative flex flex-col items-center">
+                    <div className="hexagon-outer absolute -top-12 z-10">
+                      <div className="hexagon-frame">
+                        <img src="/images/avatar1.png" alt="SLP Director" className="org-avatar" />
+                      </div>
                     </div>
-                    <div>
-                      <h4 className="font-bold text-lg text-[#0F4C81] text-center md:text-left">
-                        Juan Dela Cruz
-                      </h4>
-                      <p className="text-gray-600 font-medium mb-2 text-center md:text-left">
-                        Lead Developer
-                      </p>
-                      <p className="text-gray-700">
-                        Architected and developed the core functionality of the
-                        SLP Proposal System, with expertise in full-stack
-                        development and database design.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="bg-blue-50 p-6 rounded-lg flex flex-col md:flex-row items-center md:items-start gap-4">
-                    <div className="w-24 h-24 overflow-hidden rounded-full flex-shrink-0">
-                      <img
-                        src="/images/avatar3.png"
-                        alt="UI/UX Developer"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-lg text-[#0F4C81] text-center md:text-left">
-                        Ana Reyes
-                      </h4>
-                      <p className="text-gray-600 font-medium mb-2 text-center md:text-left">
-                        UI/UX Developer
-                      </p>
-                      <p className="text-gray-700">
-                        Designed the user interface and experience of the
-                        SLP-PS, ensuring the system is intuitive, accessible,
-                        and responsive across all devices.
-                      </p>
+                    <div className="org-info pt-12">
+                      <div className="org-name">Dr. Maria Santos</div>
+                      <div className="org-title">Director, Sustainable Livelihood Program</div>
                     </div>
                   </div>
                 </div>
-              </div>
-
-              {/* Team Members */}
-              <div>
-                <h3 className="text-xl font-bold text-[#0F4C81] mb-6 pb-2 border-b border-gray-200">
-                  Program Implementation Team
-                </h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="bg-blue-50 p-4 rounded-lg text-center">
-                    <div className="w-20 h-20 mx-auto mb-3 overflow-hidden rounded-full">
-                      <img
-                        src="/images/avatar5.png"
-                        alt="Team Member"
-                        className="w-full h-full object-cover"
-                      />
+                {/* Connecting line to next row */}
+                <div className="absolute left-1/2 top-32 w-1 h-12 bg-gradient-to-b from-yellow-400 to-pink-500 z-0" style={{transform:'translateX(-50%)'}}></div>
+                {/* Second Level */}
+                <div className="flex justify-center gap-24 mt-20 z-10">
+                  <div className="org-card-gradient-pink relative flex flex-col items-center">
+                    <div className="hexagon-outer absolute -top-12 z-10">
+                      <div className="hexagon-frame">
+                        <img src="/images/avatar2.png" alt="Lead Developer" className="org-avatar" />
+                      </div>
                     </div>
-                    <h4 className="font-bold text-[#0F4C81]">Carlos Mendoza</h4>
-                    <p className="text-sm text-gray-600 mb-1">
-                      Regional Coordinator
-                    </p>
+                    <div className="org-info pt-12">
+                      <div className="org-name">Juan Dela Cruz</div>
+                      <div className="org-title">Lead Developer</div>
+                    </div>
                   </div>
-
-                  <div className="bg-blue-50 p-4 rounded-lg text-center">
-                    <div className="w-20 h-20 mx-auto mb-3 overflow-hidden rounded-full">
-                      <img
-                        src="/images/avatar4.png"
-                        alt="Team Member"
-                        className="w-full h-full object-cover"
-                      />
+                  <div className="org-card-gradient-pink relative flex flex-col items-center">
+                    <div className="hexagon-outer absolute -top-12 z-10">
+                      <div className="hexagon-frame">
+                        <img src="/images/avatar3.png" alt="UI/UX Developer" className="org-avatar" />
+                      </div>
                     </div>
-                    <h4 className="font-bold text-[#0F4C81]">Sofia Garcia</h4>
-                    <p className="text-sm text-gray-600 mb-1">
-                      Training Specialist
-                    </p>
+                    <div className="org-info pt-12">
+                      <div className="org-name">Ana Reyes</div>
+                      <div className="org-title">UI/UX Developer</div>
+                    </div>
                   </div>
-
-                  <div className="bg-blue-50 p-4 rounded-lg text-center">
-                    <div className="w-20 h-20 mx-auto mb-3 overflow-hidden rounded-full">
-                      <img
-                        src="/images/avatar2.png"
-                        alt="Team Member"
-                        className="w-full h-full object-cover"
-                      />
+                  <div className="org-card-gradient-pink relative flex flex-col items-center">
+                    <div className="hexagon-outer absolute -top-12 z-10">
+                      <div className="hexagon-frame">
+                        <img src="/images/avatar4.png" alt="Training Specialist" className="org-avatar" />
+                      </div>
                     </div>
-                    <h4 className="font-bold text-[#0F4C81]">Miguel Santos</h4>
-                    <p className="text-sm text-gray-600 mb-1">
-                      Monitoring Officer
-                    </p>
-                  </div>
-
-                  <div className="bg-blue-50 p-4 rounded-lg text-center">
-                    <div className="w-20 h-20 mx-auto mb-3 overflow-hidden rounded-full">
-                      <img
-                        src="/images/avatar3.png"
-                        alt="Team Member"
-                        className="w-full h-full object-cover"
-                      />
+                    <div className="org-info pt-12">
+                      <div className="org-name">Sofia Garcia</div>
+                      <div className="org-title">Training Specialist</div>
                     </div>
-                    <h4 className="font-bold text-[#0F4C81]">Isabella Reyes</h4>
-                    <p className="text-sm text-gray-600 mb-1">
-                      Community Facilitator
-                    </p>
-                  </div>
-
-                  <div className="bg-blue-50 p-4 rounded-lg text-center">
-                    <div className="w-20 h-20 mx-auto mb-3 overflow-hidden rounded-full">
-                      <img
-                        src="/images/avatar6.png"
-                        alt="Team Member"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <h4 className="font-bold text-[#0F4C81]">Rafael Lim</h4>
-                    <p className="text-sm text-gray-600 mb-1">
-                      Financial Analyst
-                    </p>
-                  </div>
-
-                  <div className="bg-blue-50 p-4 rounded-lg text-center">
-                    <div className="w-20 h-20 mx-auto mb-3 overflow-hidden rounded-full">
-                      <img
-                        src="/images/avatar4.png"
-                        alt="Team Member"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <h4 className="font-bold text-[#0F4C81]">Elena Cruz</h4>
-                    <p className="text-sm text-gray-600 mb-1">
-                      Livelihood Specialist
-                    </p>
-                  </div>
-
-                  <div className="bg-blue-50 p-4 rounded-lg text-center">
-                    <div className="w-20 h-20 mx-auto mb-3 overflow-hidden rounded-full">
-                      <img
-                        src="/images/avatar5.png"
-                        alt="Team Member"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <h4 className="font-bold text-[#0F4C81]">Antonio Tan</h4>
-                    <p className="text-sm text-gray-600 mb-1">Data Analyst</p>
-                  </div>
-
-                  <div className="bg-blue-50 p-4 rounded-lg text-center">
-                    <div className="w-20 h-20 mx-auto mb-3 overflow-hidden rounded-full">
-                      <img
-                        src="/images/avatar3.png"
-                        alt="Team Member"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                    <h4 className="font-bold text-[#0F4C81]">
-                      Gabriela Pascual
-                    </h4>
-                    <p className="text-sm text-gray-600 mb-1">
-                      Administrative Officer
-                    </p>
                   </div>
                 </div>
+                {/* Connecting lines to next row */}
+                <div className="absolute left-1/2 top-[19.5rem] w-[60%] h-1 bg-gradient-to-r from-yellow-400 via-pink-500 to-orange-400 z-0" style={{transform:'translateX(-50%)'}}></div>
+                {/* Third Level */}
+                <div className="flex flex-wrap justify-center gap-8 mt-20 z-10">
+                  <div className="org-card-gradient-orange relative flex flex-col items-center">
+                    <div className="hexagon-outer absolute -top-12 z-10">
+                      <div className="hexagon-frame">
+                        <img src="/images/avatar5.png" alt="Regional Coordinator" className="org-avatar" />
+                      </div>
+                    </div>
+                    <div className="org-info pt-12">
+                      <div className="org-name">Carlos Mendoza</div>
+                      <div className="org-title">Regional Coordinator</div>
+                    </div>
+                  </div>
+                  <div className="org-card-gradient-orange relative flex flex-col items-center">
+                    <div className="hexagon-outer absolute -top-12 z-10">
+                      <div className="hexagon-frame">
+                        <img src="/images/avatar6.png" alt="Financial Analyst" className="org-avatar" />
+                      </div>
+                    </div>
+                    <div className="org-info pt-12">
+                      <div className="org-name">Rafael Lim</div>
+                      <div className="org-title">Financial Analyst</div>
+                    </div>
+                  </div>
+                  <div className="org-card-gradient-blue relative flex flex-col items-center">
+                    <div className="hexagon-outer absolute -top-12 z-10">
+                      <div className="hexagon-frame">
+                        <img src="/images/avatar2.png" alt="Monitoring Officer" className="org-avatar" />
+                      </div>
+                    </div>
+                    <div className="org-info pt-12">
+                      <div className="org-name">Miguel Santos</div>
+                      <div className="org-title">Monitoring Officer</div>
+                    </div>
+                  </div>
+                  <div className="org-card-gradient-blue relative flex flex-col items-center">
+                    <div className="hexagon-outer absolute -top-12 z-10">
+                      <div className="hexagon-frame">
+                        <img src="/images/avatar3.png" alt="Community Facilitator" className="org-avatar" />
+                      </div>
+                    </div>
+                    <div className="org-info pt-12">
+                      <div className="org-name">Isabella Reyes</div>
+                      <div className="org-title">Community Facilitator</div>
+                    </div>
+                  </div>
+                  <div className="org-card-gradient-blue relative flex flex-col items-center">
+                    <div className="hexagon-outer absolute -top-12 z-10">
+                      <div className="hexagon-frame">
+                        <img src="/images/avatar4.png" alt="Livelihood Specialist" className="org-avatar" />
+                      </div>
+                    </div>
+                    <div className="org-info pt-12">
+                      <div className="org-name">Elena Cruz</div>
+                      <div className="org-title">Livelihood Specialist</div>
+                    </div>
+                  </div>
+                  <div className="org-card-gradient-blue relative flex flex-col items-center">
+                    <div className="hexagon-outer absolute -top-12 z-10">
+                      <div className="hexagon-frame">
+                        <img src="/images/avatar5.png" alt="Data Analyst" className="org-avatar" />
+                      </div>
+                    </div>
+                    <div className="org-info pt-12">
+                      <div className="org-name">Antonio Tan</div>
+                      <div className="org-title">Data Analyst</div>
+                    </div>
+                  </div>
+                  <div className="org-card-gradient-blue relative flex flex-col items-center">
+                    <div className="hexagon-outer absolute -top-12 z-10">
+                      <div className="hexagon-frame">
+                        <img src="/images/avatar3.png" alt="Administrative Officer" className="org-avatar" />
+                      </div>
+                    </div>
+                    <div className="org-info pt-12">
+                      <div className="org-name">Gabriela Pascual</div>
+                      <div className="org-title">Administrative Officer</div>
+                    </div>
+                  </div>
+                </div>
+                {/* Custom styles for org chart */}
+                <style jsx>{`
+                  .hexagon-outer {
+                    width: 90px;
+                    height: 90px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                  }
+                  .hexagon-frame {
+                    width: 90px;
+                    height: 90px;
+                    background: linear-gradient(135deg, #ffb347 0%, #f857a6 100%);
+                    clip-path: polygon(25% 6%, 75% 6%, 100% 50%, 75% 94%, 25% 94%, 0% 50%);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    box-shadow: 0 4px 16px 0 rgba(31, 38, 135, 0.10);
+                    padding: 4px;
+                  }
+                  .hexagon-frame img.org-avatar {
+                    width: 78px;
+                    height: 78px;
+                    object-fit: cover;
+                    border-radius: 16px;
+                    clip-path: polygon(25% 6%, 75% 6%, 100% 50%, 75% 94%, 25% 94%, 0% 50%);
+                    background: #fff;
+                    border: 2px solid #fff;
+                  }
+                  .org-card-gradient, .org-card-gradient-pink, .org-card-gradient-orange, .org-card-gradient-blue {
+                    position: relative;
+                    margin-top: 2.5rem;
+                    padding-top: 3.5rem;
+                    border-radius: 2.5rem 2.5rem 2.5rem 2.5rem/2rem 2rem 2.5rem 2.5rem;
+                    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    min-width: 220px;
+                    margin-bottom: 1rem;
+                  }
+                  .org-info {
+                    text-align: center;
+                    margin-top: 0.5rem;
+                  }
+                  .org-name {
+                    font-weight: bold;
+                    font-size: 1.1rem;
+                    color: #fff;
+                  }
+                  .org-title {
+                    font-size: 0.95rem;
+                    color: #f3f3f3;
+                  }
+                  @media (max-width: 900px) {
+                    .org-card-gradient, .org-card-gradient-pink, .org-card-gradient-orange, .org-card-gradient-blue {
+                      min-width: 140px;
+                      padding: 2.5rem 1.2rem 1rem 1.2rem;
+                    }
+                    .hexagon-outer, .hexagon-frame {
+                      width: 60px;
+                      height: 60px;
+                    }
+                    .hexagon-frame img.org-avatar {
+                      width: 50px;
+                      height: 50px;
+                    }
+                  }
+                `}</style>
               </div>
             </div>
           </div>
