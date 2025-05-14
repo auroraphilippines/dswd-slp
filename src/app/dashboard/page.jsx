@@ -11,39 +11,20 @@ import {
   Users,
   Menu,
   X,
-  Bell,
   Search,
-  Building2,
   Store,
-  Package,
-  TrendingUp,
-  AlertTriangle,
-  DollarSign,
-  ArrowUpRight,
-  ArrowDownRight,
-  User,
-  LogOut,
   FolderOpen,
-  ChevronRight,
   MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-  CardFooter,
 } from "@/components/ui/card";
 
 import { auth, db } from "@/service/firebase";
@@ -60,7 +41,9 @@ export default function DashboardPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [lastActivity, setLastActivity] = useState(Date.now());
   const pathname = usePathname();
+
 
   // Add municipalities array
   const MUNICIPALITIES = [
