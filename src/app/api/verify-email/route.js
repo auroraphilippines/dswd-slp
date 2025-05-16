@@ -2,27 +2,35 @@ import { NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 
 // Initialize Firebase Admin if not already initialized
-if (!admin.apps.length) {
-  try {
+let firebaseApp;
+try {
+  if (!admin.apps.length) {
     const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
     const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
     const privateKey = process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
     if (!projectId || !clientEmail || !privateKey) {
+      console.error('Missing Firebase configuration:', {
+        hasProjectId: !!projectId,
+        hasClientEmail: !!clientEmail,
+        hasPrivateKey: !!privateKey
+      });
       throw new Error('Missing required Firebase Admin SDK configuration. Please check your environment variables.');
     }
 
-    admin.initializeApp({
+    firebaseApp = admin.initializeApp({
       credential: admin.credential.cert({
         projectId,
         clientEmail,
         privateKey,
       }),
     });
-  } catch (error) {
-    console.error('Firebase Admin initialization error:', error);
-    throw new Error('Failed to initialize Firebase Admin SDK: ' + error.message);
+  } else {
+    firebaseApp = admin.apps[0];
   }
+} catch (error) {
+  console.error('Firebase Admin initialization error:', error);
+  throw new Error('Failed to initialize Firebase Admin SDK: ' + error.message);
 }
 
 export async function POST(request) {
