@@ -39,7 +39,7 @@
     "react": "^18.2.0",
     "react-chartjs-2": "^5.3.0",
     "react-day-picker": "^9.6.2",
-    "react-dom": "^18.2.0",
+    "react-dom": "^19.1.0",
     "react-error-boundary": "^4.0.12",
     "react-feather": "^2.0.10",
     "react-toastify": "^11.0.5",
