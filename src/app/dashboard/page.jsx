@@ -15,9 +15,13 @@ import {
   Store,
   FolderOpen,
   MapPin,
+  User,
+  LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 import {
   Card,
@@ -28,11 +32,20 @@ import {
 } from "@/components/ui/card";
 
 import { auth, db } from "@/service/firebase";
-import { doc, getDoc, collection, query, where, getDocs } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, getDocs, updateDoc } from "firebase/firestore";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { UploadActivity } from "./upload-activity";
 import { ActivityFeed } from "./activity-feed";
 import { getProfilePhotoFromLocalStorage } from "@/service/storage";
+import { onAuthStateChanged } from "firebase/auth";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+import { signOut } from "firebase/auth";
 
 export default function DashboardPage() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -114,14 +127,13 @@ export default function DashboardPage() {
     if (!searchQuery || searchResults.length === 0) return null;
 
     return (
-      <div className="absolute mt-1 w-full bg-background border rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto">
+      <div className="absolute mt-1 w-full bg-background border rounded-lg shadow-lg z-50 max-h-[60vh] sm:max-h-96 overflow-y-auto">
         <div className="p-2">
           {searchResults.map((result) => (
             <div
               key={result.id}
               className="flex items-center gap-2 p-2 hover:bg-muted rounded-md cursor-pointer"
               onClick={() => {
-                // Scroll to the activity with this ID
                 const element = document.getElementById(`activity-${result.id}`);
                 if (element) {
                   element.scrollIntoView({ behavior: 'smooth' });
@@ -134,9 +146,9 @@ export default function DashboardPage() {
                 setSearchQuery("");
               }}
             >
-              <MapPin className="h-4 w-4 text-muted-foreground" />
-              <div>
-                <p className="text-sm font-medium">{result.municipalityName}</p>
+              <MapPin className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium truncate">{result.municipalityName}</p>
                 <p className="text-xs text-muted-foreground truncate">
                   {result.description?.slice(0, 100)}...
                 </p>
@@ -181,37 +193,29 @@ export default function DashboardPage() {
 
   // Update the useEffect for fetching user data
   useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        const user = auth.currentUser;
-        if (user) {
-          const userDoc = await getDoc(doc(db, "users", user.uid));
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
-            const rawName = userData.name || "";
-            const displayName = rawName === "255" ? "Admin DSWD" : rawName;
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          const rawName = userData.name || "";
+          const displayName = rawName === "255" ? "Admin DSWD" : rawName;
+          const profileImage = await fetchUserProfileImage(user.uid);
 
-            // Fetch profile image
-            const profileImage = await fetchUserProfileImage(user.uid);
-
-            setCurrentUser({
-              ...userData,
-              uid: user.uid,
-              email: userData.email || "admin@dswd.gov.ph",
-              name: displayName,
-              role: userData.role || "Administrator",
-              photoURL: profileImage
-            });
-          }
+          setCurrentUser({
+            ...userData,
+            uid: user.uid,
+            email: userData.email || "admin@dswd.gov.ph",
+            name: displayName,
+            role: userData.role || "Administrator",
+            photoURL: profileImage
+          });
         }
-        setLoading(false);
-      } catch (error) {
-        console.error("Error fetching user data:", error);
-        setLoading(false);
       }
-    };
+      setLoading(false);
+    });
 
-    fetchUserData();
+    return () => unsubscribe();
   }, []);
 
   // Get user initials from name
@@ -238,8 +242,50 @@ export default function DashboardPage() {
     { name: "Settings", href: "/settings", icon: Settings },
   ];
 
+  // Logout function (copied and adapted from settings/page.jsx)
+  const handleLogout = async () => {
+    try {
+      // Clear any local storage items
+      localStorage.clear();
+      sessionStorage.clear();
+      // Sign out from Firebase
+      const user = auth.currentUser;
+      if (user) {
+        await updateDoc(doc(db, "users", user.uid), { status: "inactive" });
+      }
+      await signOut(auth);
+      // Clear any cookies
+      document.cookie.split(";").forEach(function(c) {
+        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+      });
+      // Force a hard redirect to the login page
+      window.location.replace("/");
+      // Prevent going back
+      window.history.pushState(null, "", "/");
+      window.onpopstate = function() {
+        window.history.pushState(null, "", "/");
+      };
+    } catch (error) {
+      console.error("Error signing out:", error);
+      toast.error("Error signing out");
+    }
+  };
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+        className="z-50"
+      />
       {/* Sidebar for desktop */}
       <div className="hidden md:flex md:w-64 md:flex-col bg-[#0B3D2E]">
         <div className="flex flex-col flex-grow pt-5 overflow-y-auto border-r border-green-900">
@@ -320,121 +366,97 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Mobile menu */}
-      <div
-        className={`${
-          isMobileMenuOpen ? "fixed inset-0 z-40 flex" : "hidden"
-        } md:hidden`}
-        role="dialog"
-        aria-modal="true"
-      >
-        <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm"
-          aria-hidden="true"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-        <div className="relative flex-1 flex flex-col max-w-xs w-full bg-card">
-          <div className="absolute top-0 right-0 -mr-12 pt-4">
-            <button
-              type="button"
-              className="flex items-center justify-center h-10 w-10 rounded-full bg-black/10 backdrop-blur-sm"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              <span className="sr-only">Close sidebar</span>
-              <X className="h-6 w-6 text-white" aria-hidden="true" />
-            </button>
+      {/* Mobile icon header */}
+      <div className="md:hidden w-full fixed top-0 left-0 z-30 bg-[#0B3D2E] flex items-center justify-between px-2 py-1 shadow-lg">
+        {/* Logo */}
+        <Link href="/dashboard" className="flex items-center">
+          <div className="relative h-9 w-9 rounded-lg overflow-hidden bg-green-200/80">
+            <Image
+              src="/images/SLP.png"
+              alt="Logo"
+              fill
+              className="object-contain p-1"
+            />
           </div>
-          <div className="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
-            <div className="flex-shrink-0 flex items-center px-4 mb-6">
-              <Link href="/dashboard" className="flex items-center">
-                <div className="relative h-10 w-10 rounded-lg overflow-hidden bg-primary/10">
+        </Link>
+        {/* Navigation icons */}
+        <div className="flex-1 flex items-center justify-center gap-2">
+          <Link
+            href="/dashboard"
+            className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+              pathname === '/dashboard' ? 'border-2 border-white' : ''
+            } hover:bg-green-800/40 transition`}
+          >
+            <LayoutDashboard className="h-6 w-6 text-white" />
+          </Link>
+          <Link href="/vendors" className="p-2 rounded-full hover:bg-green-800/40 transition">
+            <Store className="h-6 w-6 text-green-50" />
+          </Link>
+          <Link href="/participants" className="p-2 rounded-full hover:bg-green-800/40 transition">
+            <Users className="h-6 w-6 text-green-50" />
+          </Link>
+          <Link href="/programs" className="p-2 rounded-full hover:bg-green-800/40 transition">
+            <FolderOpen className="h-6 w-6 text-green-50" />
+          </Link>
+          <Link href="/settings" className="p-2 rounded-full hover:bg-green-800/40 transition">
+            <Settings className="h-6 w-6 text-green-50" />
+          </Link>
+        </div>
+        {/* Profile avatar with dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="ml-2 p-1 rounded-full hover:bg-green-800/40 transition flex items-center justify-center focus:outline-none">
+              {currentUser?.photoURL ? (
+                <div className="h-9 w-9 rounded-full overflow-hidden border-2 border-green-200/80">
                   <Image
-                    src="/images/SLP.png"
-                    alt="Logo"
-                    fill
-                    className="object-contain p-1"
+                    src={currentUser.photoURL}
+                    alt={currentUser.name}
+                    width={36}
+                    height={36}
+                    className="object-cover"
                   />
                 </div>
-                <span className="ml-3 text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                  DSWD SLP-TIS
-                </span>
-              </Link>
-            </div>
-            <nav className="px-3 space-y-1">
-              {navigation.map((item) => {
-                const isActive =
-                  pathname === item.href ||
-                  pathname.startsWith(`${item.href}/`);
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={`${
-                      isActive
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    } group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ease-in-out`}
-                  >
-                    <item.icon
-                      className={`${
-                        isActive
-                          ? "text-primary-foreground"
-                          : "text-muted-foreground group-hover:text-foreground"
-                      } mr-3 flex-shrink-0 h-5 w-5`}
-                      aria-hidden="true"
-                    />
-                    {item.name}
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
-          <div className="flex-shrink-0 p-4">
-            <div className="rounded-lg bg-muted/50 p-3">
-              <div className="flex items-center">
-                {currentUser?.photoURL ? (
-                  <div className="h-9 w-9 rounded-full overflow-hidden border-2 border-green-200">
-                    <Image
-                      src={currentUser.photoURL}
-                      alt={currentUser.name}
-                      width={36}
-                      height={36}
-                      className="object-cover"
-                    />
-                  </div>
-                ) : (
-                  <Avatar className="h-9 w-9 border-2 border-green-200">
-                    <AvatarFallback className="bg-black text-white font-medium">
-                      {getUserInitials(currentUser?.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                )}
-                <div className="ml-3">
-                  <p className="text-sm font-medium">
-                    {currentUser?.name || "Admin DSWD"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {currentUser?.role || "Administrator"}
-                  </p>
+              ) : (
+                <div className="h-9 w-9 rounded-full bg-green-800/80 text-green-50 flex items-center justify-center font-medium text-base border-2 border-green-200/80">
+                  {getUserInitials(currentUser?.name)}
                 </div>
-              </div>
+              )}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <div className="px-3 py-2">
+              <div className="font-semibold text-base leading-tight">{currentUser?.name}</div>
+              <div className="text-xs text-muted-foreground truncate">{currentUser?.email}</div>
             </div>
-          </div>
-        </div>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link href="/profile" className="flex items-center gap-2">
+                <User className="h-4 w-4" /> Profile
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={handleLogout}
+              className="text-red-600 focus:text-red-700 flex items-center gap-2"
+            >
+              <LogOut className="h-4 w-4" /> Log out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Main content */}
-      <div className="flex flex-col flex-1 overflow-hidden">
-        <header className="relative z-10 flex-shrink-0 h-16 bg-white backdrop-blur-sm border-b border-green-100 flex items-center">
+      <div className="flex flex-col flex-1 overflow-hidden pt-12 md:pt-0">
+        <header className="relative z-10 flex-shrink-0 h-16 bg-white backdrop-blur-sm border-b border-green-100 flex items-center md:static md:h-16">
           <button
             type="button"
-            className="px-4 text-muted-foreground md:hidden"
+            className="px-4 text-muted-foreground md:hidden hidden"
             onClick={() => setIsMobileMenuOpen(true)}
           >
             <span className="sr-only">Open sidebar</span>
             <Menu className="h-6 w-6" aria-hidden="true" />
           </button>
-          <div className="flex-1 px-4 flex justify-between">
+          <div className="flex-1 px-2 sm:px-4 flex justify-between">
             <div className="flex-1 flex max-w-md">
               <div className="w-full flex md:ml-0">
                 <div className="relative w-full text-muted-foreground">
@@ -453,7 +475,7 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
-            <div className="ml-4 flex items-center gap-2">
+            <div className="ml-2 sm:ml-4 flex items-center gap-2">
               <Button
                 variant="ghost"
                 size="icon"
@@ -466,16 +488,16 @@ export default function DashboardPage() {
         </header>
 
         <main className="flex-1 relative overflow-y-auto focus:outline-none bg-green-50/30">
-          <div className="py-6">
+          <div className="py-4 sm:py-6">
             {/* Dashboard Content */}
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-              <div className="flex flex-col space-y-8">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="container mx-auto px-3 sm:px-6 lg:px-8">
+              <div className="flex flex-col space-y-4 sm:space-y-8">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
                   <div>
-                    <h1 className="text-2xl font-bold tracking-tight mb-1 text-green-900">
+                    <h1 className="text-xl sm:text-2xl font-bold tracking-tight mb-1 text-green-900">
                       DSWD Sustainable Livelihood Program - Activity Feed
                     </h1>
-                    <p className="text-green-700">
+                    <p className="text-sm sm:text-base text-green-700">
                       Share and view project activities and updates
                     </p>
                   </div>
@@ -483,19 +505,19 @@ export default function DashboardPage() {
 
                 {/* Activity Feed */}
                 <Card className="border border-green-100 shadow-sm bg-white">
-                  <CardHeader className="pb-3 border-b border-green-100">
+                  <CardHeader className="pb-3 border-b border-green-100 px-4 sm:px-6">
                     <div className="flex items-center justify-between">
                       <div>
-                        <CardTitle className="text-black">Activity Feed</CardTitle>
-                        <CardDescription className="text-green-700">
+                        <CardTitle className="text-base sm:text-lg text-black">Activity Feed</CardTitle>
+                        <CardDescription className="text-sm sm:text-base text-green-700">
                           Share and view project activities
                         </CardDescription>
                       </div>
                     </div>
                   </CardHeader>
-                  <CardContent className="space-y-6">
+                  <CardContent className="space-y-4 sm:space-y-6 px-4 sm:px-6">
                     <UploadActivity />
-                    <div className="border-t pt-6">
+                    <div className="border-t pt-4 sm:pt-6">
                       <ActivityFeed />
                     </div>
                   </CardContent>

@@ -71,13 +71,45 @@ const MUNICIPALITIES = [
 ];
 
 const showToast = (message, type = 'default') => {
-  toast(message, {
-    className: type === 'success' 
-      ? 'bg-green-500 text-white border-green-600'
-      : type === 'error'
-        ? 'bg-red-500 text-white border-red-600'
-        : '',
-  });
+  switch (type) {
+    case 'success':
+      toast.success(message, {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        style: {
+          background: '#10B981',
+          color: 'white',
+          border: '1px solid #059669',
+        },
+        progressStyle: {
+          background: '#059669',
+        },
+      });
+      break;
+    case 'error':
+      toast.error(message, {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
+      break;
+    default:
+      toast(message, {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
+  }
 };
 
 export function UploadActivity() {

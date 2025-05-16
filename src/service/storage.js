@@ -1,5 +1,6 @@
 import { db } from './firebase';
 import { doc, updateDoc, setDoc } from 'firebase/firestore';
+import Logger from '@/lib/logger';
 
 /**
  * Upload profile photo to Firestore as base64 string with fallback to localStorage
@@ -18,11 +19,11 @@ export const uploadProfilePhoto = async (file, userId) => {
       throw new Error('File size should be less than 5MB');
     }
     
-    console.log('Converting image to base64...');
+    Logger.log('Converting image to base64...');
     
     // Convert file to base64
     const base64String = await convertFileToBase64(file);
-    console.log('Image converted to base64 successfully');
+    Logger.log('Image converted to base64 successfully');
     
     // Try to update Firestore first
     try {
@@ -32,9 +33,9 @@ export const uploadProfilePhoto = async (file, userId) => {
         photoURL: base64String,
         lastUpdated: new Date().toISOString()
       });
-      console.log('User profile updated with base64 image in Firestore');
+      Logger.log('User profile updated with base64 image in Firestore');
     } catch (firestoreError) {
-      console.error('Firestore update failed, using localStorage fallback:', firestoreError);
+      Logger.error('Firestore update failed, using localStorage fallback:', firestoreError);
       
       // Fallback to localStorage if Firestore fails (ad blockers, etc.)
       saveProfileToLocalStorage(userId, base64String);
@@ -42,7 +43,7 @@ export const uploadProfilePhoto = async (file, userId) => {
     
     return base64String;
   } catch (error) {
-    console.error('Error uploading profile photo:', error);
+    Logger.error('Error uploading profile photo:', error);
     throw new Error(error.message || 'Failed to upload profile photo');
   }
 };

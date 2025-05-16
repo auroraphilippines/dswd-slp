@@ -391,11 +391,19 @@ export function UsersPermissionsSettings() {
     <TableRow key={user.id}>
       <TableCell>
         <div className="flex items-center gap-3">
-          <div className="h-8 w-8 rounded-full bg-[#96B54A]/20 text-[#496E22] flex items-center justify-center">
-            <span className="text-sm font-medium">
+          <Avatar className="h-8 w-8">
+            <AvatarImage 
+              src={user.avatar} 
+              alt={user.name}
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=96B54A&color=fff`;
+              }}
+            />
+            <AvatarFallback className="bg-[#96B54A]/20 text-[#496E22]">
               {user.name.split(" ").map(n => n[0]).join("").toUpperCase()}
-            </span>
-          </div>
+            </AvatarFallback>
+          </Avatar>
           <div>
             <div className="font-medium">{user.name}</div>
             <div className="text-sm text-muted-foreground">

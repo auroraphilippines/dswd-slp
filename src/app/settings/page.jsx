@@ -156,35 +156,31 @@ export default function SettingsPage() {
     return "Never";
   };
 
+  // Add handleLogout function
   const handleLogout = async () => {
     try {
-      // Clear any local storage items
-      localStorage.clear();
-      sessionStorage.clear();
+      // Update user status to offline before logging out
+      if (currentUser?.uid) {
+        await updateDoc(doc(db, "users", currentUser.uid), {
+          status: "offline",
+          lastActive: serverTimestamp()
+        });
+      }
       
       // Sign out from Firebase
-      const user = auth.currentUser;
-      if (user) {
-        await updateDoc(doc(db, "users", user.uid), { status: "inactive" });
-      }
       await auth.signOut();
       
-      // Clear any cookies
-      document.cookie.split(";").forEach(function(c) { 
-        document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
-      });
-
-      // Force a hard redirect to the login page
-      window.location.replace("/");
+      // Clear any local storage items if needed
+      localStorage.removeItem('userProfile');
       
-      // Prevent going back
-      window.history.pushState(null, "", "/");
-      window.onpopstate = function() {
-        window.history.pushState(null, "", "/");
-      };
+      // Show success message
+      toast.success("Logged out successfully");
+      
+      // Redirect to login page
+      window.location.href = "/";
     } catch (error) {
-      console.error("Error signing out:", error);
-      toast.error("Error signing out");
+      console.error("Error logging out:", error);
+      toast.error("Failed to log out. Please try again.");
     }
   };
 
@@ -372,99 +368,84 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Main content */}
-      <div className="flex flex-col flex-1 overflow-hidden">
-        <div className="relative z-10 flex-shrink-0 flex h-16 bg-card shadow">
-          <button
-            type="button"
-            className="px-4 border-r border-gray-200 text-muted-foreground md:hidden"
-            onClick={() => setIsMobileMenuOpen(true)}
-          >
-            <span className="sr-only">Open sidebar</span>
-            <Menu className="h-6 w-6" aria-hidden="true" />
-          </button>
-          <div className="flex-1 px-4 flex justify-between">
-            <div className="flex-1 flex">
-              <div className="w-full flex md:ml-0">
-                <label htmlFor="search-field" className="sr-only">
-                  Search
-                </label>
-                <div className="relative w-full text-muted-foreground focus-within:text-gray-600">
-                  <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none">
-                    <Search className="h-5 w-5 ml-3" aria-hidden="true" />
-                  </div>
-                  <Input
-                    id="search-field"
-                    className="block w-full h-full pl-10 pr-3 py-2 border-transparent text-muted-foreground placeholder-muted-foreground focus:outline-none focus:placeholder-gray-400 focus:ring-0 focus:border-transparent sm:text-sm"
-                    placeholder="Search settings..."
-                    type="search"
-                  />
-                </div>
-              </div>
-            </div>
-            <div className="ml-4 flex items-center md:ml-6">
-           
-
-              {/* Profile dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="ml-3 rounded-full"
-                  >
-                    <span className="sr-only">Open user menu</span>
-                    {currentUser?.photoURL ? (
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage 
-                          src={currentUser.photoURL} 
-                          alt={currentUser?.name || "User"}
-                          className="object-cover" 
-                        />
-                      </Avatar>
-                    ) : (
-                      <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                        <span className="text-sm font-medium">
-                          {getUserInitials(currentUser?.name)}
-                        </span>
-                      </div>
-                    )}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        {currentUser?.name || "Admin DSWD"}
-                      </p>
-                      <p className="text-xs leading-none text-muted-foreground">
-                        {currentUser?.email || "admin@dswd.gov.ph"}
-                      </p>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    <Link href="/profile" className="flex items-center">
-                      <User className="mr-2 h-4 w-4" />
-                      Profile
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Link href="/settings" className="flex items-center">
-                      <Settings className="mr-2 h-4 w-4" />
-                      Settings
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout} className="text-red-600">
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Log out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+      {/* Mobile icon header (like other pages) */}
+      <div className="md:hidden w-full fixed top-0 left-0 z-30 bg-[#0B3D2E] flex items-center justify-between px-2 py-1 shadow-lg">
+        {/* Logo */}
+        <Link href="/dashboard" className="flex items-center">
+          <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-white flex items-center justify-center">
+            <Image
+              src="/images/SLP.png"
+              alt="Logo"
+              fill
+              className="object-contain p-1"
+            />
           </div>
+        </Link>
+        {/* Navigation icons */}
+        <div className="flex-1 flex items-center justify-center gap-3">
+          <Link href="/dashboard" className={`w-10 h-10 rounded-lg flex items-center justify-center ${pathname === '/dashboard' ? 'border-2 border-white' : ''}`}>
+            <LayoutDashboard className="h-6 w-6 text-white" />
+          </Link>
+          <Link href="/vendors" className={`w-10 h-10 rounded-lg flex items-center justify-center ${pathname === '/vendors' ? 'border-2 border-white' : ''}`}> 
+            <Store className="h-6 w-6 text-white" />
+          </Link>
+          <Link href="/participants" className={`w-10 h-10 rounded-lg flex items-center justify-center ${pathname === '/participants' ? 'border-2 border-white' : ''}`}> 
+            <Users className="h-6 w-6 text-white" />
+          </Link>
+          <Link href="/programs" className={`w-10 h-10 rounded-lg flex items-center justify-center ${pathname === '/programs' ? 'border-2 border-white' : ''}`}> 
+            <FolderOpen className="h-6 w-6 text-white" />
+          </Link>
+          <Link href="/settings" className={`w-10 h-10 rounded-lg flex items-center justify-center ${pathname === '/settings' ? 'border-2 border-white' : ''}`}> 
+            <Settings className="h-6 w-6 text-white" />
+          </Link>
         </div>
+        {/* Profile avatar/initials */}
+        <div className="ml-2 w-10 h-10 flex items-center justify-center">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="w-full h-full flex items-center justify-center">
+                {currentUser?.photoURL ? (
+                  <Image
+                    src={currentUser.photoURL}
+                    alt={currentUser.name}
+                    width={32}
+                    height={32}
+                    className="object-cover rounded-full"
+                  />
+                ) : (
+                  <span className="w-8 h-8 flex items-center justify-center font-medium text-white">
+                    {getUserInitials(currentUser?.name)}
+                  </span>
+                )}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium">{currentUser?.name}</p>
+                  <p className="text-xs text-muted-foreground">{currentUser?.role}</p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href="/profile" className="flex items-center">
+                  <User className="mr-2 h-4 w-4" />
+                  Profile
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout} className="text-red-600">
+                <LogOut className="mr-2 h-4 w-4" />
+                Logout
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
+      {/* Main content */}
+      <div className="flex flex-col flex-1 overflow-hidden mt-16 md:mt-0">
+
 
         <main className="flex-1 relative overflow-y-auto focus:outline-none">
           <div className="py-6">

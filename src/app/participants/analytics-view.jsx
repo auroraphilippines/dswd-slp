@@ -32,6 +32,34 @@ import {
 import { ResponsiveContainer } from "recharts"
 import Image from "next/image"
 import { X } from "lucide-react"
+import Logger from "@/lib/logger"
+import dynamic from 'next/dynamic'
+
+// Create a client-side only version of the pie chart
+const ClientPieChart = dynamic(
+  () => import('recharts').then((mod) => mod.PieChart),
+  { ssr: false }
+)
+
+const ClientPie = dynamic(
+  () => import('recharts').then((mod) => mod.Pie),
+  { ssr: false }
+)
+
+const ClientCell = dynamic(
+  () => import('recharts').then((mod) => mod.Cell),
+  { ssr: false }
+)
+
+const ClientLabel = dynamic(
+  () => import('recharts').then((mod) => mod.Label),
+  { ssr: false }
+)
+
+const ClientSector = dynamic(
+  () => import('recharts').then((mod) => mod.Sector),
+  { ssr: false }
+)
 
 export function AnalyticsView() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -88,15 +116,24 @@ export function AnalyticsView() {
   // Add fetchUserProfileImage function after the existing useEffect for mobile menu
   const fetchUserProfileImage = async (userId) => {
     try {
+      Logger.log("Fetching user profile image...", { userId });
       const userDoc = await getDoc(doc(db, "users", userId))
       if (userDoc.exists()) {
         const userData = userDoc.data()
-        if (userData.photoURL) return userData.photoURL
+        if (userData.photoURL) {
+          Logger.log("Profile image found in Firestore");
+          return userData.photoURL
+        }
       }
       const localPhoto = getProfilePhotoFromLocalStorage(userId)
-      if (localPhoto) return localPhoto
+      if (localPhoto) {
+        Logger.log("Profile image found in localStorage");
+        return localPhoto
+      }
+      Logger.log("No profile image found");
       return null
     } catch (error) {
+      Logger.error("Error fetching profile image:", error);
       console.error("Error fetching profile image:", error)
       return null
     }
@@ -106,6 +143,7 @@ export function AnalyticsView() {
   useEffect(() => {
     const fetchUserData = async () => {
       try {
+        Logger.log("Fetching user data...");
         const user = auth.currentUser
         if (user) {
           const userDoc = await getDoc(doc(db, "users", user.uid))
@@ -115,6 +153,12 @@ export function AnalyticsView() {
             const displayName = rawName === "255" ? "Admin DSWD" : rawName
             // Fetch profile image
             const profileImage = await fetchUserProfileImage(user.uid)
+            Logger.log("User data retrieved successfully", {
+              uid: user.uid,
+              name: displayName,
+              role: userData.role
+            });
+            
             setCurrentUser({
               ...userData,
               uid: user.uid,
@@ -127,6 +171,7 @@ export function AnalyticsView() {
         }
         setLoading(false)
       } catch (error) {
+        Logger.error("Error fetching user data:", error);
         console.error("Error fetching user data:", error)
         setLoading(false)
       }
@@ -138,6 +183,7 @@ export function AnalyticsView() {
   useEffect(() => {
     const fetchAnalytics = async () => {
       try {
+        Logger.log("Fetching analytics data...");
         const participantsRef = collection(db, "participants")
         const q = query(participantsRef, orderBy("createdAt", "desc"))
         const querySnapshot = await getDocs(q)
@@ -148,8 +194,17 @@ export function AnalyticsView() {
           dateRegistered: doc.data().dateRegistered?.toDate().toLocaleDateString() || new Date().toLocaleDateString(),
         }))
 
-        setAnalytics(calculateAnalytics(participantsData))
+        Logger.log(`Retrieved ${participantsData.length} participants`);
+        const analyticsData = calculateAnalytics(participantsData);
+        Logger.log("Analytics calculation completed", {
+          total: analyticsData.total,
+          active: analyticsData.active,
+          pending: analyticsData.pending
+        });
+        
+        setAnalytics(analyticsData)
       } catch (error) {
+        Logger.error("Error fetching analytics:", error);
         console.error("Error fetching analytics:", error)
       } finally {
         setLoading(false)
@@ -391,81 +446,16 @@ export function AnalyticsView() {
 
       {/* Main content */}
       <div className="flex flex-col flex-1 overflow-hidden">
-        <div className="relative z-10 flex-shrink-0 flex h-16 bg-card shadow">
-          <button
-            type="button"
-            className="px-4 border-r border-gray-200 text-muted-foreground md:hidden"
-            onClick={() => setIsMobileMenuOpen(true)}
-          >
-            <span className="sr-only">Open sidebar</span>
-            <Menu className="h-6 w-6" aria-hidden="true" />
-          </button>
-          <div className="flex-1 px-4 flex justify-between">
-            <div className="flex-1 flex">
-              <Button
-                variant="ghost"
-                onClick={() => router.back()}
-                className="text-[#496E22] hover:text-[#6C9331] hover:bg-[#96B54A]/10"
-              >
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Back to Participants
-              </Button>
-            </div>
-            <div className="ml-4 flex items-center md:ml-6">
-
-              {/* Profile dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="ml-3 rounded-full"
-                  >
-                    <span className="sr-only">Open user menu</span>
-                    {currentUser?.photoURL ? (
-                      <Avatar className="h-8 w-8">
-                        <AvatarImage src={currentUser.photoURL || "/placeholder.svg"} alt={currentUser?.name || "User"} className="object-cover" />
-                        <AvatarFallback className="bg-primary text-primary-foreground">
-                          {getUserInitials(currentUser?.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                    ) : (
-                      <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                        <span className="text-sm font-medium">
-                          {getUserInitials(currentUser?.name)}
-                        </span>
-                      </div>
-                    )}
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuLabel>
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        {currentUser?.name}
-                      </p>
-                      <p className="text-xs leading-none text-muted-foreground">
-                        {currentUser?.email}
-                      </p>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem>
-                    <Link href="/profile" className="flex items-center">
-                      <User className="mr-2 h-4 w-4" />
-                      Profile
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem>
-                    <Link href="/settings" className="flex items-center">
-                      <Settings className="mr-2 h-4 w-4" />
-                      Settings
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+        <div className="relative z-10 flex-shrink-0 flex h-10 bg-[#0B3D2E] w-full">
+          <div className="w-full px-4 flex items-center">
+            <Button
+              variant="ghost"
+              onClick={() => router.back()}
+              className="text-white hover:text-white/80 hover:bg-white/10"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Participants
+            </Button>
           </div>
         </div>
 
@@ -531,19 +521,56 @@ export function AnalyticsView() {
                           {/* Mini chart at the bottom */}
                           <div className="mt-6 h-16 relative">
                             <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-white/20"></div>
-                            {Array.from({ length: 20 }).map((_, i) => (
-                              <div
-                                key={i}
-                                className="absolute bottom-0 bg-emerald-400"
-                                style={{
-                                  left: `${i * 5}%`,
-                                  height: `${15 + Math.random() * 50}%`,
-                                  width: "4%",
-                                  opacity: 0.5 + Math.random() * 0.5,
-                                  borderRadius: "1px 1px 0 0",
-                                }}
-                              />
-                            ))}
+                            {(() => {
+                              try {
+                                // Calculate normalized values based on analytics data
+                                const total = analytics.total || 1;
+                                const active = analytics.active || 0;
+                                const inactive = analytics.inactive || 0;
+                                const pending = analytics.pending || 0;
+                                
+                                // Create a pattern based on the actual data
+                                const values = [
+                                  (active / total) * 100,
+                                  (inactive / total) * 100,
+                                  (pending / total) * 100,
+                                  (active / total) * 100,
+                                  (inactive / total) * 100,
+                                  (pending / total) * 100,
+                                  (active / total) * 100,
+                                  (inactive / total) * 100,
+                                  (pending / total) * 100,
+                                  (active / total) * 100,
+                                  (inactive / total) * 100,
+                                  (pending / total) * 100,
+                                  (active / total) * 100,
+                                  (inactive / total) * 100,
+                                  (pending / total) * 100,
+                                  (active / total) * 100,
+                                  (inactive / total) * 100,
+                                  (pending / total) * 100,
+                                  (active / total) * 100,
+                                  (inactive / total) * 100
+                                ];
+
+                                return values.map((value, i) => (
+                                  <div
+                                    key={`chart-bar-${i}`}
+                                    className="absolute bottom-0 bg-emerald-400"
+                                    style={{
+                                      left: `${i * 5}%`,
+                                      height: `${Math.max(15, value)}%`,
+                                      width: "4%",
+                                      opacity: 0.7,
+                                      borderRadius: "1px 1px 0 0",
+                                    }}
+                                  />
+                                ));
+                              } catch (error) {
+                                Logger.error("Error rendering mini chart:", error);
+                                return null;
+                              }
+                            })()}
                           </div>
                         </div>
                       </CardContent>
@@ -1007,6 +1034,7 @@ export function AnalyticsView() {
 }
 
 function calculateAnalytics(participants) {
+  Logger.log("Starting analytics calculation...");
   // Define time periods
   const now = new Date()
   const currentPeriodStart = new Date(now.getFullYear(), now.getMonth(), 1) // Start of current month
@@ -1101,7 +1129,7 @@ function calculateAnalytics(participants) {
     if (participant.participantType) {
       // Normalize the type string to handle case variations and whitespace
       const normalizedType = participant.participantType.trim()
-      console.log("Processing participant type:", normalizedType) // Debug log
+      Logger.log("Processing participant type:", normalizedType) // Debug log
 
       // Check for 4Ps variations
       if (
@@ -1111,44 +1139,44 @@ function calculateAnalytics(participants) {
       ) {
         if (normalizedType.toLowerCase().includes("exit")) {
           stats.typeDistribution["Poor - Exiting 4Ps"]++
-          console.log("Matched: Poor - Exiting 4Ps")
+          Logger.log("Matched: Poor - Exiting 4Ps")
         } else {
           stats.typeDistribution["Poor - 4Ps"]++
-          console.log("Matched: Poor - 4Ps")
+          Logger.log("Matched: Poor - 4Ps")
         }
       }
       // Check for Listahanan
       else if (normalizedType.toLowerCase().includes("listahanan")) {
         stats.typeDistribution["Poor - Listahanan"]++
-        console.log("Matched: Poor - Listahanan")
+        Logger.log("Matched: Poor - Listahanan")
       }
       // Check for Non-Poor
       else if (normalizedType.toLowerCase().includes("non-poor")) {
         stats.typeDistribution["Non-Poor"]++
-        console.log("Matched: Non-Poor")
+        Logger.log("Matched: Non-Poor")
       }
       // Check for No Match
       else if (normalizedType.toLowerCase().includes("no match")) {
         stats.typeDistribution["No Match"]++
-        console.log("Matched: No Match")
+        Logger.log("Matched: No Match")
       }
       // Check for SLP Means Test - Exact match with database value
       else if (normalizedType === "SLP Means Test") {
         stats.typeDistribution["SLP Means Test"]++
-        console.log("Matched: SLP Means Test")
+        Logger.log("Matched: SLP Means Test")
       }
       // If none of the above, count as N/A
       else {
         stats.typeDistribution["N/A"]++
-        console.log("No match found, counted as N/A. Type was:", normalizedType)
+        Logger.log("No match found, counted as N/A. Type was:", normalizedType)
       }
     } else {
       stats.typeDistribution["N/A"]++
-      console.log("No type provided, counted as N/A")
+      Logger.log("No type provided, counted as N/A")
     }
 
     // Log the current state of typeDistribution after each participant
-    console.log("Current type distribution:", JSON.stringify(stats.typeDistribution, null, 2))
+    Logger.log("Current type distribution:", JSON.stringify(stats.typeDistribution, null, 2))
 
     try {
       const monthYear = `${participantDate.getMonth() + 1}/${participantDate.getFullYear()}`
@@ -1156,7 +1184,7 @@ function calculateAnalytics(participants) {
         orderedRegistrations[monthYear]++
       }
     } catch (error) {
-      console.error("Error processing date:", error)
+      Logger.error("Error processing date:", error)
     }
   })
 
@@ -1173,6 +1201,13 @@ function calculateAnalytics(participants) {
   stats.growthPercent = lastMonthValue === 0
     ? 0
     : Math.round(((thisMonthValue - lastMonthValue) / lastMonthValue) * 100);
+
+  Logger.log("Analytics calculation completed", {
+    total: stats.total,
+    active: stats.active,
+    pending: stats.pending,
+    graduated: stats.graduated
+  });
 
   return stats
 }
@@ -1218,6 +1253,7 @@ export function TopLocationRadarChart({ topLocations }) {
   useEffect(() => {
     const fetchLocationData = async () => {
       try {
+        Logger.log("Fetching location data...");
         setLoading(true)
         const participantsRef = collection(db, "participants")
         const q = query(participantsRef)
@@ -1235,18 +1271,23 @@ export function TopLocationRadarChart({ topLocations }) {
           }
         })
 
-        // Convert to array and sort by count
         const sortedLocations = Object.entries(locationCounts)
           .map(([location, count]) => ({
             location,
             value: count,
           }))
           .sort((a, b) => b.value - a.value)
-          .slice(0, 6) // Get top 6 locations
+          .slice(0, 6)
+
+        Logger.log("Location data processed", {
+          totalLocations: Object.keys(locationCounts).length,
+          topLocations: sortedLocations.length
+        });
 
         setLocationData(sortedLocations)
         setError(null)
       } catch (err) {
+        Logger.error("Error fetching location data:", err);
         console.error("Error fetching location data:", err)
         setError("Failed to load location data")
       } finally {
@@ -1341,14 +1382,18 @@ export function TopLocationRadarChart({ topLocations }) {
 
 function GenderDistributionPieChart({ genderDistribution }) {
   const genderData = [
-    { key: "male", label: "Male", value: genderDistribution.male, fill: "#14532d" }, // Dark green
-    { key: "female", label: "Female", value: genderDistribution.female, fill: "#134e4a" }, // Dark teal
-    { key: "lgbtqia", label: "LGBTQIA+", value: genderDistribution.lgbtqia, fill: "#6d28d9" }, // Dark purple
+    { key: "male", label: "Male", value: genderDistribution.male, fill: "#14532d" },
+    { key: "female", label: "Female", value: genderDistribution.female, fill: "#134e4a" },
+    { key: "lgbtqia", label: "LGBTQIA+", value: genderDistribution.lgbtqia, fill: "#6d28d9" },
   ];
   const [activeGender, setActiveGender] = useState("all");
+  const [isClient, setIsClient] = useState(false);
   const total = genderData.reduce((sum, g) => sum + g.value, 0);
 
-  // Calculate percentages for each gender
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
   const genderDataWithPercentage = genderData.map(item => ({
     ...item,
     percentage: total > 0 ? Math.round((item.value / total) * 100) : 0
@@ -1358,7 +1403,7 @@ function GenderDistributionPieChart({ genderDistribution }) {
     const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill } = props;
     return (
       <g>
-        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+        <filter id="gender-chart-shadow" x="-20%" y="-20%" width="140%" height="140%">
           <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#000" floodOpacity="0.25" />
         </filter>
         <Sector
@@ -1371,11 +1416,32 @@ function GenderDistributionPieChart({ genderDistribution }) {
           fill={fill}
           stroke="#22223b"
           strokeWidth={5}
-          filter="url(#shadow)"
+          filter="url(#gender-chart-shadow)"
         />
       </g>
     );
   };
+
+  if (!isClient) {
+    return (
+      <Card className="bg-gradient-to-br from-[#E8F5E9] to-[#C8E6C9] border-0 relative overflow-hidden w-full h-full">
+        <div className="absolute inset-0 bg-white/30 w-full h-full">
+          <div className="absolute -inset-2 bg-gradient-to-r from-[#496E22]/20 to-transparent blur-3xl"></div>
+        </div>
+        <CardHeader className="flex-row items-center justify-between space-y-0 pb-2 relative">
+          <div>
+            <CardTitle className="text-lg font-medium text-[#1B4D2E]">Gender Distribution</CardTitle>
+            <CardDescription className="text-[#496E22]/80">Distribution of participants by gender</CardDescription>
+          </div>
+        </CardHeader>
+        <CardContent className="pb-0 relative">
+          <div className="relative h-[250px] flex items-center justify-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#496E22]"></div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
     <Card className="bg-gradient-to-br from-[#E8F5E9] to-[#C8E6C9] border-0 relative overflow-hidden w-full h-full">
@@ -1404,7 +1470,10 @@ function GenderDistributionPieChart({ genderDistribution }) {
           <div className="relative z-10 flex items-center justify-center">
             <PieChart width={400} height={250}>
               <defs>
-                <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+                <clipPath id="gender-chart-clip">
+                  <rect x="0" y="0" width="400" height="250" />
+                </clipPath>
+                <filter id="gender-chart-shadow" x="-20%" y="-20%" width="140%" height="140%">
                   <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#000" floodOpacity="0.25" />
                 </filter>
               </defs>
@@ -1419,10 +1488,11 @@ function GenderDistributionPieChart({ genderDistribution }) {
                 activeShape={renderActiveShape}
                 stroke="#22223b"
                 strokeWidth={4}
-                filter="url(#shadow)"
+                filter="url(#gender-chart-shadow)"
+                clipPath="url(#gender-chart-clip)"
               >
                 {genderDataWithPercentage.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.fill} stroke="#22223b" strokeWidth={4} filter="url(#shadow)" />
+                  <Cell key={`cell-${index}`} fill={entry.fill} stroke="#22223b" strokeWidth={4} filter="url(#gender-chart-shadow)" />
                 ))}
                 <Label
                   content={({ viewBox }) => {
@@ -1505,10 +1575,22 @@ function MonthlyRegistrationsAreaChart({ participants, className }) {
   // Build a map of date => { active }
   const dateMap = {}
   participants.forEach((p) => {
-    const date = new Date(p.dateRegistered)
-    const dateStr = date.toISOString().slice(0, 10)
-    if (!dateMap[dateStr]) dateMap[dateStr] = { date: dateStr, active: 0 }
-    if (p.status === "Active") dateMap[dateStr].active++
+    try {
+      const date = new Date(p.dateRegistered)
+      if (isNaN(date.getTime())) {
+        Logger.warn("Invalid date found:", p.dateRegistered);
+        return;
+      }
+      const dateStr = date.toISOString().slice(0, 10)
+      if (!dateMap[dateStr]) {
+        dateMap[dateStr] = { date: dateStr, active: 0 }
+      }
+      if (p.status === "Active") {
+        dateMap[dateStr].active++
+      }
+    } catch (error) {
+      Logger.error("Error processing participant date:", error);
+    }
   })
 
   // Fill in missing days for the selected year
@@ -1517,27 +1599,36 @@ function MonthlyRegistrationsAreaChart({ participants, className }) {
   const startDate = new Date(selectedYear, 0, 1) // January 1st of selected year
   const endDate = selectedYear === currentYear ? today : new Date(selectedYear, 11, 31) // December 31st of selected year or today if current year
 
-  for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
-    const dateStr = d.toISOString().slice(0, 10)
-    chartData.push({
-      date: dateStr,
-      active: dateMap[dateStr]?.active || 0,
-    })
+  try {
+    for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+      const dateStr = d.toISOString().slice(0, 10)
+      chartData.push({
+        date: dateStr,
+        active: dateMap[dateStr]?.active ?? 0, // Use optional chaining and nullish coalescing
+      })
+    }
+  } catch (error) {
+    Logger.error("Error generating chart data:", error);
   }
 
   // Filter by time range (monthly)
   const getFilteredData = () => {
     if (timeRange === "all") return chartData
 
-    const month = parseInt(timeRange)
-    const year = selectedYear
-    const startOfMonth = new Date(year, month - 1, 1)
-    const endOfMonth = new Date(year, month, 0)
+    try {
+      const month = parseInt(timeRange)
+      const year = selectedYear
+      const startOfMonth = new Date(year, month - 1, 1)
+      const endOfMonth = new Date(year, month, 0)
 
-    return chartData.filter(item => {
-      const date = new Date(item.date)
-      return date >= startOfMonth && date <= endOfMonth
-    })
+      return chartData.filter(item => {
+        const date = new Date(item.date)
+        return date >= startOfMonth && date <= endOfMonth
+      })
+    } catch (error) {
+      Logger.error("Error filtering data by time range:", error);
+      return chartData; // Return all data if filtering fails
+    }
   }
 
   const filteredData = getFilteredData()
@@ -1616,55 +1707,53 @@ function MonthlyRegistrationsAreaChart({ participants, className }) {
       </CardHeader>
       <CardContent className="px-2 pt-4 sm:px-6 sm:pt-6">
         <ChartContainer config={chartConfig} className="aspect-auto h-[250px] w-full">
-          <ResponsiveContainer width="100%" height={250}>
-            <AreaChart data={filteredData}>
-              <defs>
-                {/* Area for active registrations */}
-                <linearGradient id="fillActive" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#222" stopOpacity={0.7} />
-                  <stop offset="100%" stopColor="#90BE6D" stopOpacity={0.25} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid vertical={false} />
-              <XAxis
-                dataKey="date"
-                tickLine={false}
-                axisLine={false}
-                tickMargin={8}
-                minTickGap={32}
-                tickFormatter={(value) => {
-                  const date = new Date(value)
-                  return date.toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                  })
-                }}
-              />
-              <ChartTooltip
-                cursor={false}
-                content={
-                  <ChartTooltipContent
-                    labelFormatter={(value) => {
-                      return new Date(value).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric"
-                      })
-                    }}
-                    indicator="dot"
-                  />
-                }
-              />
-              <Area
-                dataKey="active"
-                type="natural"
-                fill="url(#fillActive)"
-                stroke="#90BE6D"
-                strokeWidth={1.5}
-                stackId="a"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+          <AreaChart width={757} height={250} data={filteredData}>
+            <defs>
+              {/* Area for active registrations */}
+              <linearGradient id="fillActive" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#222" stopOpacity={0.7} />
+                <stop offset="100%" stopColor="#90BE6D" stopOpacity={0.25} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid vertical={false} />
+            <XAxis
+              dataKey="date"
+              tickLine={false}
+              axisLine={false}
+              tickMargin={8}
+              minTickGap={32}
+              tickFormatter={(value) => {
+                const date = new Date(value)
+                return date.toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                })
+              }}
+            />
+            <ChartTooltip
+              cursor={false}
+              content={
+                <ChartTooltipContent
+                  labelFormatter={(value) => {
+                    return new Date(value).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric"
+                    })
+                  }}
+                  indicator="dot"
+                />
+              }
+            />
+            <Area
+              dataKey="active"
+              type="natural"
+              fill="url(#fillActive)"
+              stroke="#90BE6D"
+              strokeWidth={1.5}
+              stackId="a"
+            />
+          </AreaChart>
         </ChartContainer>
       </CardContent>
     </Card>

@@ -19,6 +19,7 @@ import {
     where,
     updateDoc
 } from "firebase/firestore";
+import Logger from '@/lib/logger';
 
 // Helper function to retry Firestore operations
 const retryOperation = async (operation, maxAttempts = 3, delay = 1000) => {
@@ -85,7 +86,7 @@ export const registerUser = async (name, email, password) => {
         };
 
     } catch (error) {
-        console.error("Registration error:", error);
+        Logger.error("Registration error:", error);
         let errorMessage = "Failed to register user";
         
         switch (error.code) {
@@ -207,7 +208,7 @@ export const loginUser = async (email, password) => {
             throw authError;
         }
     } catch (error) {
-        console.error("Login error:", error);
+        Logger.error("Login error:", error);
         let errorMessage = "Failed to login";
         
         switch (error.code) {
@@ -271,7 +272,7 @@ export const logout = async () => {
         await signOut(auth);
         return { success: true };
     } catch (error) {
-        console.error("Logout error:", error);
+        Logger.error("Logout error:", error);
         return { 
             success: false, 
             error: error.message || "Failed to logout" 

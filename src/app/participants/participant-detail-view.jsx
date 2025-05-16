@@ -12,8 +12,8 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Save, Trash } from "lucide-react";
-import { useState } from "react";
+import { Plus, Pencil, Save, Trash, X } from "lucide-react";
+import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { db, } from "@/service/firebase";
@@ -25,7 +25,12 @@ import {
 } from "firebase/firestore";
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
-
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // Add date formatting function
 const formatDate = (dateString) => {
@@ -46,7 +51,7 @@ const formatDate = (dateString) => {
   }
 };
 
-export function ParticipantDetailView({ participant, onEdit, onAddAssistance, userPermissions }) {
+export function ParticipantDetailView({ participant, onEdit, onAddAssistance, userPermissions, onClose }) {
   const [familyMembers, setFamilyMembers] = useState(participant.familyMembers || []);
   const [members, setMembers] = useState(participant.members || []);
   const [isLoading, setIsLoading] = useState(false);
@@ -68,9 +73,22 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance, us
   const [editingMember, setEditingMember] = useState(null);
   const [showMemberForm, setShowMemberForm] = useState(false);
   const [editingFamilyMember, setEditingFamilyMember] = useState(null);
+  const [isMobile, setIsMobile] = useState(false);
 
   // Check if user has read-only access or no participant access
   const readOnly = userPermissions?.readOnly || !userPermissions?.accessParticipant;
+
+  // Add mobile detection
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024); // lg breakpoint
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Family member handlers
   const handleAddFamilyMember = async () => {
@@ -424,524 +442,539 @@ export function ParticipantDetailView({ participant, onEdit, onAddAssistance, us
 
   if (!participant) return null;
 
-  return (
-    <>
-      <Tabs defaultValue="basic">
-        <TabsList className="mb-4">
-          <TabsTrigger value="basic">Basic Info</TabsTrigger>
-          <TabsTrigger value="family">Family Details</TabsTrigger>
-          <TabsTrigger value="program">Member details</TabsTrigger>
-        </TabsList>
+  const content = (
+    <Tabs defaultValue="basic">
+      <TabsList className="mb-4">
+        <TabsTrigger value="basic">Basic Info</TabsTrigger>
+        <TabsTrigger value="family">Family Details</TabsTrigger>
+        <TabsTrigger value="program">Member details</TabsTrigger>
+      </TabsList>
 
-        <TabsContent value="basic" className="space-y-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">
-                Basic Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
-                <div className="flex justify-between sm:block">
-                  <dt className="text-sm font-medium text-muted-foreground">
-                    Participant ID:
-                  </dt>
-                  <dd className="text-sm font-medium">{participant.id}</dd>
-                </div>
-                <div className="flex justify-between sm:block">
-                  <dt className="text-sm font-medium text-muted-foreground">
-                    Name:
-                  </dt>
-                  <dd className="text-sm font-medium">{participant.name}</dd>
-                </div>
-                <div className="flex justify-between sm:block">
-                  <dt className="text-sm font-medium text-muted-foreground">
-                    Gender:
-                  </dt>
-                  <dd className="text-sm font-medium">{participant.gender}</dd>
-                </div>
-                <div className="flex justify-between sm:block">
-                  <dt className="text-sm font-medium text-muted-foreground">
-                    Birthday:
-                  </dt>
-                  <dd className="text-sm font-medium">{participant.birthday}</dd>
-                </div>
-                <div className="flex justify-between sm:block">
-                  <dt className="text-sm font-medium text-muted-foreground">
-                    Age:
-                  </dt>
-                  <dd className="text-sm font-medium">{participant.age}</dd>
-                </div>
-                <div className="flex justify-between sm:block">
-                  <dt className="text-sm font-medium text-muted-foreground">
-                    Status:
-                  </dt>
-                  <dd className="text-sm font-medium">
-                    <Badge
-                      variant={
-                        participant.status === "Active" ? "outline" : "secondary"
-                      }
-                      className={
-                        participant.status === "Active"
-                          ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
-                          : ""
-                      }
-                    >
-                      {participant.status}
-                    </Badge>
-                  </dd>
-                </div>
-                <div className="flex justify-between sm:block">
-                  <dt className="text-sm font-medium text-muted-foreground">
-                    Date Registered:
-                  </dt>
-                  <dd className="text-sm font-medium">
-                    {participant.dateRegistered}
-                  </dd>
-                </div>
-              </dl>
-            </CardContent>
-          </Card>
+      <TabsContent value="basic" className="space-y-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">
+              Basic Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
+              <div className="flex justify-between sm:block">
+                <dt className="text-sm font-medium text-muted-foreground">
+                  Participant ID:
+                </dt>
+                <dd className="text-sm font-medium">{participant.id}</dd>
+              </div>
+              <div className="flex justify-between sm:block">
+                <dt className="text-sm font-medium text-muted-foreground">
+                  Name:
+                </dt>
+                <dd className="text-sm font-medium">{participant.name}</dd>
+              </div>
+              <div className="flex justify-between sm:block">
+                <dt className="text-sm font-medium text-muted-foreground">
+                  Gender:
+                </dt>
+                <dd className="text-sm font-medium">{participant.gender}</dd>
+              </div>
+              <div className="flex justify-between sm:block">
+                <dt className="text-sm font-medium text-muted-foreground">
+                  Birthday:
+                </dt>
+                <dd className="text-sm font-medium">{participant.birthday}</dd>
+              </div>
+              <div className="flex justify-between sm:block">
+                <dt className="text-sm font-medium text-muted-foreground">
+                  Age:
+                </dt>
+                <dd className="text-sm font-medium">{participant.age}</dd>
+              </div>
+              <div className="flex justify-between sm:block">
+                <dt className="text-sm font-medium text-muted-foreground">
+                  Status:
+                </dt>
+                <dd className="text-sm font-medium">
+                  <Badge
+                    variant={
+                      participant.status === "Active" ? "outline" : "secondary"
+                    }
+                    className={
+                      participant.status === "Active"
+                        ? "bg-green-50 text-green-700 border-green-200 dark:bg-green-900/20 dark:text-green-400 dark:border-green-800"
+                        : ""
+                    }
+                  >
+                    {participant.status}
+                  </Badge>
+                </dd>
+              </div>
+              <div className="flex justify-between sm:block">
+                <dt className="text-sm font-medium text-muted-foreground">
+                  Date Registered:
+                </dt>
+                <dd className="text-sm font-medium">
+                  {participant.dateRegistered}
+                </dd>
+              </div>
+            </dl>
+          </CardContent>
+        </Card>
 
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">
-                Project & Category Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">
+              Project & Category Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
+              <div className="flex justify-between sm:block">
+                <dt className="text-sm font-medium text-muted-foreground">
+                  Project:
+                </dt>
+                <dd className="text-sm font-medium">{participant.project}</dd>
+              </div>
+              <div className="flex justify-between sm:block">
+                <dt className="text-sm font-medium text-muted-foreground">
+                  Category:
+                </dt>
+                <dd className="text-sm font-medium">{participant.category}</dd>
+              </div>
+              {participant.category === "GROUP" && (
                 <div className="flex justify-between sm:block">
                   <dt className="text-sm font-medium text-muted-foreground">
-                    Project:
+                    SLPA Name:
                   </dt>
-                  <dd className="text-sm font-medium">{participant.project}</dd>
+                  <dd className="text-sm font-medium">{participant.slpaName}</dd>
                 </div>
-                <div className="flex justify-between sm:block">
-                  <dt className="text-sm font-medium text-muted-foreground">
-                    Category:
-                  </dt>
-                  <dd className="text-sm font-medium">{participant.category}</dd>
-                </div>
-                {participant.category === "GROUP" && (
+              )}
+            </dl>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">
+              Contact Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
+              <div className="flex justify-between sm:block">
+                <dt className="text-sm font-medium text-muted-foreground">
+                  Contact Number:
+                </dt>
+                <dd className="text-sm font-medium">
+                  {participant.contactNumber}
+                </dd>
+              </div>
+              <div className="col-span-1 sm:col-span-2">
+                <dt className="text-sm font-medium text-muted-foreground">
+                  Address:
+                </dt>
+                <dd className="text-sm font-medium">
+                  {participant.address}
+                </dd>
+              </div>
+            </dl>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">
+              Identification Information
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
+              <div className="flex justify-between sm:block">
+                <dt className="text-sm font-medium text-muted-foreground">
+                  Valid ID Type:
+                </dt>
+                <dd className="text-sm font-medium">{participant.validID}</dd>
+              </div>
+              <div className="flex justify-between sm:block">
+                <dt className="text-sm font-medium text-muted-foreground">
+                  Valid ID Number:
+                </dt>
+                <dd className="text-sm font-medium">
+                  {participant.validIDNumber}
+                </dd>
+              </div>
+            </dl>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">
+              Program Details
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
+              <div className="flex justify-between sm:block">
+                <dt className="text-sm font-medium text-muted-foreground">
+                  Type of Participant:
+                </dt>
+                <dd className="text-sm font-medium">{participant.participantType}</dd>
+              </div>
+              <div className="flex justify-between sm:block">
+                <dt className="text-sm font-medium text-muted-foreground">
+                  Sector:
+                </dt>
+                <dd className="text-sm font-medium">{participant.sector}</dd>
+              </div>
+              {(participant.participantType === "Poor - Exiting 4Ps" || participant.participantType === "Poor - 4Ps") && (
+                <>
                   <div className="flex justify-between sm:block">
                     <dt className="text-sm font-medium text-muted-foreground">
-                      SLPA Name:
+                      4Ps Household Member:
                     </dt>
-                    <dd className="text-sm font-medium">{participant.slpaName}</dd>
+                    <dd className="text-sm font-medium">{participant.is4PsHouseholdMember}</dd>
                   </div>
-                )}
-              </dl>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">
-                Contact Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
-                <div className="flex justify-between sm:block">
-                  <dt className="text-sm font-medium text-muted-foreground">
-                    Contact Number:
-                  </dt>
-                  <dd className="text-sm font-medium">
-                    {participant.contactNumber}
-                  </dd>
-                </div>
-                <div className="col-span-1 sm:col-span-2">
-                  <dt className="text-sm font-medium text-muted-foreground">
-                    Address:
-                  </dt>
-                  <dd className="text-sm font-medium">
-                    {participant.address}
-                  </dd>
-                </div>
-              </dl>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">
-                Identification Information
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
-                <div className="flex justify-between sm:block">
-                  <dt className="text-sm font-medium text-muted-foreground">
-                    Valid ID Type:
-                  </dt>
-                  <dd className="text-sm font-medium">{participant.validID}</dd>
-                </div>
-                <div className="flex justify-between sm:block">
-                  <dt className="text-sm font-medium text-muted-foreground">
-                    Valid ID Number:
-                  </dt>
-                  <dd className="text-sm font-medium">
-                    {participant.validIDNumber}
-                  </dd>
-                </div>
-              </dl>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">
-                Program Details
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
-                <div className="flex justify-between sm:block">
-                  <dt className="text-sm font-medium text-muted-foreground">
-                    Type of Participant:
-                  </dt>
-                  <dd className="text-sm font-medium">{participant.participantType}</dd>
-                </div>
-                <div className="flex justify-between sm:block">
-                  <dt className="text-sm font-medium text-muted-foreground">
-                    Sector:
-                  </dt>
-                  <dd className="text-sm font-medium">{participant.sector}</dd>
-                </div>
-                {(participant.participantType === "Poor - Exiting 4Ps" || participant.participantType === "Poor - 4Ps") && (
-                  <>
+                  {participant.is4PsHouseholdMember === "Yes" && (
                     <div className="flex justify-between sm:block">
                       <dt className="text-sm font-medium text-muted-foreground">
-                        4Ps Household Member:
+                        Household ID:
                       </dt>
-                      <dd className="text-sm font-medium">{participant.is4PsHouseholdMember}</dd>
+                      <dd className="text-sm font-medium">{participant.householdId}</dd>
                     </div>
-                    {participant.is4PsHouseholdMember === "Yes" && (
-                      <div className="flex justify-between sm:block">
-                        <dt className="text-sm font-medium text-muted-foreground">
-                          Household ID:
-                        </dt>
-                        <dd className="text-sm font-medium">{participant.householdId}</dd>
-                      </div>
-                    )}
-                  </>
-                )}
-              </dl>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="family" className="space-y-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <div className="flex justify-between items-center">
-                <CardTitle className="text-sm font-medium">
-                  Family Information
-                </CardTitle>
-                {!readOnly && (
-                  <div className="flex gap-2">
-                    <Button 
-                      size="sm" 
-                      variant="outline"
-                      onClick={() => setShowFamilyForm(true)}
-                      className="text-[#496E22] hover:text-[#96B54A] hover:bg-[#96B54A]/10"
-                    >
-                      <Plus className="h-4 w-4 mr-2" /> Add Family Member
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              {showFamilyForm && !readOnly && (
-                <div className="grid grid-cols-2 gap-4 mb-4 p-4 border rounded-lg">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Name</Label>
-                    <Input
-                      id="name"
-                      value={newFamilyMember.name}
-                      onChange={(e) => setNewFamilyMember({
-                        ...newFamilyMember,
-                        name: e.target.value
-                      })}
-                      placeholder="Enter family member name"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="relationship">Relationship</Label>
-                    <Input
-                      id="relationship"
-                      value={newFamilyMember.relationship}
-                      onChange={(e) => setNewFamilyMember({
-                        ...newFamilyMember,
-                        relationship: e.target.value
-                      })}
-                      placeholder="Enter relationship"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="age">Age</Label>
-                    <Input
-                      id="age"
-                      type="number"
-                      value={newFamilyMember.age}
-                      onChange={(e) => setNewFamilyMember({
-                        ...newFamilyMember,
-                        age: e.target.value
-                      })}
-                      placeholder="Enter age"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="occupation">Occupation</Label>
-                    <Input
-                      id="occupation"
-                      value={newFamilyMember.occupation}
-                      onChange={(e) => setNewFamilyMember({
-                        ...newFamilyMember,
-                        occupation: e.target.value
-                      })}
-                      placeholder="Enter occupation"
-                    />
-                  </div>
-                  <div className="col-span-2 flex justify-end gap-2">
-                    <Button 
-                      variant="outline" 
-                      onClick={handleCancelFamilyAdd}
-                      disabled={isLoading}
-                    >
-                      Cancel
-                    </Button>
-                    <Button 
-                      onClick={handleAddFamilyMember}
-                      disabled={isLoading}
-                    >
-                      {editingFamilyMember ? (
-                        <>
-                          <Save className="h-4 w-4 mr-2" /> Update Family Member
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="h-4 w-4 mr-2" /> Add Family Member
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Relationship</TableHead>
-                    <TableHead>Age</TableHead>
-                    <TableHead>Occupation</TableHead>
-                    {!readOnly && <TableHead>Actions</TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {familyMembers.map((member) => (
-                    <TableRow key={member.id}>
-                      <TableCell>{member.name}</TableCell>
-                      <TableCell>{member.relationship}</TableCell>
-                      <TableCell>{member.age}</TableCell>
-                      <TableCell>{member.occupation}</TableCell>
-                      {!readOnly && (
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditFamilyMember(member)}
-                            >
-                              <Pencil className="h-4 w-4 text-blue-500" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleRemoveFamilyMember(member.id)}
-                            >
-                              <Trash className="h-4 w-4 text-red-500" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
-                  {familyMembers.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={readOnly ? 4 : 5} className="text-center py-4 text-muted-foreground">
-                        No family members added yet
-                      </TableCell>
-                    </TableRow>
                   )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                </>
+              )}
+            </dl>
+          </CardContent>
+        </Card>
+      </TabsContent>
 
-        <TabsContent value="program" className="space-y-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <div className="flex justify-between items-center">
-                <CardTitle className="text-sm font-medium">
-                  Member Management
-                </CardTitle>
-                {!readOnly && !editingMember && !showMemberForm && (
+      <TabsContent value="family" className="space-y-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex justify-between items-center">
+              <CardTitle className="text-sm font-medium">
+                Family Information
+              </CardTitle>
+              {!readOnly && (
+                <div className="flex gap-2">
                   <Button 
-                    onClick={() => {
-                      setShowMemberForm(true);
-                      setEditingMember(null);
-                    }}
+                    size="sm" 
+                    variant="outline"
+                    onClick={() => setShowFamilyForm(true)}
                     className="text-[#496E22] hover:text-[#96B54A] hover:bg-[#96B54A]/10"
                   >
-                    <Plus className="h-4 w-4 mr-2" /> Add Member
+                    <Plus className="h-4 w-4 mr-2" /> Add Family Member
                   </Button>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              {(showMemberForm || editingMember) && !readOnly && (
-                <div className="grid grid-cols-2 gap-4 mb-4 p-4 border rounded-lg">
-                  <div className="space-y-2">
-                    <Label htmlFor="memberName">Name</Label>
-                    <Input
-                      id="memberName"
-                      value={newMember.name || ""}
-                      onChange={(e) => setNewMember({
-                        ...newMember,
-                        name: e.target.value
-                      })}
-                      placeholder="Enter member name"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="position">Position</Label>
-                    <Input
-                      id="position"
-                      value={newMember.position || ""}
-                      onChange={(e) => setNewMember({
-                        ...newMember,
-                        position: e.target.value
-                      })}
-                      placeholder="Enter position"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="memberContact">Contact Number</Label>
-                    <Input
-                      id="memberContact"
-                      value={newMember.contactNumber || ""}
-                      onChange={(e) => setNewMember({
-                        ...newMember,
-                        contactNumber: e.target.value
-                      })}
-                      placeholder="Enter contact number"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="address">Address</Label>
-                    <Input
-                      id="address"
-                      value={newMember.address || ""}
-                      onChange={(e) => setNewMember({
-                        ...newMember,
-                        address: e.target.value
-                      })}
-                      placeholder="Enter address"
-                    />
-                  </div>
-                  <div className="col-span-2 flex justify-end gap-2">
-                    <Button 
-                      variant="outline"
-                      onClick={() => {
-                        handleCancelEdit();
-                        setShowMemberForm(false);
-                      }}
-                      disabled={isLoading}
-                    >
-                      Cancel
-                    </Button>
-                    <Button 
-                      onClick={async () => {
-                        if (editingMember) {
-                          await handleUpdateMember();
-                        } else {
-                          await handleAddMember();
-                        }
-                        setShowMemberForm(false);
-                      }}
-                      disabled={isLoading}
-                    >
-                      {editingMember ? (
-                        <>
-                          <Save className="h-4 w-4 mr-2" /> Update Member
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="h-4 w-4 mr-2" /> Add Member
-                        </>
-                      )}
-                    </Button>
-                  </div>
                 </div>
               )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            {showFamilyForm && !readOnly && (
+              <div className="grid grid-cols-2 gap-4 mb-4 p-4 border rounded-lg">
+                <div className="space-y-2">
+                  <Label htmlFor="name">Name</Label>
+                  <Input
+                    id="name"
+                    value={newFamilyMember.name}
+                    onChange={(e) => setNewFamilyMember({
+                      ...newFamilyMember,
+                      name: e.target.value
+                    })}
+                    placeholder="Enter family member name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="relationship">Relationship</Label>
+                  <Input
+                    id="relationship"
+                    value={newFamilyMember.relationship}
+                    onChange={(e) => setNewFamilyMember({
+                      ...newFamilyMember,
+                      relationship: e.target.value
+                    })}
+                    placeholder="Enter relationship"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="age">Age</Label>
+                  <Input
+                    id="age"
+                    type="number"
+                    value={newFamilyMember.age}
+                    onChange={(e) => setNewFamilyMember({
+                      ...newFamilyMember,
+                      age: e.target.value
+                    })}
+                    placeholder="Enter age"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="occupation">Occupation</Label>
+                  <Input
+                    id="occupation"
+                    value={newFamilyMember.occupation}
+                    onChange={(e) => setNewFamilyMember({
+                      ...newFamilyMember,
+                      occupation: e.target.value
+                    })}
+                    placeholder="Enter occupation"
+                  />
+                </div>
+                <div className="col-span-2 flex justify-end gap-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={handleCancelFamilyAdd}
+                    disabled={isLoading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={handleAddFamilyMember}
+                    disabled={isLoading}
+                  >
+                    {editingFamilyMember ? (
+                      <>
+                        <Save className="h-4 w-4 mr-2" /> Update Family Member
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4 mr-2" /> Add Family Member
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
 
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Name</TableHead>
-                    <TableHead>Position</TableHead>
-                    <TableHead>Contact Number</TableHead>
-                    <TableHead>Address</TableHead>
-                    {!readOnly && <TableHead>Actions</TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {members.map((member) => (
-                    <TableRow key={member.id}>
-                      <TableCell>{member.name}</TableCell>
-                      <TableCell>{member.position}</TableCell>
-                      <TableCell>{member.contactNumber}</TableCell>
-                      <TableCell>{member.address}</TableCell>
-                      {!readOnly && (
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleEditMember(member)}
-                            >
-                              <Pencil className="h-4 w-4 text-blue-500" />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleRemoveMember(member.id)}
-                            >
-                              <Trash className="h-4 w-4 text-red-500" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
-                  {members.length === 0 && (
-                    <TableRow>
-                      <TableCell colSpan={readOnly ? 4 : 5} className="text-center py-4 text-muted-foreground">
-                        No members added yet
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Relationship</TableHead>
+                  <TableHead>Age</TableHead>
+                  <TableHead>Occupation</TableHead>
+                  {!readOnly && <TableHead>Actions</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {familyMembers.map((member) => (
+                  <TableRow key={member.id}>
+                    <TableCell>{member.name}</TableCell>
+                    <TableCell>{member.relationship}</TableCell>
+                    <TableCell>{member.age}</TableCell>
+                    <TableCell>{member.occupation}</TableCell>
+                    {!readOnly && (
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditFamilyMember(member)}
+                          >
+                            <Pencil className="h-4 w-4 text-blue-500" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveFamilyMember(member.id)}
+                          >
+                            <Trash className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </div>
                       </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </>
+                    )}
+                  </TableRow>
+                ))}
+                {familyMembers.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={readOnly ? 4 : 5} className="text-center py-4 text-muted-foreground">
+                      No family members added yet
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </TabsContent>
+
+      <TabsContent value="program" className="space-y-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex justify-between items-center">
+              <CardTitle className="text-sm font-medium">
+                Member Management
+              </CardTitle>
+              {!readOnly && !editingMember && !showMemberForm && (
+                <Button 
+                  onClick={() => {
+                    setShowMemberForm(true);
+                    setEditingMember(null);
+                  }}
+                  className="text-[#496E22] hover:text-[#96B54A] hover:bg-[#96B54A]/10"
+                >
+                  <Plus className="h-4 w-4 mr-2" /> Add Member
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            {(showMemberForm || editingMember) && !readOnly && (
+              <div className="grid grid-cols-2 gap-4 mb-4 p-4 border rounded-lg">
+                <div className="space-y-2">
+                  <Label htmlFor="memberName">Name</Label>
+                  <Input
+                    id="memberName"
+                    value={newMember.name || ""}
+                    onChange={(e) => setNewMember({
+                      ...newMember,
+                      name: e.target.value
+                    })}
+                    placeholder="Enter member name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="position">Position</Label>
+                  <Input
+                    id="position"
+                    value={newMember.position || ""}
+                    onChange={(e) => setNewMember({
+                      ...newMember,
+                      position: e.target.value
+                    })}
+                    placeholder="Enter position"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="memberContact">Contact Number</Label>
+                  <Input
+                    id="memberContact"
+                    value={newMember.contactNumber || ""}
+                    onChange={(e) => setNewMember({
+                      ...newMember,
+                      contactNumber: e.target.value
+                    })}
+                    placeholder="Enter contact number"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="address">Address</Label>
+                  <Input
+                    id="address"
+                    value={newMember.address || ""}
+                    onChange={(e) => setNewMember({
+                      ...newMember,
+                      address: e.target.value
+                    })}
+                    placeholder="Enter address"
+                  />
+                </div>
+                <div className="col-span-2 flex justify-end gap-2">
+                  <Button 
+                    variant="outline"
+                    onClick={() => {
+                      handleCancelEdit();
+                      setShowMemberForm(false);
+                    }}
+                    disabled={isLoading}
+                  >
+                    Cancel
+                  </Button>
+                  <Button 
+                    onClick={async () => {
+                      if (editingMember) {
+                        await handleUpdateMember();
+                      } else {
+                        await handleAddMember();
+                      }
+                      setShowMemberForm(false);
+                    }}
+                    disabled={isLoading}
+                  >
+                    {editingMember ? (
+                      <>
+                        <Save className="h-4 w-4 mr-2" /> Update Member
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4 mr-2" /> Add Member
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Position</TableHead>
+                  <TableHead>Contact Number</TableHead>
+                  <TableHead>Address</TableHead>
+                  {!readOnly && <TableHead>Actions</TableHead>}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {members.map((member) => (
+                  <TableRow key={member.id}>
+                    <TableCell>{member.name}</TableCell>
+                    <TableCell>{member.position}</TableCell>
+                    <TableCell>{member.contactNumber}</TableCell>
+                    <TableCell>{member.address}</TableCell>
+                    {!readOnly && (
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditMember(member)}
+                          >
+                            <Pencil className="h-4 w-4 text-blue-500" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleRemoveMember(member.id)}
+                          >
+                            <Trash className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+                {members.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={readOnly ? 4 : 5} className="text-center py-4 text-muted-foreground">
+                      No members added yet
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </TabsContent>
+    </Tabs>
   );
+
+  if (isMobile) {
+    return (
+      <Dialog open={true} onOpenChange={onClose}>
+        <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-lg font-semibold text-[#496E22]">
+              Participant Details
+            </DialogTitle>
+          </DialogHeader>
+          {content}
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  return content;
 }

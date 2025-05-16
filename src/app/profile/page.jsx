@@ -23,6 +23,7 @@ import {
   Shield,
   Calendar,
   Upload,
+  LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -242,16 +243,27 @@ export default function ProfilePage() {
     }
   };
 
-  const handleSignOut = async () => {
+  const handleLogout = async () => {
     try {
-      await signOut(auth);
+      // Update user status to offline before logging out
+      if (currentUser?.uid) {
+        const db = getFirestore();
+        await updateDoc(doc(db, "users", currentUser.uid), {
+          status: "offline",
+          lastActive: new Date(),
+        });
+      }
+      // Sign out from Firebase
+      await auth.signOut();
+      // Clear any local storage items if needed
+      localStorage.removeItem('userProfile');
+      // Show success message
+      toast.success("Logged out successfully");
+      // Redirect to login page
       window.location.href = "/";
     } catch (error) {
-      toast.error("Failed to sign out. Please try again.", {
-        position: "top-center",
-        autoClose: 3000,
-      });
-      console.error("Sign out error:", error);
+      console.error("Error logging out:", error);
+      toast.error("Failed to log out. Please try again.");
     }
   };
 
@@ -302,6 +314,77 @@ export default function ProfilePage() {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
+      {/* Mobile icon header (like programs page) */}
+      <div className="md:hidden w-full fixed top-0 left-0 z-30 bg-[#0B3D2E] flex items-center justify-between px-2 py-1 shadow-lg">
+        {/* Logo */}
+        <Link href="/dashboard" className="flex items-center">
+          <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-white flex items-center justify-center">
+            <Image
+              src="/images/SLP.png"
+              alt="Logo"
+              fill
+              className="object-contain p-1"
+            />
+          </div>
+        </Link>
+        {/* Navigation icons */}
+        <div className="flex-1 flex items-center justify-center gap-3">
+          <Link href="/dashboard" className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-200 ${pathname === '/dashboard' ? 'border-2 border-white bg-white/10' : 'hover:border-2 hover:border-white hover:bg-white/10'}`}>
+            <LayoutDashboard className="h-6 w-6 text-white" />
+          </Link>
+          <Link href="/vendors" className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-200 ${pathname === '/vendors' ? 'border-2 border-white bg-white/10' : 'hover:border-2 hover:border-white hover:bg-white/10'}`}> 
+            <Store className="h-6 w-6 text-white" />
+          </Link>
+          <Link href="/participants" className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-200 ${pathname === '/participants' ? 'border-2 border-white bg-white/10' : 'hover:border-2 hover:border-white hover:bg-white/10'}`}> 
+            <Users className="h-6 w-6 text-white" />
+          </Link>
+          <Link href="/programs" className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-200 ${pathname === '/programs' ? 'border-2 border-white bg-white/10' : 'hover:border-2 hover:border-white hover:bg-white/10'}`}> 
+            <FolderOpen className="h-6 w-6 text-white" />
+          </Link>
+          <Link href="/settings" className={`w-10 h-10 rounded-lg flex items-center justify-center transition-all duration-200 ${pathname === '/settings' ? 'border-2 border-white bg-white/10' : 'hover:border-2 hover:border-white hover:bg-white/10'}`}> 
+            <Settings className="h-6 w-6 text-white" />
+          </Link>
+        </div>
+        {/* Profile avatar/initials with dropdown */}
+        <div className="ml-2 w-10 h-10 flex items-center justify-center">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="w-full h-full flex items-center justify-center">
+                <Avatar className="h-8 w-8 border-2 border-white">
+                  {currentUser?.photoURL ? (
+                    <AvatarImage 
+                      src={currentUser.photoURL} 
+                      alt={currentUser?.name || "User"}
+                      className="object-cover" 
+                    />
+                  ) : (
+                    <AvatarFallback className="bg-primary text-primary-foreground">
+                      {getUserInitials(currentUser?.name)}
+                    </AvatarFallback>
+                  )}
+                </Avatar>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium">{currentUser?.name}</p>
+                  <p className="text-xs text-muted-foreground">{currentUser?.role}</p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                onClick={handleLogout}
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Logout
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+
       {/* Sidebar for desktop */}
       <div className="hidden md:flex md:w-64 md:flex-col bg-[#0B3D2E]">
         <div className="flex flex-col flex-grow pt-5 overflow-y-auto border-r border-green-900">
@@ -483,34 +566,59 @@ export default function ProfilePage() {
 
       {/* Main content */}
       <div className="flex flex-col flex-1 overflow-hidden">
-        <div className="relative z-10 flex-shrink-0 flex h-16 bg-card shadow">
-          <button
-            type="button"
-            className="px-4 border-r border-gray-200 text-muted-foreground md:hidden"
-            onClick={() => setIsMobileMenuOpen(true)}
-          >
-            <span className="sr-only">Open sidebar</span>
-            <Menu className="h-6 w-6" aria-hidden="true" />
-          </button>
-          <div className="flex-1 px-4 flex justify-between">
-            <div className="flex-1 flex">
-              <div className="w-full flex md:ml-0">
-                <label htmlFor="search-field" className="sr-only">
-                  Search
-                </label>
-                <div className="relative w-full text-muted-foreground focus-within:text-gray-600">
-                  <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none">
-                    <Search className="h-5 w-5 ml-3" aria-hidden="true" />
-                  </div>
-                  <Input
-                    id="search-field"
-                    className="block w-full h-full pl-10 pr-3 py-2 border-transparent text-muted-foreground placeholder-muted-foreground focus:outline-none focus:placeholder-gray-400 focus:ring-0 focus:border-transparent sm:text-sm"
-                    placeholder="Search..."
-                    type="search"
-                  />
-                </div>
+        <div className="relative z-10 flex-shrink-0 flex h-12 bg-[#0B3D2E] shadow">
+          {/* Logo (left) */}
+          <div className="flex items-center pl-4 z-10">
+            <Link href="/dashboard" className="flex items-center group">
+              <div className="relative h-10 w-10 flex items-center justify-center transition-all duration-200 group-hover:bg-white group-hover:border-2 group-hover:border-[#0B3D2E] group-hover:rounded-lg group-hover:shadow-md">
+                <Image
+                  src="/images/SLP.png"
+                  alt="Logo"
+                  fill
+                  className="object-contain p-1"
+                />
               </div>
-            </div>          
+            </Link>
+          </div>
+          {/* Navigation Icons (center, absolutely positioned) */}
+          <div className="absolute left-1/2 top-0 h-full -translate-x-1/2 flex items-center justify-center z-0">
+            <div className="flex items-center space-x-6">
+              {navigation.map((item) => {
+                const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={`group flex items-center justify-center h-10 w-10 transition-all duration-200
+                      ${isActive ? 'bg-white border-2 border-white rounded-lg text-[#0B3D2E] shadow-md' : 'text-white'}
+                    `}
+                    title={item.name}
+                  >
+                    <span className={`flex items-center justify-center h-10 w-10 transition-all duration-200
+                      ${isActive ? '' : 'group-hover:bg-white group-hover:border-2 group-hover:border-white group-hover:rounded-lg group-hover:shadow-md'}
+                    `}>
+                      <item.icon className={`h-6 w-6 ${isActive ? 'text-[#0B3D2E]' : 'text-inherit group-hover:text-[#0B3D2E]'}`} />
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+          {/* Avatar (right) */}
+          <div className="flex items-center pr-4 ml-auto z-10">
+            <Avatar className="h-10 w-10 border-2 border-white">
+              {currentUser?.photoURL ? (
+                <AvatarImage 
+                  src={currentUser.photoURL} 
+                  alt={currentUser?.name || "User"}
+                  className="object-cover" 
+                />
+              ) : (
+                <AvatarFallback className="bg-primary text-primary-foreground">
+                  {getUserInitials(currentUser?.name)}
+                </AvatarFallback>
+              )}
+            </Avatar>
           </div>
         </div>
 

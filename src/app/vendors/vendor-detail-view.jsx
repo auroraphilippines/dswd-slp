@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -12,15 +12,34 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Edit2, Plus, Trash2, Save, X } from "lucide-react";
+import { Edit2, Plus, Trash2, Save, X as LucideX } from "lucide-react";
 import { toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import Logger from '@/lib/logger';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
-export function VendorDetailView({ vendor, onUpdate, readOnly }) {
+export function VendorDetailView({ vendor, onUpdate, readOnly, onClose }) {
   const [editingSection, setEditingSection] = useState(null);
   const [editedManpower, setEditedManpower] = useState([]);
   const [editedTools, setEditedTools] = useState([]);
   const [editedMaterials, setEditedMaterials] = useState([]);
+  const [isMobile, setIsMobile] = useState(false);
+  const [isOpen, setIsOpen] = useState(true);
+
+  // Mobile detection (same as ParticipantDetailView)
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024); // lg breakpoint
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Generate a unique vendor ID based on timestamp and random number
   const vendorId = `VEN${Date.now().toString().slice(-8)}${Math.floor(Math.random() * 10000)}`;
@@ -43,14 +62,21 @@ export function VendorDetailView({ vendor, onUpdate, readOnly }) {
   }, 0) || 0;
 
   // Debug log to check the data
-  console.log("========== VENDOR DETAIL VIEW LOGS ==========");
-  console.log("Complete Vendor Object:", vendor);
-  console.log("Tools Array:", vendor?.tools);
-  console.log("Tools Length:", vendor?.tools?.length);
-  console.log("First Tool Item:", vendor?.tools?.[0]);
-  console.log("Manpower Array:", vendor?.manpower);
-  console.log("Raw Materials Array:", vendor?.rawMaterials);
-  console.log("==========================================");
+  Logger.log("========== VENDOR DETAIL VIEW LOGS ==========");
+  Logger.log("Complete Vendor Object:", vendor);
+  Logger.log("Tools Array:", vendor?.tools);
+  Logger.log("Tools Length:", vendor?.tools?.length);
+  Logger.log("First Tool Item:", vendor?.tools?.[0]);
+  Logger.log("Manpower Array:", vendor?.manpower);
+  Logger.log("Raw Materials Array:", vendor?.rawMaterials);
+  Logger.log("==========================================");
+
+  const handleDialogClose = () => {
+    setIsOpen(false);
+    if (onClose) {
+      onClose();
+    }
+  };
 
   // Handler for starting edit mode
   const handleEdit = (section, data) => {
@@ -97,7 +123,7 @@ export function VendorDetailView({ vendor, onUpdate, readOnly }) {
       toast.success(`${section} updated successfully!`);
     } catch (error) {
       toast.error(`Failed to update ${section}`);
-      console.error(error);
+      Logger.error(error);
     }
   };
 
@@ -239,7 +265,7 @@ export function VendorDetailView({ vendor, onUpdate, readOnly }) {
     setEditedMaterials(updated);
   };
 
-  return (
+  const content = (
     <Tabs defaultValue="basic-info" className="w-full">
       <TabsList className="grid w-full grid-cols-4">
         <TabsTrigger value="basic-info">Basic Info</TabsTrigger>
@@ -274,7 +300,11 @@ export function VendorDetailView({ vendor, onUpdate, readOnly }) {
                 <div>
                   <label className="text-sm text-muted-foreground">Registration Date:</label>
                   <p className="font-medium">
-                    {vendor?.createdAt ? new Date(vendor.createdAt).toLocaleDateString() : new Date().toLocaleDateString()}
+                    {vendor?.createdAt
+                      ? (typeof vendor.createdAt.toDate === "function"
+                          ? vendor.createdAt.toDate().toLocaleDateString()
+                          : new Date(vendor.createdAt).toLocaleDateString())
+                      : new Date().toLocaleDateString()}
                   </p>
                 </div>
               </div>
@@ -314,7 +344,7 @@ export function VendorDetailView({ vendor, onUpdate, readOnly }) {
                         <Save className="h-4 w-4 mr-2" />Save
                       </Button>
                       <Button variant="outline" onClick={handleCancel}>
-                        <X className="h-4 w-4 mr-2" />Cancel
+                        <LucideX className="h-4 w-4 mr-2" />Cancel
                       </Button>
                       <Button variant="outline" onClick={handleAddManpower}>
                         <Plus className="h-4 w-4 mr-2" />Add Worker
@@ -409,7 +439,7 @@ export function VendorDetailView({ vendor, onUpdate, readOnly }) {
                         <Save className="h-4 w-4 mr-2" />Save
                       </Button>
                       <Button variant="outline" onClick={handleCancel}>
-                        <X className="h-4 w-4 mr-2" />Cancel
+                        <LucideX className="h-4 w-4 mr-2" />Cancel
                       </Button>
                       <Button variant="outline" onClick={handleAddMaterial}>
                         <Plus className="h-4 w-4 mr-2" />Add Material
@@ -516,7 +546,7 @@ export function VendorDetailView({ vendor, onUpdate, readOnly }) {
                         <Save className="h-4 w-4 mr-2" />Save
                       </Button>
                       <Button variant="outline" onClick={handleCancel}>
-                        <X className="h-4 w-4 mr-2" />Cancel
+                        <LucideX className="h-4 w-4 mr-2" />Cancel
                       </Button>
                       <Button variant="outline" onClick={handleAddTool}>
                         <Plus className="h-4 w-4 mr-2" />Add Tool
@@ -612,5 +642,31 @@ export function VendorDetailView({ vendor, onUpdate, readOnly }) {
         </Card>
       </TabsContent>
     </Tabs>
+  );
+
+  if (isMobile) {
+    return (
+      <Dialog open={isOpen} onOpenChange={handleDialogClose}>
+        <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="mb-4">
+            <DialogTitle className="text-lg font-semibold text-[#496E22]">
+              Vendor Details
+            </DialogTitle>
+          </DialogHeader>
+          <div className="mt-4">
+            {content}
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  return (
+    <div className="space-y-4 vendor-modal-opacity">
+      {!isMobile && (
+        <h2 className="text-lg font-semibold text-[#496E22]">Vendor Details</h2>
+      )}
+      {content}
+    </div>
   );
 }

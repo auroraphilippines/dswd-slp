@@ -79,7 +79,7 @@ import {
 import { getCurrentUser } from "@/service/auth";
 import LoadingPage from "../loading/page";
 import { auth, db } from "@/service/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Chart as ChartJS,
@@ -482,6 +482,34 @@ export default function VendorsPage() {
     return name.substring(0, 2).toUpperCase();
   };
 
+  // Add handleLogout function
+  const handleLogout = async () => {
+    try {
+      // Update user status to offline before logging out
+      if (currentUser?.uid) {
+        await updateDoc(doc(db, "users", currentUser.uid), {
+          status: "offline",
+          lastActive: serverTimestamp()
+        });
+      }
+      
+      // Sign out from Firebase
+      await auth.signOut();
+      
+      // Clear any local storage items if needed
+      localStorage.removeItem('userProfile');
+      
+      // Show success message
+      toast.success("Logged out successfully");
+      
+      // Redirect to login page
+      window.location.href = "/";
+    } catch (error) {
+      console.error("Error logging out:", error);
+      toast.error("Failed to log out. Please try again.");
+    }
+  };
+
   const handleSelectAll = (e) => {
     if (!hasWritePermissions()) {
       showPermissionDenied('select all vendors');
@@ -694,6 +722,65 @@ export default function VendorsPage() {
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       <ToastContainer position="top-right" />
+      
+      {/* Mobile Header */}
+      <div className="md:hidden fixed top-0 left-0 right-0 z-50 bg-[#0B3D2E] border-b border-green-800">
+        <div className="flex items-center justify-between px-2 py-2">
+          {/* Logo */}
+          <Link href="/dashboard" className="flex items-center justify-center" style={{ width: 40, height: 40 }}>
+            <div className="relative h-10 w-10 rounded-lg overflow-hidden bg-white/10 flex items-center justify-center">
+              <Image
+                src="/images/SLP.png"
+                alt="Logo"
+                fill
+                className="object-contain p-1"
+              />
+            </div>
+          </Link>
+
+          {/* Navigation Icons */}
+          <div className="flex-1 flex items-center justify-center gap-3">
+            <Link href="/dashboard" className={`w-10 h-10 rounded-lg flex items-center justify-center ${pathname === '/dashboard' ? 'border-2 border-white' : ''}`}>
+              <LayoutDashboard className="h-6 w-6 text-white" />
+            </Link>
+            <Link href="/vendors" className={`w-10 h-10 rounded-lg flex items-center justify-center ${pathname === '/vendors' ? 'border-2 border-white' : ''}`}> 
+              <Store className="h-6 w-6 text-white" />
+            </Link>
+            <Link href="/participants" className={`w-10 h-10 rounded-lg flex items-center justify-center ${pathname === '/participants' ? 'border-2 border-white' : ''}`}> 
+              <Users className="h-6 w-6 text-white" />
+            </Link>
+             <Link href="/programs" className={`w-10 h-10 rounded-lg flex items-center justify-center ${pathname === '/programs' ? 'border-2 border-white' : ''}`}> 
+              <FolderOpen className="h-6 w-6 text-white" />
+            </Link>
+            <Link href="/settings" className={`w-10 h-10 rounded-lg flex items-center justify-center ${pathname === '/settings' ? 'border-2 border-white' : ''}`}> 
+              <Settings className="h-6 w-6 text-white" />
+            </Link>
+          </div>
+
+          {/* Profile Avatar */}
+          <Link href="/profile" className="p-0 rounded-full border-2 border-white/40 flex items-center justify-center ml-3" style={{ width: 40, height: 40 }}>
+            {currentUser?.photoURL ? (
+              <div className="w-9 h-9 rounded-full overflow-hidden">
+                <Image
+                  src={currentUser.photoURL}
+                  alt={currentUser.name}
+                  width={36}
+                  height={36}
+                  className="object-cover"
+                />
+              </div>
+            ) : (
+              <span className="w-9 h-9 flex items-center justify-center rounded-full bg-white/20 text-white font-medium text-base">
+                {getUserInitials(currentUser?.name)}
+              </span>
+            )}
+          </Link>
+        </div>
+      </div>
+
+      {/* Add padding to main content for mobile header */}
+      <div className="md:hidden h-14"></div>
+
       {/* Sidebar for desktop */}
       <div className="hidden md:flex md:w-64 md:flex-col bg-[#0B3D2E]">
         <div className="flex flex-col flex-grow pt-5 overflow-y-auto border-r border-green-900">
@@ -983,6 +1070,13 @@ export default function VendorsPage() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
+                  <DropdownMenuItem 
+                    className="rounded-lg cursor-pointer text-red-600 hover:text-red-700 hover:bg-red-50"
+                    onClick={handleLogout}
+                  >
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -995,29 +1089,29 @@ export default function VendorsPage() {
               <div className="flex flex-col space-y-6">
                 <div className="flex items-center justify-between pt-4">
                   <h1 className="text-2xl font-bold tracking-tight">
-                    Project Management
+                    Project
                   </h1>
                   <div className="flex items-center gap-4">
                     <Button
                       variant="outline"
                       onClick={() => router.push('/vendors/analytics')}
-                      className="bg-green-600 text-white hover:bg-green-700 hover:text-white border-green-600 hover:border-green-700 transition-colors duration-200"
+                      className="bg-green-600 text-white hover:bg-green-700 hover:text-white border-green-600 hover:border-green-700 transition-colors duration-200 flex items-center justify-center rounded-full w-10 h-10 md:w-auto md:px-4"
                     >
-                      <FileBarChart className="mr-2 h-4 w-4" />
-                      View Analytics
+                      <FileBarChart className="h-5 w-5 md:mr-2" />
+                      <span className="hidden md:inline">View Analytics</span>
                     </Button>
                     <Button
                       variant="outline"
                       onClick={exportToCSV}
-                      className="bg-blue-600 text-white hover:bg-blue-700 hover:text-white border-blue-600 hover:border-blue-700 transition-colors duration-200"
+                      className="bg-blue-600 text-white hover:bg-blue-700 hover:text-white border-blue-600 hover:border-blue-700 transition-colors duration-200 flex items-center justify-center rounded-full w-10 h-10 md:w-auto md:px-4"
                     >
-                      <Download className="mr-2 h-4 w-4" />
-                      Export to Excel
+                      <Download className="h-5 w-5 md:mr-2" />
+                      <span className="hidden md:inline">Export to Excel</span>
                     </Button>
                     {hasWritePermissions() && (
-                      <Button onClick={handleAddVendor}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Add Project
+                      <Button onClick={handleAddVendor} className="flex items-center justify-center rounded-full w-10 h-10 md:w-auto md:px-4">
+                        <Plus className="h-5 w-5 md:mr-2" />
+                        <span className="hidden md:inline">Add Project</span>
                       </Button>
                     )}
                   </div>
@@ -1195,31 +1289,6 @@ export default function VendorsPage() {
                           </Table>
                         </div>
                       </div>
-
-                      {selectedVendor && (
-                        <div className="p-6 overflow-auto max-h-[800px] bg-gradient-to-br from-white to-[#C5D48A]/5">
-                          <div className="flex justify-between items-center mb-6">
-                            <h3 className="text-xl font-semibold text-black">
-                              Vendor Details
-                            </h3>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setSelectedVendor(null)}
-                              className="text-black hover:text-[#96B54A] hover:bg-[#96B54A]/10"
-                            >
-                              <X className="h-4 w-4 mr-1" />
-                              Close
-                            </Button>
-                          </div>
-
-                          <VendorDetailView
-                            vendor={selectedVendor}
-                            onUpdate={handleDetailUpdate}
-                            readOnly={isReadOnly()}
-                          />
-                        </div>
-                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -1374,6 +1443,27 @@ export default function VendorsPage() {
                       {isSubmitting ? "Deleting..." : "Delete"}
                     </Button>
                   </DialogFooter>
+                </DialogContent>
+              </Dialog>
+
+              {/* Vendor Preview Modal (works for all screen sizes) */}
+              <Dialog open={!!selectedVendor} onOpenChange={(open) => { if (!open) setSelectedVendor(null); }}>
+                <DialogContent className="max-w-[95vw] max-h-[90vh] overflow-y-auto">
+                  <DialogHeader className="mb-4">
+                    <DialogTitle className="text-lg font-semibold text-[#496E22]">
+                      Vendor Details
+                    </DialogTitle>
+                  </DialogHeader>
+                  <div className="mt-4">
+                    {selectedVendor && (
+                      <VendorDetailView
+                        vendor={selectedVendor}
+                        onUpdate={handleDetailUpdate}
+                        readOnly={isReadOnly()}
+                        onClose={() => setSelectedVendor(null)}
+                      />
+                    )}
+                  </div>
                 </DialogContent>
               </Dialog>
             </div>

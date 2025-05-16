@@ -227,12 +227,12 @@ export function EditActivityModal({ isOpen, onClose, activity, onUpdate }) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[600px]">
+      <DialogContent className="w-full max-w-lg sm:max-w-xl max-h-[90vh] p-2 sm:p-6 overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Edit Activity</DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
+        <div className="space-y-4 py-2 sm:py-4">
           <div className="space-y-2">
             <label className="text-sm font-medium">Description</label>
             <Textarea
@@ -245,7 +245,7 @@ export function EditActivityModal({ isOpen, onClose, activity, onUpdate }) {
 
           <div className="space-y-2">
             <label className="text-sm font-medium">Images</label>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {/* Existing Images */}
               {existingImages.map((url, index) => (
                 <div key={`${url}-${index}`} className="relative group aspect-square">

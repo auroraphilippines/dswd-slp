@@ -1,9 +1,10 @@
 // firebase.js
 import { initializeApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { getFirestore, initializeFirestore, persistentLocalCache, CACHE_SIZE_UNLIMITED } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { initializeDefaultData } from './initializeData';
+import Logger from '@/lib/logger';
 
 const firebaseConfig = {
     apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -21,7 +22,11 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 
 // Initialize Firestore with settings
-const db = getFirestore(app);
+const db = initializeFirestore(app, {
+    localCache: persistentLocalCache({
+        cacheSizeBytes: CACHE_SIZE_UNLIMITED
+    })
+});
 
 // Initialize Storage with settings
 const storage = getStorage(app);
@@ -29,31 +34,15 @@ const storage = getStorage(app);
 // Initialize default data in development
 if (process.env.NODE_ENV === 'development') {
     initializeDefaultData().then(() => {
-        console.log('Default data initialization completed');
+        Logger.log('Default data initialization completed');
     }).catch(error => {
-        console.error('Error initializing default data:', error);
+        Logger.error('Error initializing default data:', error);
     });
-}
-
-// Enable Firestore persistence for offline support
-if (typeof window !== 'undefined') {
-    try {
-        const { enableIndexedDbPersistence } = require('firebase/firestore');
-        enableIndexedDbPersistence(db).catch((err) => {
-            if (err.code === 'failed-precondition') {
-                console.warn('Multiple tabs open, persistence can only be enabled in one tab at a time.');
-            } else if (err.code === 'unimplemented') {
-                console.warn('The current browser does not support persistence.');
-            }
-        });
-    } catch (error) {
-        console.warn('Error enabling persistence:', error);
-    }
 }
 
 // Development logging
 if (process.env.NODE_ENV === 'development') {
-    console.log('Firebase initialized in development mode');
+    Logger.log('Firebase initialized in development mode');
 }
 
 // Set CORS configuration
@@ -69,7 +58,7 @@ const checkFirebaseConnectivity = async () => {
     try {
         // Add a very small timeout to test connectivity
         const testTimeout = setTimeout(() => {
-            console.warn('Firebase connectivity check timed out. Possible ad blocker interference.');
+            Logger.warn('Firebase connectivity check timed out. Possible ad blocker interference.');
             if (typeof window !== 'undefined') {
                 localStorage.setItem('firebaseConnectivityIssue', 'true');
             }
@@ -80,9 +69,9 @@ const checkFirebaseConnectivity = async () => {
         if (typeof window !== 'undefined') {
             localStorage.removeItem('firebaseConnectivityIssue');
         }
-        console.log('Firebase connection check passed');
+        Logger.log('Firebase connection check passed');
     } catch (error) {
-        console.error('Firebase connectivity check failed:', error);
+        Logger.error('Firebase connectivity check failed:', error);
         if (typeof window !== 'undefined') {
             localStorage.setItem('firebaseConnectivityIssue', 'true');
         }
@@ -96,7 +85,7 @@ if (typeof window !== 'undefined') {
 
 // Enable logging in development
 if (process.env.NODE_ENV === 'development') {
-    console.log('Firebase initialized successfully');
+    Logger.log('Firebase initialized successfully');
 }
 
 // Export a function to check if there are connectivity issues

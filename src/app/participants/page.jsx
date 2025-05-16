@@ -26,6 +26,7 @@ import {
   Power,
   Eye,
   Loader2,
+  LogOut,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -334,6 +335,34 @@ export default function ParticipantsPage() {
       return (words[0][0] + words[1][0]).toUpperCase();
     }
     return name.substring(0, 2).toUpperCase();
+  };
+
+  // Add handleLogout function
+  const handleLogout = async () => {
+    try {
+      // Update user status to offline before logging out
+      if (currentUser?.uid) {
+        await updateDoc(doc(db, "users", currentUser.uid), {
+          status: "offline",
+          lastActive: serverTimestamp()
+        });
+      }
+      
+      // Sign out from Firebase
+      await auth.signOut();
+      
+      // Clear any local storage items if needed
+      localStorage.removeItem('userProfile');
+      
+      // Show success message
+      toast.success("Logged out successfully");
+      
+      // Redirect to login page
+      window.location.href = "/";
+    } catch (error) {
+      console.error("Error logging out:", error);
+      toast.error("Failed to log out. Please try again.");
+    }
   };
 
   const handleViewDetails = (participant) => {
@@ -840,6 +869,7 @@ export default function ParticipantsPage() {
           ...userPermissions,
           readOnly: isReadOnly()
         }}
+        onClose={handleCloseDetails}
       />
     );
   };
@@ -1057,30 +1087,8 @@ export default function ParticipantsPage() {
               <span className="sr-only">Open sidebar</span>
               <Menu className="h-6 w-6" aria-hidden="true" />
             </button>
-            <div className="flex-1 px-4 flex justify-between">
-              <div className="flex-1 flex">
-                <div className="w-full flex md:ml-0">
-                  <label htmlFor="search-field" className="sr-only">
-                    Search
-                  </label>
-                  <div className="relative w-full text-muted-foreground focus-within:text-gray-600">
-                    <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none">
-                      <Search className="h-5 w-5 ml-3" aria-hidden="true" />
-                    </div>
-                    <Input
-                      id="search-field"
-                      className="block w-full h-full pl-10 pr-3 py-2 border-transparent text-muted-foreground placeholder-muted-foreground focus:outline-none focus:placeholder-gray-400 focus:ring-0 focus:border-transparent sm:text-sm"
-                      placeholder="Search"
-                      type="search"
-                      value={searchQuery}
-                      onChange={handleSearchChange}
-                    />
-                  </div>
-                </div>
-              </div>
+            <div className="flex-1 px-4 flex justify-end">
               <div className="ml-4 flex items-center md:ml-6">
-                
-
                 {/* Profile dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -1135,7 +1143,13 @@ export default function ParticipantsPage() {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                  
+                    <DropdownMenuItem 
+                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      onClick={handleLogout}
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Logout
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -1149,27 +1163,34 @@ export default function ParticipantsPage() {
                 <div className="flex flex-col space-y-4">
                   <div className="flex justify-between items-center mb-4">
                     <h1 className="text-2xl font-bold">Participants</h1>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 md:gap-3">
+                      {/* Analytics Button */}
                       <Button
-                        variant="outline"
+                        variant="ghost"
+                        className="bg-green-600 text-white hover:bg-green-700 hover:text-white border-green-600 hover:border-green-700 transition-colors duration-200 flex items-center justify-center rounded-full w-10 h-10 md:w-auto md:px-4"
                         onClick={() => router.push('/participants/analytics')}
-                        className="bg-green-600 text-white hover:bg-green-700 hover:text-white border-green-600 hover:border-green-700 transition-colors duration-200"
                       >
-                        <FileBarChart className="mr-2 h-4 w-4" />
-                        View Analytics
+                        <FileBarChart className="h-5 w-5 md:mr-2" />
+                        <span className="hidden md:inline">View Analytics</span>
                       </Button>
-                      <Button 
-                        variant="outline"
+                      {/* Export Button */}
+                      <Button
+                        variant="ghost"
+                        className="bg-blue-600 text-white hover:bg-blue-700 hover:text-white border-blue-600 hover:border-blue-700 transition-colors duration-200 flex items-center justify-center rounded-full w-10 h-10 md:w-auto md:px-4"
                         onClick={() => setShowExportDialog(true)}
-                        className="bg-blue-600 text-white hover:bg-blue-700 hover:text-white border-blue-600 hover:border-blue-700 transition-colors duration-200"
                       >
-                        <Download className="mr-2 h-4 w-4" />
-                        Export to Excel
+                        <Download className="h-5 w-5 md:mr-2" />
+                        <span className="hidden md:inline">Export to Excel</span>
                       </Button>
+                      {/* Add Participant Button */}
                       {!isReadOnly() && userPermissions.accessParticipant && (
-                        <Button onClick={handleAddParticipant}>
-                          <Plus className="mr-2 h-4 w-4" />
-                          Add Participant
+                        <Button
+                          variant="ghost"
+                          className="bg-black text-white hover:bg-gray-800 hover:text-white border-black hover:border-gray-800 transition-colors duration-200 flex items-center justify-center rounded-full w-10 h-10 md:w-auto md:px-4"
+                          onClick={handleAddParticipant}
+                        >
+                          <Plus className="h-5 w-5 md:mr-2" />
+                          <span className="hidden md:inline">Add Participant</span>
                         </Button>
                       )}
                     </div>
@@ -1307,6 +1328,102 @@ export default function ParticipantsPage() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Mobile icon header (like vendors page) */}
+        <div className="md:hidden w-full fixed top-0 left-0 z-30 bg-[#0B3D2E] flex items-center justify-between px-2 py-1 shadow-lg">
+          {/* Logo */}
+          <Link href="/dashboard" className="flex items-center">
+            <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-white flex items-center justify-center">
+              <Image
+                src="/images/SLP.png"
+                alt="Logo"
+                fill
+                className="object-contain p-1"
+              />
+            </div>
+          </Link>
+          {/* Navigation icons */}
+          <div className="flex-1 flex items-center justify-center gap-3">
+            <Link href="/dashboard" className={`w-10 h-10 rounded-lg flex items-center justify-center ${pathname === '/dashboard' ? 'border-2 border-white' : ''}`}>
+              <LayoutDashboard className="h-6 w-6 text-white" />
+            </Link>
+            <Link href="/vendors" className={`w-10 h-10 rounded-lg flex items-center justify-center ${pathname === '/vendors' ? 'border-2 border-white' : ''}`}> 
+              <Store className="h-6 w-6 text-white" />
+            </Link>
+            <Link href="/participants" className={`w-10 h-10 rounded-lg flex items-center justify-center ${pathname === '/participants' ? 'border-2 border-white' : ''}`}> 
+              <Users className="h-6 w-6 text-white" />
+            </Link>
+             <Link href="/programs" className={`w-10 h-10 rounded-lg flex items-center justify-center ${pathname === '/programs' ? 'border-2 border-white' : ''}`}> 
+              <FolderOpen className="h-6 w-6 text-white" />
+            </Link>
+            <Link href="/settings" className={`w-10 h-10 rounded-lg flex items-center justify-center ${pathname === '/settings' ? 'border-2 border-white' : ''}`}> 
+              <Settings className="h-6 w-6 text-white" />
+            </Link>
+          </div>
+          {/* Profile avatar/initials */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="ml-2 w-10 h-10 flex items-center justify-center focus:outline-none bg-transparent">
+                {currentUser?.photoURL ? (
+                  <div className="w-8 h-8 overflow-hidden">
+                    <Image
+                      src={currentUser.photoURL}
+                      alt={currentUser.name}
+                      width={32}
+                      height={32}
+                      className="object-cover rounded-full"
+                    />
+                  </div>
+                ) : (
+                  <span className="w-8 h-8 flex items-center justify-center font-medium text-white">
+                    {getUserInitials(currentUser?.name)}
+                  </span>
+                )}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuLabel>
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium leading-none">
+                    {currentUser?.name}
+                  </p>
+                  <p className="text-xs leading-none text-muted-foreground">
+                    {currentUser?.email}
+                  </p>
+                </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem>
+                <Link href="/profile" className="flex items-center">
+                  <User className="mr-2 h-4 w-4" />
+                  Profile
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem>
+                <Link href="/settings" className="flex items-center">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Settings
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                onClick={handleLogout}
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Logout
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+        {/* Main content with top margin for mobile header offset */}
+        <div className="mt-16 md:mt-0">
+          {/* Main content starts here */}
+          <div className="flex h-screen overflow-hidden bg-background">
+            {/* Sidebar for desktop */}
+            {/* ... existing code ... */}
+          </div>
+        </div>
       </div>
     </>
   );

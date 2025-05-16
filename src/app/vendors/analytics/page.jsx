@@ -615,117 +615,24 @@ export default function VendorsAnalyticsPage() {
               })}
             </nav>
           </div>
-          <div className="flex-shrink-0 p-4">
-            <div className="rounded-lg bg-muted/50 p-3">
-              <div className="flex items-center">
-                {currentUser?.photoURL ? (
-                  <Avatar className="h-9 w-9 border-2 border-primary/20">
-                    <AvatarImage src={currentUser.photoURL} alt={currentUser?.name || "User"} className="object-cover" />
-                    <AvatarFallback className="bg-primary/10 text-primary font-medium">
-                      {getUserInitials(currentUser?.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                ) : (
-                  <div className="h-8 w-8 rounded-full bg-white/10 text-white flex items-center justify-center">
-                    <span className="text-sm font-medium">
-                      {getUserInitials(currentUser?.name)}
-                    </span>
-                  </div>
-                )}
-                <div className="ml-3">
-                  <p className="text-sm font-medium">
-                    {currentUser?.name || "Admin DSWD"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {currentUser?.role || "Administrator"}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
       {/* Main content */}
       <div className="flex flex-col flex-1 overflow-hidden">
-        <div className="relative z-10 flex-shrink-0 flex h-16 bg-card shadow">
-          <button
-            type="button"
-            className="px-4 border-r border-gray-200 text-muted-foreground md:hidden"
-            onClick={() => setIsMobileMenuOpen(true)}
+        {/* Clean mobile header with only back button */}
+        <div className="md:hidden w-full fixed top-0 left-0 z-30 bg-[#0B3D2E] flex items-center px-2 py-1 shadow-lg">
+          <Button
+            variant="ghost"
+            className="flex items-center gap-2 text-white px-2 py-2 text-base font-medium"
+            onClick={() => router.push('/vendors')}
           >
-            <span className="sr-only">Open sidebar</span>
-            <Menu className="h-6 w-6" aria-hidden="true" />
-          </button>
-          <div className="flex-1 px-4 flex justify-between">
-            <div className="flex-1 flex">
-              <div className="w-full flex md:ml-0">
-                <div className="relative w-full text-muted-foreground focus-within:text-gray-600">
-                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center">
-                    <Search className="h-5 w-5 ml-3" aria-hidden="true" />
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="ml-4 flex items-center md:ml-6">
-            
-              {/* Profile dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="rounded-full flex items-center gap-2 px-2">
-                    {currentUser?.photoURL ? (
-                      <Avatar className="h-8 w-8 border-2 border-primary/20">
-                        <AvatarImage src={currentUser.photoURL} alt={currentUser?.name || "User"} className="object-cover" />
-                        <AvatarFallback className="bg-primary/10 text-primary font-medium">
-                          {getUserInitials(currentUser?.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                    ) : (
-                      <Avatar className="h-8 w-8 border-2 border-primary/20">
-                        <AvatarFallback className="bg-primary/10 text-primary font-medium">
-                          {getUserInitials(currentUser?.name)}
-                        </AvatarFallback>
-                      </Avatar>
-                    )}
-                    <span className="hidden sm:inline text-sm font-medium">
-                      {currentUser?.name || "Admin DSWD"}
-                    </span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56 mt-1 rounded-xl p-1">
-                  <DropdownMenuLabel className="px-2 py-1.5">
-                    <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">
-                        {currentUser?.name || "Admin DSWD"}
-                      </p>
-                      <p className="text-xs leading-none text-muted-foreground">
-                        {currentUser?.email || "admin@dswd.gov.ph"}
-                      </p>
-                    </div>
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem className="rounded-lg cursor-pointer">
-                    <Link href="/profile" className="flex w-full items-center">
-                      <Users className="mr-2 h-4 w-4" />
-                      Profile
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem className="rounded-lg cursor-pointer">
-                    <Link href="/settings" className="flex w-full items-center">
-                      <Settings className="mr-2 h-4 w-4" />
-                      Settings
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-        </div>              
-
+            <ArrowLeft className="h-5 w-5" />
+            Back to Projects
+          </Button>
+        </div>
         <main className="flex-1 relative overflow-y-auto focus:outline-none">
-          <div className="py-6">
+          <div className="py-6 mt-10">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex flex-col space-y-4">
                 <h1 className="text-3xl font-bold bg-gradient-to-r from-[#496E22] to-[#6C9331] bg-clip-text text-transparent">

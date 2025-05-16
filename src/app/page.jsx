@@ -23,7 +23,6 @@ import {
   BookOpen,
   Award,
   Eye,
-  Heart,
 } from "lucide-react"
 import { useRouter } from "next/navigation"
 
@@ -373,11 +372,29 @@ export default function LandingPage() {
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  {mobileMenuOpen ? (
-                    <X className="h-5 w-5" aria-hidden="true" />
-                  ) : (
-                    <Menu className="h-5 w-5" aria-hidden="true" />
-                  )}
+                  <AnimatePresence mode="wait">
+                    {mobileMenuOpen ? (
+                      <motion.div
+                        key="close"
+                        initial={{ rotate: -90, opacity: 0 }}
+                        animate={{ rotate: 0, opacity: 1 }}
+                        exit={{ rotate: 90, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <X className="h-5 w-5" aria-hidden="true" />
+                      </motion.div>
+                    ) : (
+                      <motion.div
+                        key="menu"
+                        initial={{ rotate: 90, opacity: 0 }}
+                        animate={{ rotate: 0, opacity: 1 }}
+                        exit={{ rotate: -90, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                      >
+                        <Menu className="h-5 w-5" aria-hidden="true" />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </motion.button>
               </div>
 
@@ -392,19 +409,15 @@ export default function LandingPage() {
                     transition={{ duration: 0.2 }}
                     onClick={() => setMobileMenuOpen(false)}
                   >
+                    {/* Mobile Header Icons */}
                     <motion.div
-                      className="fixed inset-y-0 right-0 max-w-xs w-full bg-white shadow-xl flex flex-col"
-                      initial={{ x: "100%" }}
-                      animate={{ x: 0 }}
-                      exit={{ x: "100%" }}
-                      transition={{
-                        type: "spring",
-                        damping: 30,
-                        stiffness: 300,
-                      }}
-                      onClick={(e) => e.stopPropagation()}
+                      className="fixed top-0 left-0 right-0 bg-white/95 backdrop-blur-sm shadow-md border-b border-emerald-100 py-3 px-4 z-40"
+                      initial={{ x: 100, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      exit={{ x: 100, opacity: 0 }}
+                      transition={{ duration: 0.3 }}
                     >
-                      <div className="p-4 border-b border-emerald-100 flex justify-between items-center">
+                      <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
                           <img
                             src="/images/SLP.png"
@@ -423,52 +436,38 @@ export default function LandingPage() {
                           <X className="h-5 w-5" aria-hidden="true" />
                         </motion.button>
                       </div>
-                      <div className="flex-1 overflow-y-auto py-4">
-                        <nav className="flex flex-col space-y-2 px-4">
-                          <MobileNavLink
-                            href="#hero"
-                            icon={<Home className="mr-3 h-5 w-5" />}
-                            text="Home"
-                            onClick={() => handleNavLinkClick("hero")}
-                            isActive={activeSection === "hero"}
-                          />
-                          <MobileNavLink
-                            href="#about-program"
-                            icon={<Info className="mr-3 h-5 w-5" />}
-                            text="About"
-                            onClick={() => handleNavLinkClick("about-program")}
-                            isActive={activeSection === "about-program"}
-                          />
-                          <MobileNavLink
-                            href="#program-modalities"
-                            icon={<Layers className="mr-3 h-5 w-5" />}
-                            text="Program"
-                            onClick={() => handleNavLinkClick("program-modalities")}
-                            isActive={activeSection === "program-modalities"}
-                          />
-                          <MobileNavLink
-                            href="#mission-vision"
-                            icon={<Target className="mr-3 h-5 w-5" />}
-                            text="Principles"
-                            onClick={() => handleNavLinkClick("mission-vision")}
-                            isActive={activeSection === "mission-vision"}
-                          />
-                          <MobileNavLink
-                            href="#history"
-                            icon={<Clock className="mr-3 h-5 w-5" />}
-                            text="History"
-                            onClick={() => handleNavLinkClick("history")}
-                            isActive={activeSection === "history"}
-                          />
-                          <MobileNavLink
-                            href="#team"
-                            icon={<Users className="mr-3 h-5 w-5" />}
-                            text="Team"
-                            onClick={() => handleNavLinkClick("team")}
-                            isActive={activeSection === "team"}
-                          />
-                        </nav>
-                      </div>
+                      <motion.div
+                        className="flex justify-around mt-4"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        transition={{ delay: 0.2, staggerChildren: 0.1 }}
+                      >
+                        {[
+                          { icon: <Home className="w-5 h-5" />, label: "Home", id: "hero" },
+                          { icon: <Info className="w-5 h-5" />, label: "About", id: "about-program" },
+                          { icon: <Layers className="w-5 h-5" />, label: "Program", id: "program-modalities" },
+                          { icon: <Target className="w-5 h-5" />, label: "Principles", id: "mission-vision" },
+                          { icon: <Users className="w-5 h-5" />, label: "Team", id: "team" },
+                        ].map((item, index) => (
+                          <motion.div
+                            key={index}
+                            className={`flex flex-col items-center ${activeSection === item.id ? "text-emerald-600" : "text-emerald-700"}`}
+                            initial={{ x: -50, opacity: 0 }}
+                            animate={{ x: 0, opacity: 1 }}
+                            transition={{ delay: 0.1 + index * 0.05 }}
+                            onClick={() => handleNavLinkClick(item.id)}
+                          >
+                            <motion.div
+                              className={`p-2 rounded-full ${activeSection === item.id ? "bg-emerald-100" : "bg-gray-50"}`}
+                              whileHover={{ x: 2, scale: 1.1 }}
+                              whileTap={{ scale: 0.95 }}
+                            >
+                              {item.icon}
+                            </motion.div>
+                            <span className="text-xs mt-1">{item.label}</span>
+                          </motion.div>
+                        ))}
+                      </motion.div>
                     </motion.div>
                   </motion.div>
                 )}
@@ -765,47 +764,18 @@ export default function LandingPage() {
                     whileInView={{ opacity: 1, x: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.8 }}
+                    className="relative"
                   >
                     <h3 className="text-2xl font-bold text-emerald-800 mb-6">What is SLP?</h3>
-                    <p className="text-gray-700 mb-6 leading-relaxed">
-                      The Sustainable Livelihood Program (SLP) is a capacity-building program aimed at providing viable
-                      interventions and support to identified poor, vulnerable, and marginalized households and
-                      communities. It helps improve the program participants' socio-economic conditions by accessing and
-                      acquiring necessary assets to engage in and maintain thriving livelihoods.
-                    </p>
-                    <p className="text-gray-700 mb-8 leading-relaxed">
-                      As a component of the Convergence Strategy, the program aims to serve the beneficiaries of the
-                      Pantawid Pamilyang Pilipino Program (4Ps), hoping to sustain and expand beyond the five-year
-                      intervention the socio-economic benefits gained.
-                    </p>
-
-                    <div className="p-6 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-lg border border-emerald-100">
-                      <h4 className="font-semibold text-emerald-800 mb-4">
-                        SLP is implemented through a two-track program:
-                      </h4>
-                      <div className="grid sm:grid-cols-2 gap-4">
-                        <div className="bg-white p-5 rounded-lg shadow-sm border border-emerald-100">
-                          <div className="flex items-center gap-3 mb-3">
-                            <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
-                              <Target className="w-5 h-5" />
-                            </div>
-                            <h5 className="font-semibold text-emerald-700">Microenterprise Development</h5>
-                          </div>
-                          <p className="text-sm text-gray-600">
-                            Supports micro-enterprises in becoming organizationally and economically viable.
-                          </p>
-                        </div>
-                        <div className="bg-white p-5 rounded-lg shadow-sm border border-emerald-100">
-                          <div className="flex items-center gap-3 mb-3">
-                            <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
-                              <Users className="w-5 h-5" />
-                            </div>
-                            <h5 className="font-semibold text-emerald-700">Employment Facilitation</h5>
-                          </div>
-                          <p className="text-sm text-gray-600">
-                            Assists participants to access appropriate employment opportunities.
-                          </p>
-                        </div>
+                    <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl border border-emerald-100 p-0 md:p-0">
+                      <div className="bg-white rounded-xl shadow-xl border border-emerald-100 p-8 md:p-10 max-w-2xl mx-auto">
+                        <p className="text-lg md:text-xl text-gray-700 leading-relaxed">
+                          The Sustainable Livelihood Program (SLP) is a capability-building program of the Department of 
+                          Social Welfare and Development (DSWD) that aims to help the poor, vulnerable, and marginalized 
+                          households and communities to improve their socio-economic conditions through provision of assistance
+                          that strengthens participants' skills, experience, and abilities toward sustainable and profitable 
+                          business and employment.
+                        </p>
                       </div>
                     </div>
                   </motion.div>
@@ -825,14 +795,13 @@ export default function LandingPage() {
                         className="w-full h-60 object-cover"
                       />
                       <div className="bg-white p-8">
-                        <h3 className="text-xl font-bold text-emerald-800 mb-4">Program Objectives</h3>
+                        <h3 className="text-xl font-bold text-emerald-800 mb-4">Learning Objectives</h3>
                         <ul className="space-y-3">
                           {[
-                            "Enhance human assets through technical-vocational and life skills training",
-                            "Extend social assets through membership and participation in SLP associations",
-                            "Expand financial assets through seed capital and access to credit facilities",
-                            "Enrich natural assets that protect and contribute to community livelihoods",
-                            "Establish physical assets for more efficient livelihood operations",
+                            "Know about the Sustainable Livelihood Program",
+                            "Understand the eligibility requirements to join the program",
+                            "Familiarize themselves with the tracks and modalities offered by the program and ",
+                            "Learn about the five-year Livelihood Sustainability Plan of the program and its benefits",
                           ].map((item, index) => (
                             <motion.li
                               key={index}
@@ -962,15 +931,15 @@ export default function LandingPage() {
                         Vision
                       </h3>
                       <div className="pl-2 border-l-4 border-white/30">
-                        <p className="text-white/90 mb-6 leading-relaxed">
-                          An empowered society where the poor, vulnerable, and disadvantaged sectors have immediate and
-                          equitable access to opportunities for an improved quality of life.
-                        </p>
+                        
                         <div className="bg-white/10 backdrop-blur-sm rounded-lg p-5 mt-6">
-                          <h4 className="font-semibold mb-2 text-white">2028 Vision Base Camp</h4>
+                         
                           <p className="text-white/90">
-                            DSWD is a leader in transformation social protection and social welfare system in the
-                            Indo-Pacific region.
+                          The Sustainable Livelihood Program, as the leading
+                          capability-building program, envisions a transformed
+                          poor, vulnerable, and marginalized households and
+                          communities through sustainable and resilient
+                          livelihoods.
                           </p>
                         </div>
                       </div>
@@ -995,9 +964,10 @@ export default function LandingPage() {
                       </h3>
                       <div className="pl-2 border-l-4 border-emerald-200">
                         <p className="text-gray-700 leading-relaxed">
-                          As the authority in the Social Welfare and Development sector, the DSWD develops, implements,
-                          enables, and coordinates SWD policies and programs for and with the poor, vulnerable, and
-                          disadvantage.
+                        To improve the socio-economic condition of the
+                         program participants by building sustainable
+                          livelihoods through accessing and acquiring skills
+                          and assets.
                         </p>
                       </div>
                     </div>
@@ -1011,63 +981,78 @@ export default function LandingPage() {
                   viewport={{ once: true }}
                   transition={{ duration: 0.8 }}
                 >
-                  <h3 className="text-2xl font-bold text-emerald-800 mb-10 text-center">Core Values</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  <h3 className="text-2xl font-bold text-emerald-800 mb-10 text-center">Sustainability Plan</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
                     {[
                       {
-                        title: "Maagap at Mapagkalinga",
+                        title: "Punla",
+                        year: "YEAR 1",
                         description:
-                          "Emphasizes empathy, understanding, and providing care to individuals, families, and communities in need. It reflects the DSWD's recognition of the inherent worth and dignity of every person and their right to be treated with kindness, respect, and support.",
-                        icon: <Heart className="w-6 h-6" />,
+                          "Year 1 can be equated to seed planting, wherein the DSWD-SLP carefully prepares and cultivates the program participants with the basic knowledge and skills in starting up their own micro-enterprises or in securing an employment.",
+                        icon: <Layers className="w-6 h-6" />,
+                        color: "from-emerald-600 to-emerald-700",
                       },
                       {
-                        title: "Matapat",
+                        title: "Usbong",
+                        year: "YEAR 2",
                         description:
-                          "Upholds honest, ethical behavior, and a strong sense of moral principles within the organization. It involves adhering to a set of values and principles that guide the actions and decisions of the DSWD workforce, ensuring that they act with transparency, accountability and professionalism.",
-                        icon: <Shield className="w-6 h-6" />,
+                          "Year 2 centers on the seed progress and self-sustainability wherein the program participants are able to maintain their livelihood operational and secure positive gross sales and net income.",
+                        icon: <Layers className="w-6 h-6" />,
+                        color: "from-emerald-600 to-emerald-700",
                       },
                       {
-                        title: "Mahusay",
+                        title: "Sibol",
+                        year: "YEAR 3",
                         description:
-                          "Provides high-quality, efficient, and effective services to individuals, families, and communities in need. It encompasses a dedication to delivering services anchored in social justice, while also striving for continuous improvement and innovation.",
-                        icon: <Award className="w-6 h-6" />,
+                          "For Year 3, as the seed starts to sprout and grow, the goal of the SLP is to bring the program beneficiaries to new heights. They will be able to expand and mature their business operations and processes to become a positive self-sustaining force at the community level.",
+                        icon: <Layers className="w-6 h-6" />,
+                        color: "from-emerald-600 to-emerald-700",
                       },
-                    ].map((value, index) => (
+                      {
+                        title: "Yabong",
+                        year: "YEAR 4",
+                        description:
+                          "At the point of reaching the state of abundance, in Year 4, the program participants are expected to prosper and bring their products to a wider and multi-faceted market to attract stable institutional buyers.",
+                        icon: <Layers className="w-6 h-6" />,
+                        color: "from-emerald-600 to-emerald-700",
+                      },
+                      {
+                        title: "Ani",
+                        year: "YEAR 5",
+                        description:
+                          "As the culminating and graduation phase of the Program, Year 5 is the condition of fruition and harvesting wherein the SLP will conduct the actual graduation ceremonies of the program participants.",
+                        icon: <Layers className="w-6 h-6" />,
+                        color: "from-emerald-600 to-emerald-700",
+                      },
+                    ].map((phase, index) => (
                       <motion.div
                         key={index}
                         className="bg-white rounded-xl border border-emerald-100 p-6 shadow-sm hover:shadow-md transition-all group"
                         initial={{ opacity: 0, y: 20 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
-                        transition={{ duration: 0.5, delay: 0.2 + index * 0.1 }}
+                        transition={{ duration: 0.5, delay: 0.1 + index * 0.1 }}
                         whileHover={{ y: -5 }}
                       >
                         <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-5 group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                          {value.icon}
+                          {phase.icon}
                         </div>
-                        <h4 className="text-lg font-semibold text-emerald-800 mb-3">{value.title}</h4>
-                        <p className="text-gray-600 text-sm">{value.description}</p>
+                        <div className="text-center mb-3">
+                          <h4 className="text-2xl font-bold text-emerald-800">{phase.title}</h4>
+                          <p className="text-sm font-semibold text-emerald-600">{phase.year}</p>
+                        </div>
+                        <p className="text-gray-600 text-sm text-center">{phase.description}</p>
                       </motion.div>
                     ))}
                   </div>
                 </motion.div>
 
-                <div className="text-center mt-12">
-                  <motion.div
-                    className="inline-block"
-                    initial={{ opacity: 0 }}
-                    whileInView={{ opacity: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 0.5, delay: 0.8 }}
-                  >
-                    <p className="text-emerald-600 font-medium text-lg">#BawatBuhayMayHalagaSaDSWD</p>
-                  </motion.div>
-                </div>
+               
               </div>
             </section>
 
             {/* Our Team */}
-            <section id="team" className="py-20 bg-gradient-to-b from-white to-emerald-50 relative overflow-hidden">
+            <section id="team" className=" bg-gradient-to-b from-white to-emerald-50 relative overflow-hidden">
               {/* Background decorative elements */}
               <div className="absolute inset-0 pointer-events-none opacity-30">
                 <div className="absolute -left-20 top-40 w-80 h-80 bg-emerald-100 rounded-full blur-3xl opacity-50"></div>
@@ -1105,7 +1090,7 @@ export default function LandingPage() {
                   >
                     <div className="text-center mb-10">
                       <h3 className="inline-block text-xl font-bold text-emerald-800 px-6 py-1 rounded-full bg-emerald-50 border border-emerald-100">
-                        Leadership
+                        Provincial Head
                       </h3>
                     </div>
 
@@ -1228,7 +1213,7 @@ export default function LandingPage() {
                         {
                           name: "Edward R. Parrocha",
                           title: "Monitoring Project Development Officer",
-                          image: "/images/avatar8.png",
+                          image: "/images/edward.jpg",
                           delay: 0.4,
                         },
                       ].map((member, index) => (
@@ -1398,7 +1383,7 @@ export default function LandingPage() {
             </section>
 
             {/* Footer */}
-            <footer className="bg-gray-900 text-white pt-20 pb-10 relative overflow-hidden">
+            <footer id="team" className="py-20 bg-gradient-to-b from-white to-emerald-50 relative overflow-hidden">
               {/* Background patterns */}
               <div className="absolute inset-0 pointer-events-none overflow-hidden">
                 <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-emerald-500/20 to-transparent"></div>
@@ -1816,7 +1801,7 @@ function OrgChartCloud({ node, level = 0, isLast = false }) {
 
   return (
     <div className="flex flex-col items-center relative">
-      {renderProfileImage()}  
+      {renderProfileImage()}
       {renderCloudCard()}
       {renderChildren()}
     </div>

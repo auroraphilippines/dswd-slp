@@ -9,7 +9,6 @@ import {
   FileBarChart,
   Settings,
   Users,
-  Menu,
   X,
   Bell,
   Search,
@@ -38,6 +37,7 @@ import {
   Pencil,
   Trash,
   MoreVertical,
+  LogOut,
 } from "lucide-react"
 // Rename the imported Button to DefaultButton
 import { Button as DefaultButton } from "@/components/ui/button"
@@ -61,7 +61,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { db, auth } from "@/service/firebase"
-import { doc, collection, addDoc, updateDoc, deleteDoc, getDocs, query, orderBy, getDoc } from "firebase/firestore"
+import { doc, collection, addDoc, updateDoc, deleteDoc, getDocs, query, orderBy, getDoc, setDoc, writeBatch, serverTimestamp } from "firebase/firestore"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import {
   Breadcrumb,
@@ -73,7 +73,8 @@ import {
 import { Progress } from "@/components/ui/progress"
 import { cn } from "@/lib/utils"
 import { debounce } from "lodash"
-import { toast } from "react-toastify"
+import { toast, ToastContainer } from "react-toastify"
+import "react-toastify/dist/ReactToastify.css"
 import Image from "next/image"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { getProfilePhotoFromLocalStorage } from "@/service/storage"
@@ -125,7 +126,7 @@ const FileIcons = {
       <path fill="#217346" d="M377 105L279.1 7c-4.5-4.5-10.6-7-17-7H256v128h128v-6.1c0-6.3-2.5-12.4-7-16.9z" />
       <path
         fill="#217346"
-        d="M96 320v-24c0-6.6 5.4-12 12-12h72c6.6 0 12 5.4 12 12v24c0 6.6-5.4 12-12 12H108c-6.6 0-12-5.4-12-12zm0-96v-24c0-6.6 5.4-12 12-12h72c6.6 0 12 5.4 12 12v24c0 6.6-5.4 12-12 12H108c-6.6 0-12-5.4-12-12z"
+        d="M96 320v-24c0-6.6 5.4-12 12-12h72c6.6 0 12 5.4 12 12v24c0 6.6-5.4 12-12 12H108c-6.6 0-12-5.4-12-12z"
       />
     </svg>
   ),
@@ -138,7 +139,7 @@ const FileIcons = {
       <path fill="#217346" d="M377 105L279.1 7c-4.5-4.5-10.6-7-17-7H256v128h128v-6.1c0-6.3-2.5-12.4-7-16.9z" />
       <path
         fill="#217346"
-        d="M96 320v-24c0-6.6 5.4-12 12-12h72c6.6 0 12 5.4 12 12v24c0 6.6-5.4 12-12 12H108c-6.6 0-12-5.4-12-12zm0-96v-24c0-6.6 5.4-12 12-12h72c6.6 0 12 5.4 12 12v24c0 6.6-5.4 12-12 12H108c-6.6 0-12-5.4-12-12z"
+        d="M96 320v-24c0-6.6 5.4-12 12-12h72c6.6 0 12 5.4 12 12v24c0 6.6-5.4 12-12 12H108c-6.6 0-12-5.4-12-12z"
       />
     </svg>
   ),
@@ -181,11 +182,74 @@ export default function ProgramsPage() {
   const [uploadProgress, setUploadProgress] = useState(0)
   const [isUploading, setIsUploading] = useState(false)
   const [userPermissions, setUserPermissions] = useState({
-    readOnly: true, // Default to read-only
+    readOnly: true,
     accessProject: false,
     accessParticipant: false,
     accessFileStorage: false
   });
+  const [deleteTarget, setDeleteTarget] = useState(null);
+
+  // Add getUserInitials function
+  const getUserInitials = (name) => {
+    if (!name) return "AD";
+    const words = name.trim().split(" ").filter(Boolean);
+    if (words.length >= 2) {
+      return (words[0][0] + words[1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  // Add handleLogout function
+  const handleLogout = async () => {
+    try {
+      // Update user status to offline before logging out
+      if (currentUser?.uid) {
+        await updateDoc(doc(db, "users", currentUser.uid), {
+          status: "offline",
+          lastActive: serverTimestamp()
+        });
+      }
+      
+      // Sign out from Firebase
+      await auth.signOut();
+      
+      // Clear any local storage items if needed
+      localStorage.removeItem('userProfile');
+      
+      // Show success message
+      toast.success("Logged out successfully");
+      
+      // Redirect to login page
+      window.location.href = "/";
+    } catch (error) {
+      console.error("Error logging out:", error);
+      toast.error("Failed to log out. Please try again.");
+    }
+  };
+
+  const formatDate = (date) => {
+    if (!date) return "N/A";
+    const d = new Date(date);
+    if (isNaN(d.getTime())) return "Invalid Date";
+    
+    const now = new Date();
+    const diff = now - d;
+    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    
+    if (days === 0) {
+      return "Today";
+    } else if (days === 1) {
+      return "Yesterday";
+    } else if (days < 7) {
+      return `${days} days ago`;
+    } else {
+      return d.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    }
+  };
 
   const filterOptions = [
     { label: "All Files", value: "all", icon: File },
@@ -324,6 +388,63 @@ export default function ProgramsPage() {
 
     initializeData()
   }, [])
+
+  // Add useEffect for fetching current user
+  useEffect(() => {
+    const fetchCurrentUser = async () => {
+      try {
+        const user = auth.currentUser;
+        if (user) {
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            setCurrentUser({
+              uid: user.uid,
+              email: user.email,
+              name: userData.name || user.displayName || user.email?.split('@')[0] || 'User',
+              role: userData.role || 'User',
+              photoURL: userData.photoURL || user.photoURL,
+              ...userData
+            });
+          } else {
+            // If user document doesn't exist, create it with basic info
+            const basicUserData = {
+              name: user.displayName || user.email?.split('@')[0] || 'User',
+              email: user.email,
+              role: 'User',
+              createdAt: new Date(),
+              permissions: {
+                readOnly: true,
+                accessProject: false,
+                accessParticipant: false,
+                accessFileStorage: false
+              }
+            };
+            await setDoc(doc(db, "users", user.uid), basicUserData);
+            setCurrentUser({
+              uid: user.uid,
+              ...basicUserData
+            });
+          }
+        }
+      } catch (error) {
+        console.error("Error fetching current user:", error);
+        toast.error("Error loading user information");
+      }
+    };
+
+    // Set up auth state listener
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        fetchCurrentUser();
+      } else {
+        setCurrentUser(null);
+      }
+    });
+
+    // Cleanup subscription
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     const fetchUserPermissions = async () => {
@@ -539,10 +660,10 @@ export default function ProgramsPage() {
         });
 
         // Update local state
-        setCurrentFolder((prev) => ({
-          ...prev,
+        const updatedFolder = {
+          ...currentFolder,
           files: [
-            ...(prev.files || []),
+            ...(currentFolder.files || []),
             {
               id: fileDoc.id,
               name: cleanFileName,
@@ -555,9 +676,16 @@ export default function ProgramsPage() {
             },
           ],
           lastModified: new Date(),
-          totalFiles: (prev.files?.length || 0) + 1,
-          totalSize: (prev.totalSize || 0) + selectedFile.size,
-        }));
+          totalFiles: (currentFolder.files?.length || 0) + 1,
+          totalSize: (currentFolder.totalSize || 0) + selectedFile.size,
+        };
+
+        setCurrentFolder(updatedFolder);
+        setFolders(prev => 
+          prev.map(folder => 
+            folder.id === currentFolder.id ? updatedFolder : folder
+          )
+        );
       }
 
       // Complete the progress
@@ -597,142 +725,428 @@ export default function ProgramsPage() {
       showPermissionDenied('delete folders');
       return;
     }
-
-    if (!window.confirm("Are you sure you want to delete this folder?")) return
-
-    try {
-      await deleteDoc(doc(db, "programs", folderId))
-      setFolders((prev) => prev.filter((folder) => folder.id !== folderId))
-    } catch (error) {
-      console.error("Error deleting folder:", error)
-    }
-  }
+    // Instead of window.confirm, open modal
+    const folder = folders.find(f => f.id === folderId);
+    setDeleteTarget({ type: 'folder', data: folder });
+  };
 
   const handleDeleteFile = async (file) => {
     if (!hasWritePermissions()) {
       showPermissionDenied('delete files');
       return;
     }
+    // Instead of window.confirm, open modal
+    setDeleteTarget({ type: 'file', data: file });
+  };
 
-    if (!window.confirm("Are you sure you want to delete this file?")) return
-
-    // Check if user is authenticated
-    const user = auth.currentUser
-    if (!user) {
-      alert("You must be logged in to delete files")
-      return
-    }
-
-    // Check if user is authorized to delete the file
-    if (file.uploaderId !== user.uid) {
-      alert("You can only delete files that you have uploaded")
-      return
-    }
-
+  // Confirm delete action
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    
     try {
-      // Delete all chunks first
-      const chunksSnapshot = await getDocs(collection(db, "files", file.id, "chunks"))
-      const deleteChunksPromises = chunksSnapshot.docs.map((doc) => deleteDoc(doc.ref))
-      await Promise.all(deleteChunksPromises)
+      if (deleteTarget.type === 'folder') {
+        const folderId = deleteTarget.data.id;
+        await deleteDoc(doc(db, "programs", folderId));
+        setFolders((prev) => prev.filter((folder) => folder.id !== folderId));
+        if (currentFolder?.id === folderId) {
+          setCurrentFolder(null);
+        }
+        toast.success("Folder deleted successfully");
+      } else if (deleteTarget.type === 'file') {
+        const file = deleteTarget.data;
+        
+        // Start all operations in parallel
+        const operations = [];
 
-      // Delete the file document from Firestore
-      await deleteDoc(doc(db, "files", file.id))
+        // 1. Get all chunks in parallel with file deletion
+        const chunksRef = collection(db, "files", file.id, "chunks");
+        const chunksPromise = getDocs(chunksRef);
+        
+        // 2. Update folder document and local state immediately
+        if (currentFolder) {
+          const updatedFiles = currentFolder.files.filter(f => f.id !== file.id);
+          const folderRef = doc(db, "programs", currentFolder.id);
+          
+          // Update local state immediately for better UX
+          setCurrentFolder(prev => ({
+            ...prev,
+            files: updatedFiles,
+            lastModified: new Date(),
+            totalFiles: updatedFiles.length,
+            totalSize: updatedFiles.reduce((sum, f) => sum + (f.size || 0), 0)
+          }));
 
-      // Update folder document by removing the file
-      const folderRef = doc(db, "programs", currentFolder.id)
-      const updatedFiles = currentFolder.files.filter((f) => f.name !== file.name)
+          setFolders(prev => 
+            prev.map(folder => 
+              folder.id === currentFolder.id
+                ? {
+                    ...folder,
+                    files: updatedFiles,
+                    lastModified: new Date(),
+                    totalFiles: updatedFiles.length,
+                    totalSize: updatedFiles.reduce((sum, f) => sum + (f.size || 0), 0)
+                  }
+                : folder
+            )
+          );
 
-      await updateDoc(folderRef, {
-        files: updatedFiles,
-        lastModified: new Date(),
-        totalFiles: (currentFolder.files?.length || 0) - 1,
-        totalSize: (currentFolder.totalSize || 0) - file.size,
-      })
+          // Add folder update to operations
+          operations.push(
+            updateDoc(folderRef, {
+              files: updatedFiles,
+              lastModified: new Date(),
+              totalFiles: updatedFiles.length,
+              totalSize: updatedFiles.reduce((sum, f) => sum + (f.size || 0), 0)
+            })
+          );
+        }
 
-      // Update local state
-      setFolders((prev) =>
-        prev.map((folder) =>
-          folder.id === currentFolder.id
-            ? {
-                ...folder,
-                files: updatedFiles,
-                lastModified: new Date(),
-                totalFiles: (folder.files?.length || 0) - 1,
-                totalSize: (folder.totalSize || 0) - file.size,
-              }
-            : folder,
-        ),
-      )
+        // 3. Delete file document
+        const fileRef = doc(db, "files", file.id);
+        operations.push(deleteDoc(fileRef));
 
-      // Also update current folder state
-      setCurrentFolder((prev) => ({
-        ...prev,
-        files: updatedFiles,
-        lastModified: new Date(),
-        totalFiles: (prev.files?.length || 0) - 1,
-        totalSize: (prev.totalSize || 0) - file.size,
-      }))
+        // 4. Process chunks deletion
+        const chunksSnapshot = await chunksPromise;
+        const chunks = chunksSnapshot.docs;
+        
+        // Delete chunks in parallel batches of 500
+        const chunkBatches = [];
+        let currentBatch = writeBatch(db);
+        let operationCount = 0;
+        
+        chunks.forEach((doc) => {
+          currentBatch.delete(doc.ref);
+          operationCount++;
+          
+          if (operationCount === 500) {
+            chunkBatches.push(currentBatch.commit());
+            currentBatch = writeBatch(db);
+            operationCount = 0;
+          }
+        });
+        
+        if (operationCount > 0) {
+          chunkBatches.push(currentBatch.commit());
+        }
+
+        // Execute all operations in parallel
+        await Promise.all([
+          ...operations,
+          ...chunkBatches
+        ]);
+        
+        toast.success("File deleted successfully");
+      }
     } catch (error) {
-      console.error("Error deleting file:", error)
-      alert("Error deleting file. Please try again.")
+      console.error(`Error deleting ${deleteTarget.type}:`, error);
+      toast.error(`Failed to delete ${deleteTarget.type}. Please try again.`);
+    } finally {
+      setDeleteTarget(null);
     }
-  }
+  };
+
+  const cancelDelete = () => {
+    setDeleteTarget(null);
+  };
+
+  const renderFileContent = () => {
+    if (!currentFolder?.files?.length) {
+      return null;
+    }
+
+    const processedFiles = getProcessedItems(currentFolder.files);
+
+    if (viewMode === "grid") {
+      return (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8 gap-3 sm:gap-4 md:gap-6 p-2 sm:p-4">
+          {processedFiles.map((file) => {
+            const fileExtension = file.name.split('.').pop().toLowerCase();
+            const fileIcon = FileIcons[fileExtension] || FileIcons.default;
+
+            return (
+              <Card
+                key={file.id}
+                className="group cursor-pointer border border-border/40 hover:border-primary/30 hover:shadow-md transition-all duration-200 overflow-hidden bg-gradient-to-b from-background to-muted/20"
+              >
+                <CardContent className="p-3 sm:p-4 flex flex-col items-center">
+                  <div className="relative w-16 h-16 sm:w-24 sm:h-24 mx-auto mb-2 sm:mb-3 group-hover:scale-105 transition-transform duration-200">
+                    <div className="absolute inset-0 bg-gradient-to-br from-primary/15 to-primary/5 rounded-lg shadow-sm group-hover:from-primary/25 group-hover:to-primary/10 transition-all duration-200"></div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      {fileIcon}
+                    </div>
+                    <div className="absolute -bottom-1 -right-1 bg-background border border-border rounded-full px-2 py-0.5 text-xs font-medium shadow-sm">
+                      {formatFileSize(file.size)}
+                    </div>
+                    <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 bg-background/80 hover:bg-background rounded-full shadow-sm"
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleDownloadFile(file)}>
+                            <Download className="mr-2 h-4 w-4" />
+                            Download
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDeleteFile(file)}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                  <div className="w-full text-center mt-2">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <p className="text-sm font-medium truncate group-hover:text-primary transition-colors px-2">
+                            {file.originalName || file.name}
+                          </p>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="max-w-[200px] break-words">
+                          <p>{file.originalName || file.name}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <div className="flex items-center justify-center gap-2 mt-2 sm:hidden">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-primary hover:text-primary/80"
+                        onClick={() => handleDownloadFile(file)}
+                      >
+                        <Download className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-destructive hover:text-destructive/80"
+                        onClick={() => handleDeleteFile(file)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+      );
+    } else {
+      return (
+        <div className="overflow-hidden rounded-md border border-border/40 bg-background">
+          <div className="grid grid-cols-12 py-2 px-2 sm:px-4 bg-muted/50 text-xs font-medium text-muted-foreground">
+            <div className="col-span-6 sm:col-span-6">Name</div>
+            <div className="col-span-2 text-center hidden sm:block">Size</div>
+            <div className="col-span-4 text-right">Actions</div>
+          </div>
+          <div className="divide-y divide-border/40">
+            {processedFiles.map((file) => {
+              const fileExtension = file.name.split('.').pop().toLowerCase();
+              const fileIcon = FileIcons[fileExtension] || FileIcons.default;
+
+              return (
+                <div
+                  key={file.id}
+                  className="grid grid-cols-12 py-2 sm:py-3 px-2 sm:px-4 items-center hover:bg-muted/30 cursor-pointer border-l-2 border-transparent hover:border-primary/40 transition-all duration-200"
+                >
+                  <div className="col-span-6 sm:col-span-6 flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center">
+                      {fileIcon}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span className="font-medium block text-sm truncate">
+                              {file.originalName || file.name}
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="bottom" className="max-w-[200px] break-words">
+                            <p>{file.originalName || file.name}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      <div className="flex items-center gap-2 mt-1 sm:hidden">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-primary hover:text-primary/80"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDownloadFile(file);
+                          }}
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 px-2 text-destructive hover:text-destructive/80"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteFile(file);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <span className="text-xs text-muted-foreground block sm:hidden">
+                        {formatFileSize(file.size)}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="col-span-2 text-center hidden sm:block">
+                    <Badge variant="outline" className="bg-background">
+                      {formatFileSize(file.size)}
+                    </Badge>
+                  </div>
+                  <div className="col-span-4 text-right">
+                    <div className="hidden sm:flex justify-end">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-primary/10">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleDownloadFile(file)}>
+                            <Download className="mr-2 h-4 w-4" />
+                            Download
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDeleteFile(file)}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+  };
+
+  const formatFileSize = (bytes) => {
+    if (!bytes) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB", "GB", "TB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+  };
+
+  const handleDownloadFile = async (file) => {
+    try {
+      // Get all chunks for the file
+      const chunksRef = collection(db, "files", file.id, "chunks");
+      const chunksSnapshot = await getDocs(chunksRef);
+      
+      // Sort chunks by index
+      const chunks = chunksSnapshot.docs
+        .map(doc => doc.data())
+        .sort((a, b) => a.index - b.index);
+      
+      // Combine chunks
+      const base64Data = chunks.map(chunk => chunk.data).join('');
+      
+      // Convert base64 to blob
+      const byteCharacters = atob(base64Data);
+      const byteArrays = [];
+      
+      for (let offset = 0; offset < byteCharacters.length; offset += 1024) {
+        const slice = byteCharacters.slice(offset, offset + 1024);
+        const byteNumbers = new Array(slice.length);
+        
+        for (let i = 0; i < slice.length; i++) {
+          byteNumbers[i] = slice.charCodeAt(i);
+        }
+        
+        const byteArray = new Uint8Array(byteNumbers);
+        byteArrays.push(byteArray);
+      }
+      
+      const blob = new Blob(byteArrays, { type: file.type });
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = file.originalName || file.name;
+      document.body.appendChild(a);
+      a.click();
+      
+      // Cleanup
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast.success("File downloaded successfully");
+    } catch (error) {
+      console.error("Error downloading file:", error);
+      toast.error("Failed to download file");
+    }
+  };
 
   const renderFolderContent = () => {
     if (!folders.length) {
       return (
-        <div className="flex flex-col items-center justify-center py-16">
-          <div className="relative mb-6">
+        <div className="flex flex-col items-center justify-center py-8 sm:py-16">
+          <div className="relative mb-4 sm:mb-6">
             <div className="absolute inset-0 bg-primary/10 rounded-full animate-pulse"></div>
-            <div className="relative h-28 w-28 text-primary/70">
+            <div className="relative h-24 w-24 sm:h-28 sm:w-28 text-primary/70">
               <FolderOpen className="w-full h-full" />
             </div>
           </div>
-          <h3 className="text-xl font-medium">No folders yet</h3>
-          <p className="text-muted-foreground text-sm mt-2 max-w-md text-center">
+          <h3 className="text-lg sm:text-xl font-medium text-center">No folders yet</h3>
+          <p className="text-sm text-muted-foreground mt-2 max-w-md text-center">
             Create a new folder to organize your migration documents and files
           </p>
           <Button
             onClick={() => setIsCreateFolderOpen(true)}
-            className="mt-6 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-md hover:shadow-lg transition-all duration-200"
+            className="mt-4 sm:mt-6 w-full sm:w-auto bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-md hover:shadow-lg transition-all duration-200"
             size="lg"
           >
             <Plus className="mr-2 h-5 w-5" />
             Create New Folder
           </Button>
         </div>
-      )
+      );
     }
 
     const processedFolders = sortItems(
       folders.filter(folder => 
         folder.name.toLowerCase().includes(searchQuery.toLowerCase())
       )
-    )
+    );
 
     if (viewMode === "grid") {
       return (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-6 p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 2xl:grid-cols-8 gap-3 sm:gap-4 md:gap-6 p-2 sm:p-4">
           {processedFolders.map((folder) => (
             <Card
               key={folder.id}
               className="group cursor-pointer border border-border/40 hover:border-primary/30 hover:shadow-md transition-all duration-200 overflow-hidden bg-gradient-to-b from-background to-muted/20"
               onClick={() => setCurrentFolder(folder)}
             >
-              <CardContent className="p-4 flex flex-col items-center">
-                {/* Folder icon with enhanced gradient */}
-                <div className="relative w-24 h-24 mx-auto mb-3 group-hover:scale-105 transition-transform duration-200">
+              <CardContent className="p-3 sm:p-4 flex flex-col items-center">
+                <div className="relative w-16 h-16 sm:w-24 sm:h-24 mx-auto mb-2 sm:mb-3 group-hover:scale-105 transition-transform duration-200">
                   <div className="absolute inset-0 bg-gradient-to-br from-primary/15 to-primary/5 rounded-lg shadow-sm group-hover:from-primary/25 group-hover:to-primary/10 transition-all duration-200"></div>
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <Folder className="w-16 h-16 text-primary/80" />
+                    <Folder className="w-10 h-10 sm:w-16 sm:h-16 text-primary/80" />
                   </div>
-
-                  {/* File count badge */}
                   <div className="absolute -bottom-1 -right-1 bg-background border border-border rounded-full px-2 py-0.5 text-xs font-medium shadow-sm">
                     {folder.files?.length || 0} files
                   </div>
-
-                  {/* Actions dropdown - only show on hover */}
                   <div className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
@@ -747,8 +1161,8 @@ export default function ProgramsPage() {
                       <DropdownMenuContent align="end">
                         <DropdownMenuItem
                           onClick={(e) => {
-                            e.stopPropagation()
-                            handleRenameFolder(folder.id, prompt("Enter new name:", folder.name))
+                            e.stopPropagation();
+                            handleRenameFolder(folder.id, prompt("Enter new name:", folder.name));
                           }}
                         >
                           <Edit2 className="mr-2 h-4 w-4" />
@@ -756,8 +1170,8 @@ export default function ProgramsPage() {
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={(e) => {
-                            e.stopPropagation()
-                            handleDeleteFolder(folder.id)
+                            e.stopPropagation();
+                            handleDeleteFolder(folder.id);
                           }}
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
@@ -767,55 +1181,71 @@ export default function ProgramsPage() {
                     </DropdownMenu>
                   </div>
                 </div>
-
-                {/* Folder name with better styling */}
                 <div className="w-full text-center mt-2">
-                  <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">
-                    {folder.name}
-                  </p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{formatDate(folder.createdAt || new Date())}</p>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <p className="text-sm font-medium truncate group-hover:text-primary transition-colors px-2">
+                          {folder.name}
+                        </p>
+                      </TooltipTrigger>
+                      <TooltipContent side="bottom" className="max-w-[200px] break-words">
+                        <p>{folder.name}</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 </div>
               </CardContent>
             </Card>
           ))}
         </div>
-      )
+      );
     } else {
-      // List view
       return (
         <div className="overflow-hidden rounded-md border border-border/40 bg-background">
-          <div className="grid grid-cols-12 py-2 px-4 bg-muted/50 text-xs font-medium text-muted-foreground">
-            <div className="col-span-6">Name</div>
-            <div className="col-span-2 text-center">Files</div>
-            <div className="col-span-3 text-center">Created</div>
-            <div className="col-span-1 text-right">Actions</div>
+          <div className="grid grid-cols-12 py-2 px-2 sm:px-4 bg-muted/50 text-xs font-medium text-muted-foreground">
+            <div className="col-span-6 sm:col-span-6">Name</div>
+            <div className="col-span-2 text-center hidden sm:block">Files</div>
+            <div className="col-span-4 text-right">Actions</div>
           </div>
           <div className="divide-y divide-border/40">
             {processedFolders.map((folder) => (
               <div
-                className="grid grid-cols-12 py-3 px-4 items-center hover:bg-muted/30 cursor-pointer border-l-2 border-transparent hover:border-primary/40 transition-all duration-200"
+                key={folder.id}
+                className="grid grid-cols-12 py-2 sm:py-3 px-2 sm:px-4 items-center hover:bg-muted/30 cursor-pointer border-l-2 border-transparent hover:border-primary/40 transition-all duration-200"
                 onClick={() => setCurrentFolder(folder)}
               >
-                <div className="col-span-6 flex items-center gap-2">
+                <div className="col-span-6 sm:col-span-6 flex items-center gap-2">
                   <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center">
                     <Folder className="h-4 w-4 text-primary" />
                   </div>
-                  <div>
-                    <span className="font-medium truncate block">{folder.name}</span>
-                    <span className="text-xs text-muted-foreground">
-                      Created {folder.createdAt ? new Date(folder.createdAt.toDate()).toLocaleDateString() : "N/A"}
+                  <div className="min-w-0 flex-1">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="font-medium block text-sm truncate">
+                            {folder.name}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom" className="max-w-[200px] break-words">
+                          <p>{folder.name}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                    <span className="text-xs text-muted-foreground block sm:hidden">
+                      {folder.files?.length || 0} files • {formatDate(folder.createdAt)}
                     </span>
                   </div>
                 </div>
-                <div className="col-span-2 text-center">
+                <div className="col-span-2 text-center hidden sm:block">
                   <Badge variant="outline" className="bg-background">
                     {folder.files?.length || 0} files
                   </Badge>
                 </div>
-                <div className="col-span-3 text-center text-sm">
+                <div className="col-span-4 text-right">
                   <div className="inline-flex items-center gap-1.5">
                     <div className="w-2 h-2 rounded-full bg-primary/60"></div>
-                    <span>{folder.createdAt ? new Date(folder.createdAt.toDate()).toLocaleDateString() : "N/A"}</span>
+                    <span>{formatDate(folder.createdAt)}</span>
                   </div>
                 </div>
                 <div className="col-span-1 flex justify-end" onClick={(e) => e.stopPropagation()}>
@@ -843,594 +1273,209 @@ export default function ProgramsPage() {
             ))}
           </div>
         </div>
-      )
+      );
     }
-  }
+  };
 
-  const getFileIcon = (fileType) => {
-    const getFileExtension = (type) => {
-      if (!type) return "default"
-
-      // Check for specific MIME types first
-      if (type.includes("wordprocessingml.document") || type.includes("msword") || type.includes("word")) return "doc"
-      if (type.includes("spreadsheetml.sheet") || type.includes("excel") || type.includes("sheet")) return "xls"
-      if (type.includes("pdf")) return "pdf"
-
-      // Then check file extensions from the type string
-      const extensionMatch = type.match(/\.([0-9a-z]+)$/i)
-      if (extensionMatch) {
-        const ext = extensionMatch[1].toLowerCase()
-        if (["doc", "docx"].includes(ext)) return "doc"
-        if (["xls", "xlsx", "csv"].includes(ext)) return "xls"
-        if (ext === "pdf") return "pdf"
-      }
-
-      return "default"
-    }
-
-    const extension = getFileExtension(fileType)
-    const icon = FileIcons[extension] || FileIcons.default
-
-    return (
-      <div className="relative w-full h-full flex items-center justify-center bg-white dark:bg-gray-800 rounded-lg shadow-sm">
-        {icon}
-        <div className="absolute bottom-1 right-1 text-[10px] font-medium bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-1.5 rounded uppercase">
-          {extension}
+  // Mobile search bar header
+  <div className="md:hidden w-full fixed top-0 left-0 z-30 bg-[#0B3D2E] flex items-center px-2 py-2 shadow-lg">
+    <form onSubmit={handleSearchSubmit} className="flex-1 flex relative">
+      <div className="w-full flex relative">
+        <label htmlFor="search-field-mobile" className="sr-only">
+          Search files and folders
+        </label>
+        <div className="relative w-full text-white/70 focus-within:text-white">
+          <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none">
+            <Search className="h-5 w-5 ml-3" aria-hidden="true" />
+          </div>
+          <Input
+            ref={searchRef}
+            id="search-field-mobile"
+            className={cn(
+              "block w-full h-10 pl-10 pr-8 py-2 border-transparent text-white/70",
+              "placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-white/20",
+              "focus:border-transparent sm:text-sm transition-all duration-200",
+              "bg-white/10 hover:bg-white/20",
+              searchFocused && "shadow-lg"
+            )}
+            placeholder="Search files by name, type, or date..."
+            type="search"
+            defaultValue={searchQuery}
+            onChange={handleSearchChange}
+            onFocus={() => setSearchFocused(true)}
+            onBlur={() => setSearchFocused(false)}
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={clearSearch}
+              className="absolute inset-y-0 right-0 flex items-center pr-3 hover:text-white"
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </button>
+          )}
         </div>
       </div>
-    )
-  }
-
-  const handleFileDownload = async (file) => {
-    try {
-      // Get the file document from Firestore
-      const fileDoc = await getDoc(doc(db, "files", file.id))
-      if (!fileDoc.exists()) {
-        throw new Error("File not found")
-      }
-
-      const fileData = fileDoc.data()
-
-      // Get all chunks
-      const chunksSnapshot = await getDocs(query(collection(db, "files", file.id, "chunks"), orderBy("index")))
-
-      // Combine chunks
-      const chunks = chunksSnapshot.docs.map((doc) => doc.data().data)
-      const base64Data = chunks.join("")
-
-      // Convert base64 to blob
-      const binaryString = atob(base64Data)
-      const bytes = new Uint8Array(binaryString.length)
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i)
-      }
-      const blob = new Blob([bytes], { type: fileData.type })
-
-      // Create download link
-      const url = window.URL.createObjectURL(blob)
-      const a = document.createElement("a")
-      a.href = url
-      a.download = file.originalName
-      document.body.appendChild(a)
-      a.click()
-      window.URL.revokeObjectURL(url)
-      document.body.removeChild(a)
-    } catch (error) {
-      console.error("Error downloading file:", error)
-      alert("Error downloading file. Please try again.")
-    }
-  }
-
-  const formatDate = (date) => {
-    if (!date) return "N/A"
-    // Handle both Firestore Timestamp and regular Date objects
-    const dateObj = date instanceof Date ? date : date.toDate?.() || new Date(date)
-    return dateObj.toLocaleDateString()
-  }
-
-  const renderFileContent = () => {
-    if (!currentFolder) return null
-
-    const processedFiles = getProcessedItems(currentFolder.files)
-
-    if (viewMode === "grid") {
-      return (
-        <div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-6 p-4">
-            {processedFiles.map((file, index) => (
-              <Card
-                key={index}
-                className="group cursor-pointer border border-border/40 hover:border-primary/30 hover:shadow-md transition-all duration-200 overflow-hidden bg-gradient-to-b from-background to-muted/20"
-              >
-                <CardContent className="p-4 flex flex-col items-center">
-                  {/* File icon with enhanced styling */}
-                  <div className="relative w-24 h-24 mx-auto mb-3 group-hover:scale-105 transition-transform duration-300">
-                    <div className="absolute inset-0 bg-gradient-to-br from-background/80 to-muted/50 rounded-xl shadow-lg backdrop-blur-sm transition-all duration-300 group-hover:shadow-xl"></div>
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      {getFileIcon(file.type)}
-                    </div>
-
-                    {/* Enhanced file size badge */}
-                    <div className="absolute -bottom-1 -right-1 bg-background/95 backdrop-blur-sm border border-border/40 rounded-full px-2.5 py-1 text-xs font-medium shadow-lg">
-                      {formatFileSize(file.size)}
-                    </div>
-
-                    {/* Enhanced quick action buttons */}
-                    <div className="absolute -bottom-12 left-0 right-0 group-hover:bottom-0 transition-all duration-300 flex justify-center gap-1.5 p-1.5 bg-background/95 backdrop-blur-sm border-t border-border/40">
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 rounded-full hover:bg-primary/10 hover:text-primary transition-colors duration-200"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleFileDownload(file);
-                              }}
-                            >
-                              <Download className="h-4 w-4" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent side="bottom">
-                            <p>Download file</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                      {hasWritePermissions() && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 rounded-full hover:bg-destructive/10 hover:text-destructive transition-colors duration-200"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleDeleteFile(file);
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent side="bottom">
-                              <p>Delete file</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* File name with better styling */}
-                  <div className="w-full text-center mt-2">
-                    <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">
-                      {file.name}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{formatDate(file.uploadedAt || new Date())}</p>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )
-    } else {
-      // List view
-      return (
-        <div className="overflow-hidden rounded-md border border-border/40 bg-background">
-          <div className="grid grid-cols-12 py-2 px-4 bg-muted/50 text-xs font-medium text-muted-foreground">
-            <div className="col-span-6">Name</div>
-            <div className="col-span-2 text-center">Size</div>
-            <div className="col-span-3 text-center">Uploaded</div>
-            <div className="col-span-1 text-right">Actions</div>
-          </div>
-          <div className="divide-y divide-border/40">
-            {processedFiles.map((file, index) => (
-              <div
-                key={index}
-                className="grid grid-cols-12 py-3 px-4 items-center hover:bg-muted/30 border-l-2 border-transparent hover:border-primary/40 transition-all duration-200 group"
-              >
-                <div className="col-span-6 flex items-center gap-2">
-                  <div className="w-9 h-9 rounded-md bg-background border border-border/40 flex items-center justify-center shadow-sm">
-                    {getFileIcon(file.type)}
-                  </div>
-                  <div>
-                    <span className="font-medium truncate block">{file.name}</span>
-                    <span className="text-xs text-muted-foreground">Uploaded {formatDate(file.uploadedAt)}</span>
-                  </div>
-                </div>
-                <div className="col-span-2 text-center">
-                  <Badge variant="outline" className="bg-background">
-                    {formatFileSize(file.size)}
-                  </Badge>
-                </div>
-                <div className="col-span-3 text-center text-sm">
-                  <div className="inline-flex items-center gap-1.5">
-                    <div className="w-2 h-2 rounded-full bg-primary/60"></div>
-                    <span>{formatDate(file.uploadedAt)}</span>
-                  </div>
-                </div>
-                <div className="col-span-1 flex justify-end gap-1">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                    onClick={() => handleFileDownload(file)}
-                  >
-                    <Download className="h-4 w-4" />
-                  </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-primary/10">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleFileDownload(file)}>
-                        <Download className="mr-2 h-4 w-4" />
-                        Download
-                      </DropdownMenuItem>
-                      {hasWritePermissions() && (
-                        <DropdownMenuItem onClick={() => handleDeleteFile(file)}>
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )
-    }
-  }
-
-  const formatFileSize = (bytes) => {
-    if (bytes === 0) return "0 Bytes"
-    const k = 1024
-    const sizes = ["Bytes", "KB", "MB", "GB"]
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return Number.parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i]
-  }
-
-  // Helper to get double initials
-  const getUserInitials = (name) => {
-    if (!name) return "AD"
-    const words = name.trim().split(" ").filter(Boolean)
-    if (words.length >= 2) {
-      return (words[0][0] + words[1][0]).toUpperCase()
-    }
-    return name.substring(0, 2).toUpperCase()
-  }
-
-  // Fetch current user for sidebar avatar
-  useEffect(() => {
-    const fetchCurrentUser = async () => {
-      try {
-        const user = auth.currentUser
-        if (user) {
-          const userDoc = await getDoc(doc(db, "users", user.uid))
-          if (userDoc.exists()) {
-            setCurrentUser(userDoc.data())
-          }
-        }
-      } catch (error) {
-        // Ignore error for sidebar
-      }
-    }
-    if (!currentUser) fetchCurrentUser()
-  }, [currentUser])
+    </form>
+  </div>
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      {/* Sidebar for desktop */}
-      <div className="hidden md:flex md:w-64 md:flex-col bg-[#0B3D2E]">
-        <div className="flex flex-col flex-grow pt-5 overflow-y-auto border-r border-green-900">
-          <div className="flex items-center flex-shrink-0 px-4 mb-6">
-            <Link href="/dashboard" className="flex items-center">
-              <div className="relative h-10 w-10 rounded-lg overflow-hidden bg-green-100">
-                <Image
-                  src="/images/SLP.png"
-                  alt="Logo"
-                  fill
-                  className="object-contain p-1"
-                />
-              </div>
-              <span className="ml-3 text-xl font-bold text-white">
-                DSWD SLP-PS
-              </span>
-            </Link>
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
+      {/* Mobile icon header (like other pages) */}
+      <div className="md:hidden w-full fixed top-0 left-0 z-30 bg-[#0B3D2E] flex items-center justify-between px-2 py-1 shadow-lg">
+        {/* Logo */}
+        <Link href="/dashboard" className="flex items-center">
+          <div className="relative w-10 h-10 rounded-lg overflow-hidden bg-white flex items-center justify-center">
+            <Image
+              src="/images/SLP.png"
+              alt="Logo"
+              fill
+              className="object-contain p-1"
+            />
           </div>
-          <div className="flex-1 flex flex-col px-3">
-            <nav className="flex-1 space-y-1">
-              {navigation.map((item) => {
-                const isActive =
-                  pathname === item.href ||
-                  pathname.startsWith(`${item.href}/`);
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={`${
-                      isActive
-                        ? "bg-white/10 text-white"
-                        : "text-white/70 hover:bg-white/10 hover:text-white"
-                    } group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ease-in-out`}
-                  >
-                    <item.icon
-                      className={`${
-                        isActive
-                          ? "text-white"
-                          : "text-white/70 group-hover:text-white"
-                      } mr-3 flex-shrink-0 h-5 w-5`}
-                      aria-hidden="true"
-                    />
-                    {item.name}
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
-          <div className="flex-shrink-0 flex border-t border-white/10 p-4">
-            <div className="flex items-center w-full justify-between">
-              <div className="flex items-center">
-                {currentUser?.photoURL ? (
-                  <Avatar className="h-8 w-8 border-2 border-white/20">
-                    <AvatarImage 
-                      src={currentUser.photoURL} 
-                      alt={currentUser?.name || "User"}
-                      className="object-cover" 
-                    />
-                    <AvatarFallback className="bg-white/10 text-white">
-                      {getUserInitials(currentUser?.name)}
-                    </AvatarFallback>
-                  </Avatar>
-                ) : (
-                  <div className="h-8 w-8 rounded-full bg-white/10 text-white flex items-center justify-center">
-                    <span className="text-sm font-medium">
-                      {getUserInitials(currentUser?.name)}
-                    </span>
-                  </div>
-                )}
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-white">{currentUser?.name}</p>
-                  <p className="text-xs text-gray-300">
-                    {currentUser?.role}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
+        </Link>
+        {/* Navigation icons */}
+        <div className="flex-1 flex items-center justify-center gap-3">
+          <Link href="/dashboard" className={`w-10 h-10 rounded-lg flex items-center justify-center ${pathname === '/dashboard' ? 'border-2 border-white' : ''}`}>
+            <LayoutDashboard className="h-6 w-6 text-white" />
+          </Link>
+          <Link href="/vendors" className={`w-10 h-10 rounded-lg flex items-center justify-center ${pathname === '/vendors' ? 'border-2 border-white' : ''}`}> 
+            <Store className="h-6 w-6 text-white" />
+          </Link>
+          <Link href="/participants" className={`w-10 h-10 rounded-lg flex items-center justify-center ${pathname === '/participants' ? 'border-2 border-white' : ''}`}> 
+            <Users className="h-6 w-6 text-white" />
+          </Link>
+          <Link href="/programs" className={`w-10 h-10 rounded-lg flex items-center justify-center ${pathname === '/programs' ? 'border-2 border-white' : ''}`}> 
+            <FolderOpen className="h-6 w-6 text-white" />
+          </Link>
+          <Link href="/settings" className={`w-10 h-10 rounded-lg flex items-center justify-center ${pathname === '/settings' ? 'border-2 border-white' : ''}`}> 
+            <Settings className="h-6 w-6 text-white" />
+          </Link>
         </div>
-      </div>
-
-      {/* Mobile menu */}
-      <div
-        className={`${
-          isMobileMenuOpen ? "fixed inset-0 z-40 flex" : "hidden"
-        } md:hidden`}
-        role="dialog"
-        aria-modal="true"
-      >
-        <div
-          className="fixed inset-0 bg-black/50 backdrop-blur-sm"
-          aria-hidden="true"
-          onClick={() => setIsMobileMenuOpen(false)}
-        />
-        <div className="relative flex-1 flex flex-col max-w-xs w-full bg-card">
-          <div className="absolute top-0 right-0 -mr-12 pt-4">
-            <button
-              type="button"
-              className="flex items-center justify-center h-10 w-10 rounded-full bg-black/10 backdrop-blur-sm"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              <span className="sr-only">Close sidebar</span>
-              <X className="h-6 w-6 text-white" aria-hidden="true" />
-            </button>
-          </div>
-          <div className="flex-1 h-0 pt-5 pb-4 overflow-y-auto">
-            <div className="flex-shrink-0 flex items-center px-4 mb-6">
-              <Link href="/dashboard" className="flex items-center">
-                <div className="relative h-10 w-10 rounded-lg overflow-hidden bg-primary/10">
+        {/* Profile avatar/initials */}
+        <div className="ml-2 w-10 h-10 flex items-center justify-center">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="w-full h-full flex items-center justify-center">
+                {currentUser?.photoURL ? (
                   <Image
-                    src="/images/SLP.png"
-                    alt="Logo"
-                    fill
-                    className="object-contain p-1"
+                    src={currentUser.photoURL}
+                    alt={currentUser.name}
+                    width={32}
+                    height={32}
+                    className="object-cover rounded-full"
                   />
-                </div>
-                <span className="ml-3 text-xl font-bold bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent">
-                  DSWD SLP-TIS
-                </span>
-              </Link>
-            </div>
-            <nav className="px-3 space-y-1">
-              {navigation.map((item) => {
-                const isActive =
-                  pathname === item.href ||
-                  pathname.startsWith(`${item.href}/`);
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={`${
-                      isActive
-                        ? "bg-primary text-primary-foreground"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    } group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ease-in-out`}
-                  >
-                    <item.icon
-                      className={`${
-                        isActive
-                          ? "text-primary-foreground"
-                          : "text-muted-foreground group-hover:text-foreground"
-                      } mr-3 flex-shrink-0 h-5 w-5`}
-                      aria-hidden="true"
-                    />
-                    {item.name}
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
-          <div className="flex-shrink-0 p-4">
-            <div className="rounded-lg bg-muted/50 p-3">
-              <div className="flex items-center">
-                <Avatar className="h-9 w-9 border-2 border-primary/20">
-                  <AvatarFallback className="bg-primary/10 text-primary font-medium">
+                ) : (
+                  <span className="w-8 h-8 flex items-center justify-center font-medium text-white">
                     {getUserInitials(currentUser?.name)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="ml-3">
-                  <p className="text-sm font-medium">
-                    {currentUser?.name || "Admin DSWD"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {currentUser?.role || "Administrator"}
-                  </p>
+                  </span>
+                )}
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>
+                <div className="flex flex-col space-y-1">
+                  <p className="text-sm font-medium">{currentUser?.name}</p>
+                  <p className="text-xs text-muted-foreground">{currentUser?.role}</p>
                 </div>
-              </div>
-            </div>
-          </div>
+              </DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href="/profile" className="flex items-center">
+                  <User className="mr-2 h-4 w-4" />
+                  Profile
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/settings" className="flex items-center">
+                  <Settings className="mr-2 h-4 w-4" />
+                  Settings
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem 
+                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                onClick={handleLogout}
+              >
+                <LogOut className="mr-2 h-4 w-4" />
+                Logout
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
       {/* Main content */}
-      <div className="flex flex-col flex-1 overflow-hidden">
+      <div className="flex flex-col flex-1 overflow-hidden mt-14 md:mt-0">
         <div className="relative z-10 flex-shrink-0 flex h-16 bg-card shadow">
-          <button
-            type="button"
-            className="px-4 border-r border-gray-200 text-muted-foreground md:hidden"
-            onClick={() => setIsMobileMenuOpen(true)}
-          >
-            <span className="sr-only">Open sidebar</span>
-            <Menu className="h-6 w-6" aria-hidden="true" />
-          </button>
-          <div className="flex-1 px-4 flex justify-between">
-            <form onSubmit={handleSearchSubmit} className="flex-1 flex relative">
-              <div className="w-full flex md:ml-0 max-w-2xl relative">
-                <label htmlFor="search-field" className="sr-only">
-                  Search files and folders
-                </label>
-                <div className="relative w-full text-muted-foreground focus-within:text-foreground">
-                  <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none">
-                    <Search className="h-5 w-5 ml-3" aria-hidden="true" />
-                  </div>
-                  <Input
-                    ref={searchRef}
-                    id="search-field"
-                    className={cn(
-                      "block w-full h-10 pl-10 pr-8 py-2 border-transparent text-muted-foreground",
-                      "placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20",
-                      "focus:border-transparent sm:text-sm transition-all duration-200",
-                      searchFocused && "shadow-lg"
-                    )}
-                    placeholder="Search files by name, type, or date..."
-                    type="search"
-                    defaultValue={searchQuery}
-                    onChange={handleSearchChange}
-                    onFocus={() => setSearchFocused(true)}
-                    onBlur={() => setSearchFocused(false)}
-                  />
-                  {searchQuery && (
-                    <button
-                      type="button"
-                      onClick={clearSearch}
-                      className="absolute inset-y-0 right-0 flex items-center pr-3 hover:text-foreground"
-                    >
-                      <X className="h-4 w-4" aria-hidden="true" />
-                    </button>
-                  )}
-                </div>
-
-                {/* Search suggestions dropdown */}
-                {searchFocused && (
-                  <div className="absolute top-full left-0 right-0 mt-1 bg-background rounded-md border shadow-lg z-50">
-                    <div className="p-2">
-                      {recentSearches.length > 0 && (
-                        <>
-                          <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                            Recent Searches
-                          </div>
-                          {recentSearches.map((query, index) => (
-                            <button
-                              key={index}
-                              onClick={() => useRecentSearch(query)}
-                              className="flex items-center gap-2 w-full px-2 py-1.5 text-sm hover:bg-muted rounded-sm"
-                            >
-                              <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                              {query}
-                            </button>
-                          ))}
-                          <div className="border-t my-1" />
-                        </>
-                      )}
-                      <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                        <span className="font-medium">Pro tip:</span> Use type: to filter by file type (e.g. "type:xlsx")
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </form>
-
-            {/* Search filters */}
-            {searchQuery && (
-              <div className="ml-4 flex items-center gap-2">
-                <Badge variant="outline" className="bg-background">
-                  {currentFolder ? 'Current folder' : 'All folders'}
-                </Badge>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={clearSearch}
-                  className="h-8 px-2 text-muted-foreground hover:text-foreground"
-                >
-                  Clear filters
-                </Button>
-              </div>
-            )}
+          {/* Removed hamburger/toggle menu button here */}
+          <div className="flex-1 px-4 flex flex-col sm:flex-row justify-between gap-2 py-2 sm:py-0">
+            {/* Removed search form here */}
           </div>
         </div>
 
         <main className="flex-1 relative overflow-y-auto focus:outline-none">
-          <div className="py-6">
-            <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="py-4 sm:py-6">
+            <div className="container mx-auto px-2 sm:px-4 lg:px-8">
               <div className="flex flex-col space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border/40 mb-6">
+                {/* Header section - Make it responsive */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-border/40 mb-4 sm:mb-6">
                   <div>
-                    <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
+                    <h1 className="text-xl sm:text-2xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-transparent">
                       {currentFolder ? currentFolder.name : "Migration Management"}
                     </h1>
-                    <p className="text-muted-foreground mt-1">
+                    <p className="text-sm sm:text-base text-muted-foreground mt-1">
                       {currentFolder
                         ? `${currentFolder.files?.length || 0} files in this folder`
                         : "Manage and organize migration documents and files"}
                     </p>
                   </div>
-                  <div className="flex items-center space-x-2">
+                  <div className="flex flex-row-reverse flex-wrap items-center gap-2">
                     {hasWritePermissions() && (
                       <>
-                        <Button onClick={handleCreateFolder}>
-                          <FolderPlus className="mr-2 h-4 w-4" />
-                          New Folder
-                        </Button>
-                        <Button onClick={handleUploadFile}>
-                          <Upload className="mr-2 h-4 w-4" />
-                          Upload File
-                        </Button>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button onClick={handleCreateFolder} size="icon" variant="ghost" className="w-10 h-10 bg-green-500 hover:bg-green-600 rounded-full md:w-auto md:h-auto md:px-5 md:py-2 flex items-center justify-center gap-2 shadow-md transition-colors">
+                                <FolderPlus className="h-6 w-6" style={{ color: 'white' }} />
+                                <span className="hidden md:inline font-semibold text-white">New Folder</span>
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom">New Folder</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button onClick={handleUploadFile} size="icon" variant="ghost" className="w-10 h-10 bg-blue-600 hover:bg-blue-700 rounded-full md:w-auto md:h-auto md:px-5 md:py-2 flex items-center justify-center gap-2 shadow-md transition-colors">
+                                <Upload className="h-6 w-6" style={{ color: 'white' }} />
+                                <span className="hidden md:inline font-semibold text-white">Upload File</span>
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="bottom">Upload File</TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </>
                     )}
                   </div>
                 </div>
 
-                {/* View controls */}
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-gradient-to-r from-muted/50 to-muted/30 rounded-lg p-3 gap-3">
+                {/* View controls - Make it responsive */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between bg-gradient-to-r from-muted/50 to-muted/30 rounded-lg p-2 sm:p-3 gap-2 sm:gap-3">
                   {/* Breadcrumb navigation */}
-                  <div className="flex items-center">
+                  <div className="flex items-center w-full sm:w-auto overflow-x-auto">
                     <Breadcrumb>
                       <BreadcrumbList>
                         <BreadcrumbItem>
@@ -1467,8 +1512,8 @@ export default function ProgramsPage() {
                     )}
                   </div>
 
-                  {/* Controls */}
-                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                  {/* Controls - Make it responsive */}
+                  <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
                     <div className="flex items-center gap-1 bg-background rounded-md p-1 border border-border/40 shadow-sm">
                       <TooltipProvider>
                         <Tooltip>
@@ -1559,38 +1604,38 @@ export default function ProgramsPage() {
                   </div>
                 </div>
 
-                {/* Content area */}
-                <div className="bg-card rounded-lg shadow-sm border border-border/40 p-4">
+                {/* Content area - Make it responsive */}
+                <div className="bg-card rounded-lg shadow-sm border border-border/40 p-2 sm:p-4">
                   {currentFolder ? renderFileContent() : renderFolderContent()}
 
-                  {/* Empty state */}
+                  {/* Empty state - Make it responsive */}
                   {currentFolder && (!currentFolder.files || currentFolder.files.length === 0) && (
-                    <div className="flex flex-col items-center justify-center py-16">
-                      <div className="relative mb-6">
+                    <div className="flex flex-col items-center justify-center py-8 sm:py-16">
+                      <div className="relative mb-4 sm:mb-6">
                         <div className="absolute inset-0 bg-primary/10 rounded-full animate-pulse"></div>
-                        <div className="relative h-32 w-32 text-primary/70 transform hover:scale-105 transition-transform duration-300">
+                        <div className="relative h-24 w-24 sm:h-32 sm:w-32 text-primary/70 transform hover:scale-105 transition-transform duration-300">
                           <div className="absolute inset-0 bg-gradient-to-br from-background to-muted/50 rounded-full shadow-lg"></div>
-                          <File className="w-full h-full p-6" />
+                          <File className="w-full h-full p-4 sm:p-6" />
                         </div>
                       </div>
-                      <h3 className="text-xl font-medium">No files in this folder</h3>
-                      <p className="text-muted-foreground text-sm mt-2 max-w-md text-center">
+                      <h3 className="text-lg sm:text-xl font-medium text-center">No files in this folder</h3>
+                      <p className="text-sm text-muted-foreground mt-2 max-w-md text-center">
                         {hasWritePermissions() 
                           ? `Upload files to "${currentFolder?.name}" to start organizing your documents`
                           : "This folder is currently empty"}
                       </p>
-                      <div className="flex gap-3 mt-6">
+                      <div className="flex flex-col sm:flex-row gap-3 mt-4 sm:mt-6 w-full sm:w-auto">
                         {hasWritePermissions() && (
                           <Button
                             onClick={() => setIsUploadFileOpen(true)}
-                            className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-md hover:shadow-lg transition-all duration-200"
+                            className="w-full sm:w-auto bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-md hover:shadow-lg transition-all duration-200"
                             size="lg"
                           >
                             <Upload className="mr-2 h-5 w-5" />
                             Upload File
                           </Button>
                         )}
-                        <Button onClick={() => setCurrentFolder(null)} variant="outline" size="lg">
+                        <Button onClick={() => setCurrentFolder(null)} variant="outline" size="lg" className="w-full sm:w-auto">
                           <FolderOpen className="mr-2 h-5 w-5" />
                           Back to Folders
                         </Button>
@@ -1649,6 +1694,27 @@ export default function ProgramsPage() {
                       </Button>
                       <Button onClick={handleFileUploadSubmit} disabled={!selectedFile || isUploading}>
                         {isUploading ? "Uploading..." : "Upload"}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+
+                {/* Delete Confirmation Dialog */}
+                <Dialog open={!!deleteTarget} onOpenChange={cancelDelete}>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Delete {deleteTarget?.type === 'folder' ? 'Folder' : 'File'}</DialogTitle>
+                      <DialogDescription>
+                        Are you sure you want to delete this {deleteTarget?.type}? This action cannot be undone.<br/>
+                        <span className="font-semibold text-destructive">{deleteTarget?.data?.name || deleteTarget?.data?.originalName}</span>
+                      </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className="mt-4">
+                      <Button variant="outline" onClick={cancelDelete}>
+                        Cancel
+                      </Button>
+                      <Button variant="destructive" onClick={confirmDelete}>
+                        Delete
                       </Button>
                     </DialogFooter>
                   </DialogContent>

@@ -30,7 +30,21 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [mobileScreen, setMobileScreen] = useState('welcome'); // 'welcome', 'signin', 'signup'
+  const [isMobile, setIsMobile] = useState(false);
   const router = useRouter();
+
+  useEffect(() => {
+    // Function to check if window width is <= 480px
+    const checkMobile = () => {
+      if (typeof window !== 'undefined') {
+        setIsMobile(window.innerWidth <= 480);
+      }
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const toggleForm = () => {
     setIsAnimating(true);
@@ -496,6 +510,140 @@ export default function LoginPage() {
           }
         }
 
+        @media (max-width: 480px) {
+          .main {
+            padding: 0;
+            min-height: 100vh;
+            height: auto;
+          }
+          .container,
+          .switch {
+            width: 100vw;
+            min-height: 100vh;
+            height: auto;
+            padding: 10px 0 30px 0;
+            position: static;
+          }
+          .form {
+            max-width: 95vw;
+            padding: 0 8px;
+          }
+          .form-logo {
+            margin-bottom: 10px;
+            padding: 6px;
+          }
+          .main-logo {
+            width: 60px !important;
+            height: 60px !important;
+          }
+          .switch__container {
+            width: 95vw;
+            padding: 30px 8px;
+            position: static;
+          }
+          .logo-container {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 10px;
+          }
+          .title, .switch__title {
+            font-size: 22px;
+            line-height: 1.3;
+          }
+          .description, .switch__description {
+            font-size: 12px;
+          }
+          .button, .switch__button {
+            width: 100%;
+            min-width: 0;
+            height: 44px;
+            font-size: 13px;
+            margin-top: 30px;
+          }
+          .form__input {
+            height: 36px;
+            font-size: 12px;
+          }
+          .form__icon {
+            margin: 0 2px;
+            font-size: 18px;
+          }
+          .form__span {
+            margin: 18px 0 8px;
+            font-size: 12px;
+          }
+          .error-message {
+            font-size: 12px;
+          }
+          .forgot-password {
+            margin-top: 4px;
+          }
+          .home-button {
+            top: 10px;
+            left: 10px;
+            padding: 8px 12px;
+            font-size: 12px;
+            z-index: 999;
+          }
+          .decorative-circle-1,
+          .decorative-circle-2,
+          .decorative-circle-3 {
+            display: none;
+          }
+          .mobile-welcome {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, var(--green-primary) 0%, var(--gold-primary) 100%);
+            color: var(--white);
+            padding: 0 16px;
+          }
+          .mobile-welcome-logo {
+            margin: 40px 0 24px 0;
+            background: var(--white);
+            border-radius: 50%;
+            padding: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+          }
+          .mobile-welcome-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--white);
+            text-align: center;
+          }
+          .mobile-welcome-desc {
+            font-size: 1rem;
+            text-align: center;
+            margin-bottom: 32px;
+            color: var(--white);
+          }
+          .mobile-welcome-btn {
+            width: 100%;
+            max-width: 320px;
+            margin: 0 auto 16px auto;
+            padding: 14px 0;
+            border-radius: 30px;
+            background: var(--green-primary);
+            color: var(--white);
+            font-weight: 700;
+            font-size: 1.1rem;
+            border: none;
+            outline: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+            transition: background 0.2s;
+          }
+          .mobile-welcome-btn:last-child {
+            background: var(--gold-primary);
+            color: var(--white);
+          }
+          .mobile-welcome-btn:active {
+            opacity: 0.9;
+          }
+        }
+
         .home-button {
           position: absolute;
           top: 20px;
@@ -624,210 +772,188 @@ export default function LoginPage() {
           <Home size={20} />
           <span>Back Home</span>
         </button>
-        <div
-          className={`container a-container ${isSignUp ? "is-txl" : ""}`}
-          id="a-container"
-        >
-          <form className="form" id="a-form" onSubmit={handleSignUp}>
-            <div className="form-logo">
-              <Image
-                src="/images/SLP.png"
-                alt="SLP Logo"
-                width={80}
-                height={80}
-                className="main-logo"
-              />
+        {/* MOBILE VIEW ONLY */}
+        {isMobile ? (
+          <>
+            {/* MOBILE WELCOME SCREEN */}
+            <div className="mobile-welcome" style={{ display: mobileScreen === 'welcome' ? 'flex' : 'none' }}>
+              <div className="mobile-welcome-logo">
+                <Image src="/images/SLP.png" alt="SLP Logo" width={80} height={80} />
+              </div>
+              <div className="mobile-welcome-title">Welcome Back !</div>
+              <div className="mobile-welcome-desc">To keep connected with us please login with your personal info</div>
+              <button className="mobile-welcome-btn" onClick={() => setMobileScreen('signin')}>SIGN IN</button>
+              <button className="mobile-welcome-btn" onClick={() => setMobileScreen('signup')}>SIGN UP</button>
             </div>
-            <h2 className="form_title title">Create Account</h2>
-            <div className="form__icons">
-              <Facebook className="form__icon" size={24} />
-              <Linkedin className="form__icon" size={24} />
-              <Twitter className="form__icon" size={24} />
+            {/* SIGN IN FORM (MOBILE) */}
+            <div className="container b-container" id="b-container" style={{ display: mobileScreen === 'signin' ? 'flex' : 'none' }}>
+              <form className="form" id="b-form" onSubmit={handleSignIn}>
+                <div className="form-logo">
+                  <Image src="/images/SLP.png" alt="SLP Logo" width={80} height={80} className="main-logo" />
+                </div>
+                <h2 className="form_title title">Sign in to Website</h2>
+                <div className="form__icons">
+                  <Facebook className="form__icon" size={24} />
+                  <Linkedin className="form__icon" size={24} />
+                  <Twitter className="form__icon" size={24} />
+                </div>
+                <span className="form__span">or use your email account</span>
+                <div className="input-container">
+                  <Mail className="input-icon" size={20} />
+                  <input type="email" className="form__input" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                </div>
+                <div className="input-container">
+                  <Lock className="input-icon" size={20} />
+                  <input type={showPassword ? "text" : "password"} className="form__input" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                  {showPassword ? (
+                    <EyeOff className="password-toggle" size={20} onClick={() => setShowPassword(false)} />
+                  ) : (
+                    <Eye className="password-toggle" size={20} onClick={() => setShowPassword(true)} />
+                  )}
+                </div>
+                <div className="forgot-password">
+                  <span className="form__link" onClick={() => router.push('/login/forgot-password')}>Forgot Password?</span>
+                </div>
+                {error && <div className="error-message">{error}</div>}
+                <button className="form__button button submit" type="submit" disabled={loading}>
+                  {loading ? "SIGNING IN..." : "SIGN IN"}
+                </button>
+                <button type="button" className="form__link" style={{marginTop:16}} onClick={() => setMobileScreen('welcome')}>Back</button>
+              </form>
             </div>
-            <span className="form__span">or use email for registration</span>
-            <div className="input-container">
-              <User className="input-icon" size={20} />
-              <input
-                type="text"
-                className="form__input"
-                placeholder="Name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
+            {/* SIGN UP FORM (MOBILE) */}
+            <div className="container a-container" id="a-container" style={{ display: mobileScreen === 'signup' ? 'flex' : 'none' }}>
+              <form className="form" id="a-form" onSubmit={handleSignUp}>
+                <div className="form-logo">
+                  <Image src="/images/SLP.png" alt="SLP Logo" width={80} height={80} className="main-logo" />
+                </div>
+                <h2 className="form_title title">Create Account</h2>
+                <div className="form__icons">
+                  <Facebook className="form__icon" size={24} />
+                  <Linkedin className="form__icon" size={24} />
+                  <Twitter className="form__icon" size={24} />
+                </div>
+                <span className="form__span">or use email for registration</span>
+                <div className="input-container">
+                  <User className="input-icon" size={20} />
+                  <input type="text" className="form__input" placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} required />
+                </div>
+                <div className="input-container">
+                  <Mail className="input-icon" size={20} />
+                  <input type="email" className="form__input" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                </div>
+                <div className="input-container">
+                  <Lock className="input-icon" size={20} />
+                  <input type={showPassword ? "text" : "password"} className="form__input" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                  {showPassword ? (
+                    <EyeOff className="password-toggle" size={20} onClick={() => setShowPassword(false)} />
+                  ) : (
+                    <Eye className="password-toggle" size={20} onClick={() => setShowPassword(true)} />
+                  )}
+                </div>
+                {error && <div className="error-message">{error}</div>}
+                <button className="form__button button submit" type="submit" disabled={loading}>
+                  {loading ? "SIGNING UP..." : "SIGN UP"}
+                </button>
+                <button type="button" className="form__link" style={{marginTop:16}} onClick={() => setMobileScreen('welcome')}>Back</button>
+              </form>
             </div>
-            <div className="input-container">
-              <Mail className="input-icon" size={20} />
-              <input
-                type="email"
-                className="form__input"
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
+          </>
+        ) : (
+          <>
+            {/* DESKTOP/TABLET VIEW ONLY (original design) */}
+            <div className={`container a-container ${isSignUp ? "is-txl" : ""}`} id="a-container">
+              <form className="form" id="a-form" onSubmit={handleSignUp}>
+                <div className="form-logo">
+                  <Image src="/images/SLP.png" alt="SLP Logo" width={80} height={80} className="main-logo" />
+                </div>
+                <h2 className="form_title title">Create Account</h2>
+                <div className="form__icons">
+                  <Facebook className="form__icon" size={24} />
+                  <Linkedin className="form__icon" size={24} />
+                  <Twitter className="form__icon" size={24} />
+                </div>
+                <span className="form__span">or use email for registration</span>
+                <div className="input-container">
+                  <User className="input-icon" size={20} />
+                  <input type="text" className="form__input" placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} required />
+                </div>
+                <div className="input-container">
+                  <Mail className="input-icon" size={20} />
+                  <input type="email" className="form__input" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                </div>
+                <div className="input-container">
+                  <Lock className="input-icon" size={20} />
+                  <input type={showPassword ? "text" : "password"} className="form__input" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                  {showPassword ? (
+                    <EyeOff className="password-toggle" size={20} onClick={() => setShowPassword(false)} />
+                  ) : (
+                    <Eye className="password-toggle" size={20} onClick={() => setShowPassword(true)} />
+                  )}
+                </div>
+                {error && <div className="error-message">{error}</div>}
+                <button className="form__button button submit" type="submit" disabled={loading}>
+                  {loading ? "SIGNING UP..." : "SIGN UP"}
+                </button>
+              </form>
             </div>
-            <div className="input-container">
-              <Lock className="input-icon" size={20} />
-              <input
-                type={showPassword ? "text" : "password"}
-                className="form__input"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-              {showPassword ? (
-                <EyeOff className="password-toggle" size={20} onClick={() => setShowPassword(false)} />
-              ) : (
-                <Eye className="password-toggle" size={20} onClick={() => setShowPassword(true)} />
-              )}
+            <div className={`container b-container ${isSignUp ? "is-txl is-z200" : ""}`} id="b-container">
+              <form className="form" id="b-form" onSubmit={handleSignIn}>
+                <div className="form-logo">
+                  <Image src="/images/SLP.png" alt="SLP Logo" width={80} height={80} className="main-logo" />
+                </div>
+                <h2 className="form_title title">Sign in to Website</h2>
+                <div className="form__icons">
+                  <Facebook className="form__icon" size={24} />
+                  <Linkedin className="form__icon" size={24} />
+                  <Twitter className="form__icon" size={24} />
+                </div>
+                <span className="form__span">or use your email account</span>
+                <div className="input-container">
+                  <Mail className="input-icon" size={20} />
+                  <input type="email" className="form__input" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                </div>
+                <div className="input-container">
+                  <Lock className="input-icon" size={20} />
+                  <input type={showPassword ? "text" : "password"} className="form__input" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+                  {showPassword ? (
+                    <EyeOff className="password-toggle" size={20} onClick={() => setShowPassword(false)} />
+                  ) : (
+                    <Eye className="password-toggle" size={20} onClick={() => setShowPassword(true)} />
+                  )}
+                </div>
+                <div className="forgot-password">
+                  <span className="form__link" onClick={() => router.push('/login/forgot-password')}>Forgot Password?</span>
+                </div>
+                {error && <div className="error-message">{error}</div>}
+                <button className="form__button button submit" type="submit" disabled={loading}>
+                  {loading ? "SIGNING IN..." : "SIGN IN"}
+                </button>
+              </form>
             </div>
-            {error && <div className="error-message">{error}</div>}
-            <button
-              className="form__button button submit"
-              type="submit"
-              disabled={loading}
-            >
-              {loading ? "SIGNING UP..." : "SIGN UP"}
-            </button>
-          </form>
-        </div>
-
-        <div
-          className={`container b-container ${
-            isSignUp ? "is-txl is-z200" : ""
-          }`}
-          id="b-container"
-        >
-          <form className="form" id="b-form" onSubmit={handleSignIn}>
-            <div className="form-logo">
-              <Image
-                src="/images/SLP.png"
-                alt="SLP Logo"
-                width={80}
-                height={80}
-                className="main-logo"
-              />
+            <div className={`switch ${isSignUp ? "is-txr" : ""} ${isAnimating ? "is-gx" : ""}`} id="switch-cnt">
+              <div className="decorative-circle decorative-circle-1"></div>
+              <div className="decorative-circle decorative-circle-2"></div>
+              <div className="decorative-circle decorative-circle-3"></div>
+              <div className={`switch__container ${isSignUp ? "is-hidden" : ""}`} id="switch-c1">
+                <div className="logo-container">
+                  <Image src="/images/SLP.png" alt="SLP Logo" width={60} height={60} className="switch-logo" />
+                </div>
+                <h2 className="switch__title title">Welcome Back !</h2>
+                <p className="switch__description description">To keep connected with us please login with your personal info</p>
+                <button className="switch__button button switch-btn" onClick={toggleForm} type="button">SIGN IN</button>
+              </div>
+              <div className={`switch__container ${isSignUp ? "" : "is-hidden"}`} id="switch-c2">
+                <div className="logo-container">
+                  <Image src="/images/SLP.png" alt="SLP Logo" width={60} height={60} className="switch-logo" />
+                </div>
+                <h2 className="switch__title title">Hello Friend !</h2>
+                <p className="switch__description description">Enter your personal details and start journey with us</p>
+                <button className="switch__button button switch-btn" onClick={toggleForm} type="button">SIGN UP</button>
+              </div>
             </div>
-            <h2 className="form_title title">Sign in to Website</h2>
-            <div className="form__icons">
-              <Facebook className="form__icon" size={24} />
-              <Linkedin className="form__icon" size={24} />
-              <Twitter className="form__icon" size={24} />
-            </div>
-            <span className="form__span">or use your email account</span>
-            <div className="input-container">
-              <Mail className="input-icon" size={20} />
-              <input
-                type="email"
-                className="form__input"
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="input-container">
-              <Lock className="input-icon" size={20} />
-              <input
-                type={showPassword ? "text" : "password"}
-                className="form__input"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
-              {showPassword ? (
-                <EyeOff className="password-toggle" size={20} onClick={() => setShowPassword(false)} />
-              ) : (
-                <Eye className="password-toggle" size={20} onClick={() => setShowPassword(true)} />
-              )}
-            </div>
-            <div className="forgot-password">
-              <span 
-                className="form__link" 
-                onClick={() => {
-                  console.log('Navigating to forgot password page');
-                  router.push('/login/forgot-password');
-                }}
-              >
-                Forgot Password?
-              </span>
-            </div>
-            {error && <div className="error-message">{error}</div>}
-            <button
-              className="form__button button submit"
-              type="submit"
-              disabled={loading}
-            >
-              {loading ? "SIGNING IN..." : "SIGN IN"}
-            </button>
-          </form>
-        </div>
-
-        <div
-          className={`switch ${isSignUp ? "is-txr" : ""} ${
-            isAnimating ? "is-gx" : ""
-          }`}
-          id="switch-cnt"
-        >
-          <div className="decorative-circle decorative-circle-1"></div>
-          <div className="decorative-circle decorative-circle-2"></div>
-          <div className="decorative-circle decorative-circle-3"></div>
-
-          <div
-            className={`switch__container ${isSignUp ? "is-hidden" : ""}`}
-            id="switch-c1"
-          >
-            <div className="logo-container">
-              <Image
-                src="/images/SLP.png"
-                alt="SLP Logo"
-                width={60}
-                height={60}
-                className="switch-logo"
-              />
-            </div>
-            <h2 className="switch__title title">Welcome Back !</h2>
-            <p className="switch__description description">
-              To keep connected with us please login with your personal info
-            </p>
-            <button
-              className="switch__button button switch-btn"
-              onClick={toggleForm}
-              type="button"
-            >
-              SIGN IN
-            </button>
-          </div>
-
-          <div
-            className={`switch__container ${isSignUp ? "" : "is-hidden"}`}
-            id="switch-c2"
-          >
-            <div className="logo-container">
-              <Image
-                src="/images/SLP.png"
-                alt="SLP Logo"
-                width={60}
-                height={60}
-                className="switch-logo"
-              />
-            </div>
-            <h2 className="switch__title title">Hello Friend !</h2>
-            <p className="switch__description description">
-              Enter your personal details and start journey with us
-            </p>
-            <button
-              className="switch__button button switch-btn"
-              onClick={toggleForm}
-              type="button"
-            >
-              SIGN UP
-            </button>
-          </div>
-        </div>
+          </>
+        )}
       </div>
     </>
   );

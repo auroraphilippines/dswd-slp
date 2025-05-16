@@ -90,6 +90,8 @@ export function ActivityFeed() {
     accessFileStorage: true,
     accessActivities: true
   });
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [activityToDelete, setActivityToDelete] = useState(null);
 
   useEffect(() => {
     fetchActivities();
@@ -183,22 +185,30 @@ export function ActivityFeed() {
   };
 
   const handleDelete = async (activityId) => {
-    try {
-      if (!confirm("Are you sure you want to delete this activity?")) {
-        return;
-      }
+    setActivityToDelete(activityId);
+    setShowDeleteModal(true);
+  };
 
+  const confirmDelete = async () => {
+    if (!activityToDelete) return;
+    try {
       setLoading(true);
-      await deleteDoc(doc(db, "activities", activityId));
-      
-      setActivities(prev => prev.filter(a => a.id !== activityId));
+      await deleteDoc(doc(db, "activities", activityToDelete));
+      setActivities(prev => prev.filter(a => a.id !== activityToDelete));
       toast("Activity deleted successfully");
     } catch (error) {
       console.error("Error deleting activity:", error);
       toast("Failed to delete activity");
     } finally {
       setLoading(false);
+      setShowDeleteModal(false);
+      setActivityToDelete(null);
     }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    setActivityToDelete(null);
   };
 
   const fetchActivities = async (loadMore = false) => {
@@ -552,9 +562,7 @@ export function ActivityFeed() {
                 ))}
               </div>
             )}
-            <p className="text-xs text-muted-foreground mt-1">
-              {6 - (activity.images?.length || 0)} images remaining (maximum 6)
-            </p>
+          
           </CardContent>
         </Card>
       ))}
@@ -592,6 +600,30 @@ export function ActivityFeed() {
         onUpdate={handleUpdate}
         userPermissions={userPermissions}
       />
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm mx-2">
+            <h2 className="text-lg font-semibold mb-2">Delete Activity</h2>
+            <p className="mb-4">Are you sure you want to delete this activity?</p>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={cancelDelete}
+                className="px-4 py-2 rounded border border-gray-300 text-gray-700 hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

@@ -29,6 +29,7 @@ import { saveToolsEquipment, saveVendorDetails } from "@/service/vendor";
 import { getCurrentUser } from "@/service/auth";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import Logger from '@/lib/logger';
 
 // Initial tool state
 const initialTool = {
@@ -288,14 +289,14 @@ export default function ToolsEquipmentPage() {
       };
 
       // Log data before saving for debugging
-      console.log("========== DEBUG LOGS ==========");
-      console.log("Raw Worker Data:", workerData);
-      console.log("Formatted Workers:", formattedWorkers);
-      console.log("Raw Tools Data:", tools);
-      console.log("Formatted Tools:", formattedTools);
-      console.log("Raw Materials Data:", rawMaterialsData);
-      console.log("Complete vendor data to save:", vendorDataToSave);
-      console.log("==============================");
+      Logger.log("========== DEBUG LOGS ==========");
+      Logger.log("Raw Worker Data:", workerData);
+      Logger.log("Formatted Workers:", formattedWorkers);
+      Logger.log("Raw Tools Data:", tools);
+      Logger.log("Formatted Tools:", formattedTools);
+      Logger.log("Raw Materials Data:", rawMaterialsData);
+      Logger.log("Complete vendor data to save:", vendorDataToSave);
+      Logger.log("==============================");
 
       // Save all vendor data
       const result = await saveVendorDetails(vendorDataToSave, user.uid);
@@ -318,7 +319,7 @@ export default function ToolsEquipmentPage() {
         toast.error(result.error || "Failed to save vendor details. Please try again.");
       }
     } catch (error) {
-      console.error("Error saving vendor data:", error);
+      Logger.error("Error saving vendor data:", error);
       toast.error(error.message || "An error occurred while saving. Please try again.");
     } finally {
       setLoading(false);
