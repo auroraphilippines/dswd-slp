@@ -192,14 +192,12 @@ export default function LoginPage() {
           transform: scale(1.05);
         }
 
-        .main-logo {
-          border-radius: 50%;
-          object-fit: contain;
-        }
-
+        .main-logo,
         .switch-logo {
+          width: 100%;
+          height: 100%;
           border-radius: 50%;
-          object-fit: contain;
+          object-fit: cover;
         }
 
         .container {
@@ -778,7 +776,7 @@ export default function LoginPage() {
             {/* MOBILE WELCOME SCREEN */}
             <div className="mobile-welcome" style={{ display: mobileScreen === 'welcome' ? 'flex' : 'none' }}>
               <div className="mobile-welcome-logo">
-                <Image src="/images/SLP.png" alt="SLP Logo" width={80} height={80} />
+                <Image src="/images/SLP.png" alt="SLP Logo" width={80} height={80} className="main-logo" />
               </div>
               <div className="mobile-welcome-title">Welcome Back !</div>
               <div className="mobile-welcome-desc">To keep connected with us please login with your personal info</div>
