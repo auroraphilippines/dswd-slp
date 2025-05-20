@@ -1333,6 +1333,87 @@ export default function ProgramsPage() {
         pauseOnHover
         theme="light"
       />
+      {/* Sidebar for desktop */}
+      <div className="hidden md:flex md:w-64 md:flex-col bg-[#0B3D2E]">
+        <div className="flex flex-col flex-grow pt-5 overflow-y-auto border-r border-green-900">
+          <div className="flex items-center flex-shrink-0 px-4 mb-6">
+            <Link href="/dashboard" className="flex items-center">
+              <div className="relative h-10 w-10 rounded-lg overflow-hidden bg-green-100">
+                <Image
+                  src="/images/SLP.png"
+                  alt="Logo"
+                  fill
+                  className="object-contain p-1"
+                />
+              </div>
+              <span className="ml-3 text-xl font-bold text-white">
+                DSWD SLP-PS
+              </span>
+            </Link>
+          </div>
+          <div className="flex-1 flex flex-col px-3">
+            <nav className="flex-1 space-y-1">
+              {navigation.map((item) => {
+                const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+                return (
+                  <Link
+                    key={item.name}
+                    href={item.href}
+                    className={`${
+                      isActive
+                        ? "bg-white/10 text-white"
+                        : item.disabled
+                        ? "text-white/50 cursor-not-allowed"
+                        : "text-white/70 hover:bg-white/10 hover:text-white"
+                    } group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ease-in-out`}
+                    tabIndex={item.disabled ? -1 : 0}
+                    aria-disabled={item.disabled}
+                    onClick={item.disabled ? (e) => e.preventDefault() : undefined}
+                  >
+                    <item.icon
+                      className={`${
+                        isActive
+                          ? "text-white"
+                          : item.disabled
+                          ? "text-white/50"
+                          : "text-white/70 group-hover:text-white"
+                      } mr-3 flex-shrink-0 h-5 w-5`}
+                      aria-hidden="true"
+                    />
+                    {item.name}
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+          <div className="flex-shrink-0 flex border-t border-white/10 p-4">
+            <div className="flex items-center w-full justify-between">
+              <div className="flex items-center">
+                {currentUser?.photoURL ? (
+                  <Avatar className="h-8 w-8 border-2 border-white/20">
+                    <AvatarImage src={currentUser.photoURL} alt={currentUser?.name || "User"} className="object-cover" />
+                    <AvatarFallback className="bg-white/10 text-white font-medium">
+                      {getUserInitials(currentUser?.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                ) : (
+                  <div className="h-8 w-8 rounded-full bg-white/10 text-white flex items-center justify-center">
+                    <span className="text-sm font-medium">
+                      {getUserInitials(currentUser?.name)}
+                    </span>
+                  </div>
+                )}
+                <div className="ml-3">
+                  <p className="text-sm font-medium text-white">{currentUser?.name}</p>
+                  <p className="text-xs text-gray-300">
+                    {currentUser?.role}
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
       {/* Mobile icon header (like other pages) */}
       <div className="md:hidden w-full fixed top-0 left-0 z-30 bg-[#0B3D2E] flex items-center justify-between px-2 py-1 shadow-lg">
         {/* Logo */}

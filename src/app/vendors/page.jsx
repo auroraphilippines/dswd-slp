@@ -1128,16 +1128,6 @@ export default function VendorsPage() {
                           Manage your suppliers and Project details
                         </CardDescription>
                       </div>
-                      <div className="relative w-full sm:w-auto">
-                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-black/70" />
-                        <Input
-                          type="search"
-                          placeholder="Search projects..."
-                          className="pl-8 w-full sm:w-[300px] border-[#96B54A]/20 bg-white/50 focus:border-[#96B54A] focus:ring-[#96B54A]/20 placeholder-black/50"
-                          value={searchQuery}
-                          onChange={handleSearchChange}
-                        />
-                      </div>
                     </div>
                   </CardHeader>
                   <CardContent className="p-0">

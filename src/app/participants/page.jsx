@@ -126,22 +126,21 @@ export default function ParticipantsPage() {
     // Search in family details
     const matchedFamilies = familyDetails.filter((family) => {
       const fieldsToSearch = [
-        family.familyName,
-        family.familyId,
+        family.name,
+        family.id,
+        family.address,
         family.householdHead,
-        family.familyAddress,
         family.barangay,
         family.municipality,
         family.slpaName,
-        // Add family members if they exist
         ...(family.members?.map(member => 
           `${member.name} ${member.relationship} ${member.occupation}`
         ) || [])
       ];
 
-      return fieldsToSearch 
+      return fieldsToSearch
         .filter(Boolean)
-        .map(field => field.toLowerCase())
+        .map(field => String(field).toLowerCase())
         .some(field => field.includes(query));
     });
 
@@ -1067,7 +1066,7 @@ export default function ParticipantsPage() {
                       {currentUser?.name || "Admin DSWD"}
                     </p>
                     <p className="text-xs text-gray-300">
-                      {currentUser?.role || "Administrator"}
+                      {currentUser?.role}
                     </p>
                   </div>
                 </div>
@@ -1087,45 +1086,62 @@ export default function ParticipantsPage() {
               <span className="sr-only">Open sidebar</span>
               <Menu className="h-6 w-6" aria-hidden="true" />
             </button>
-            <div className="flex-1 px-4 flex justify-end">
+            <div className="flex-1 px-4 flex justify-between">
+              <div className="flex-1 flex">
+                <div className="w-full flex md:ml-0">
+                  <label htmlFor="search-field" className="sr-only">
+                    Search
+                  </label>
+                  <div className="relative w-full text-muted-foreground focus-within:text-gray-600">
+                    <div className="absolute inset-y-0 left-0 flex items-center pointer-events-none">
+                      <Search className="h-5 w-5 ml-3" aria-hidden="true" />
+                    </div>
+                    <Input
+                      id="search-field"
+                      className="block w-full h-full pl-10 pr-3 py-2 border-transparent text-muted-foreground placeholder-muted-foreground focus:outline-none focus:placeholder-gray-400 focus:ring-0 focus:border-transparent sm:text-sm"
+                      placeholder="Search participants..."
+                      type="search"
+                      value={searchQuery}
+                      onChange={handleSearchChange}
+                    />
+                  </div>
+                </div>
+              </div>
               <div className="ml-4 flex items-center md:ml-6">
                 {/* Profile dropdown */}
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="ml-3 rounded-full"
-                    >
-                      <span className="sr-only">Open user menu</span>
+                    <Button variant="ghost" size="sm" className="rounded-full flex items-center gap-2 px-2">
                       {currentUser?.photoURL ? (
-                        <Avatar className="h-8 w-8">
-                          <AvatarImage 
-                            src={currentUser.photoURL} 
-                            alt={currentUser?.name || "User"}
-                            className="object-cover" 
+                        <div className="h-8 w-8 rounded-full overflow-hidden border-2 border-primary/20">
+                          <Image
+                            src={currentUser.photoURL}
+                            alt={currentUser.name}
+                            width={32}
+                            height={32}
+                            className="object-cover"
                           />
-                          <AvatarFallback className="bg-primary text-primary-foreground">
+                        </div>
+                      ) : (
+                        <Avatar className="h-8 w-8 border-2 border-primary/20">
+                          <AvatarFallback className="bg-primary/10 text-primary font-medium">
                             {getUserInitials(currentUser?.name)}
                           </AvatarFallback>
                         </Avatar>
-                      ) : (
-                        <div className="h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center">
-                          <span className="text-sm font-medium">
-                            {getUserInitials(currentUser?.name)}
-                          </span>
-                        </div>
                       )}
+                      <span className="hidden sm:inline text-sm font-medium">
+                        {currentUser?.name || "Admin DSWD"}
+                      </span>
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuLabel>
                       <div className="flex flex-col space-y-1">
                         <p className="text-sm font-medium leading-none">
-                          {currentUser?.name}
+                          {currentUser?.name || "Admin DSWD"}
                         </p>
                         <p className="text-xs leading-none text-muted-foreground">
-                          {currentUser?.email}
+                          {currentUser?.email || "admin@dswd.gov.ph"}
                         </p>
                       </div>
                     </DropdownMenuLabel>
@@ -1206,17 +1222,6 @@ export default function ParticipantsPage() {
                           <CardDescription className="text-[#496E22]/70">
                             Manage program participants and their details
                           </CardDescription>
-                        </div>
-                        <div className="w-full sm:w-72">
-                          <div className="relative">
-                            <Search className="absolute left-2 top-1/2 transform -translate-y-1/2 h-4 w-4 text-[#496E22]" />
-                            <Input
-                              placeholder="Search by name, ID, address..."
-                              value={searchQuery}
-                              onChange={handleSearchChange}
-                              className="pl-8 w-full border-[#96B54A]/20 bg-white/50 focus:border-[#96B54A] focus:ring-[#96B54A]/20"
-                            />
-                          </div>
                         </div>
                       </div>
                     </CardHeader>

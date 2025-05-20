@@ -865,6 +865,17 @@ export default function VendorsAnalyticsPage() {
 
       {/* Main content */}
       <div className="flex flex-col flex-1 overflow-hidden">
+        {/* Desktop back button (hidden on mobile) */}
+        <div className="hidden md:flex w-full items-center px-4 pt-8 pb-2">
+          <Button
+            variant="ghost"
+            className="flex items-center gap-2 text-[#0B3D2E] px-2 py-2 text-base font-medium"
+            onClick={() => router.push('/vendors')}
+          >
+            <ArrowLeft className="h-5 w-5" />
+            Back to Projects
+          </Button>
+        </div>
         {/* Clean mobile header with only back button */}
         <div className="md:hidden w-full fixed top-0 left-0 z-30 bg-[#0B3D2E] flex items-center px-2 py-1 shadow-lg">
           <Button
