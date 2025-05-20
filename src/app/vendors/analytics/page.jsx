@@ -37,6 +37,7 @@ import {
   Filler
 } from 'chart.js';
 import { Chart } from 'react-chartjs-2';
+import dynamic from 'next/dynamic';
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { auth, db } from "@/service/firebase";
@@ -131,6 +132,8 @@ const navigation = [
     icon: Settings,
   }
 ];
+
+const ClientPieChart = dynamic(() => import('recharts').then((mod) => mod.PieChart), { ssr: false });
 
 export default function VendorsAnalyticsPage() {
   const router = useRouter();
