@@ -73,6 +73,17 @@ ChartJS.register(
   Filler
 );
 
+// Add this line to ensure line controller is registered
+ChartJS.defaults.set('plugins.legend', {
+  display: true,
+  position: 'top'
+});
+
+// Add this line to ensure line controller is registered
+ChartJS.defaults.set('elements.line', {
+  tension: 0.4
+});
+
 // Define navigation items
 const navigation = [
   {
