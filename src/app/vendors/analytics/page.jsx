@@ -61,28 +61,44 @@ import {
 } from "@/components/ui/select";
 
 // Register ChartJS components
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  LineElement,
-  PointElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
-);
+const registerChartJS = () => {
+  ChartJS.register(
+    CategoryScale,
+    LinearScale,
+    BarElement,
+    LineElement,
+    PointElement,
+    Title,
+    Tooltip,
+    Legend,
+    Filler
+  );
 
-// Add this line to ensure line controller is registered
-ChartJS.defaults.set('plugins.legend', {
-  display: true,
-  position: 'top'
-});
+  // Set default options
+  ChartJS.defaults.set('plugins.legend', {
+    display: true,
+    position: 'top'
+  });
 
-// Add this line to ensure line controller is registered
-ChartJS.defaults.set('elements.line', {
-  tension: 0.4
-});
+  ChartJS.defaults.set('elements.line', {
+    tension: 0.4
+  });
+
+  // Ensure line controller is registered
+  ChartJS.defaults.set('scales', {
+    x: {
+      grid: {
+        display: false
+      }
+    },
+    y: {
+      beginAtZero: true
+    }
+  });
+};
+
+// Call registration function
+registerChartJS();
 
 // Define navigation items
 const navigation = [
@@ -453,6 +469,220 @@ export default function VendorsAnalyticsPage() {
 
   const totalProjectsAllYears = allVendors.length;
 
+  // Update your chart options to include these settings
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    layout: {
+      padding: {
+        left: 20,
+        right: 20,
+        top: 40,
+        bottom: 20
+      }
+    },
+    animation: {
+      duration: 1000,
+      easing: 'easeInOutQuart'
+    },
+    transitions: {
+      active: {
+        animation: {
+          duration: 400
+        }
+      }
+    },
+    plugins: {
+      legend: {
+        position: 'top',
+        labels: {
+          usePointStyle: true,
+          pointStyle: 'circle',
+          padding: 20,
+          font: {
+            size: 12,
+            weight: 'bold'
+          }
+        }
+      },
+      tooltip: {
+        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+        padding: 12,
+        titleFont: {
+          size: 14,
+          weight: 'bold'
+        },
+        bodyFont: {
+          size: 13
+        },
+        callbacks: {
+          label: function(context) {
+            let label = context.dataset.label || '';
+            if (label) {
+              label += ': ';
+            }
+            if (context.parsed.y !== null) {
+              label += new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'PHP'
+              }).format(context.parsed.y);
+            }
+            return label;
+          }
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: {
+          display: false
+        },
+        ticks: {
+          font: {
+            size: 12
+          }
+        }
+      },
+      y: {
+        beginAtZero: true,
+        grid: {
+          color: 'rgba(0, 0, 0, 0.1)'
+        },
+        ticks: {
+          font: {
+            size: 12
+          },
+          callback: function(value) {
+            return new Intl.NumberFormat('en-US', {
+              style: 'currency',
+              currency: 'PHP',
+              maximumFractionDigits: 0
+            }).format(value);
+          }
+        }
+      }
+    }
+  };
+
+  // Update your chart data configuration
+  const getChartData = (data) => ({
+    labels: getMonthLabels(selectedYear),
+    datasets: data.hasData ? [
+      {
+        type: 'line',
+        label: 'Total Investment',
+        data: data.monthlyInvestments.map(item => item.total),
+        borderColor: '#2E8B57',
+        borderWidth: 4,
+        fill: {
+          target: 'origin',
+          above: (context) => {
+            const chart = context.chart;
+            const {ctx, chartArea} = chart;
+            if (!chartArea) return null;
+            
+            const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+            gradient.addColorStop(0, 'rgba(46, 139, 87, 0.5)');
+            gradient.addColorStop(0.5, 'rgba(46, 139, 87, 0.3)');
+            gradient.addColorStop(1, 'rgba(46, 139, 87, 0)');
+            return gradient;
+          }
+        },
+        tension: 0.4,
+        pointRadius: 5,
+        pointBackgroundColor: '#2E8B57',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 3,
+        cubicInterpolationMode: 'monotone'
+      },
+      {
+        type: 'line',
+        label: 'Average Investment',
+        data: data.monthlyInvestments.map(item => item.total * 0.75),
+        borderColor: '#3CB371',
+        borderWidth: 4,
+        fill: {
+          target: '-1',
+          above: (context) => {
+            const chart = context.chart;
+            const {ctx, chartArea} = chart;
+            if (!chartArea) return null;
+            
+            const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+            gradient.addColorStop(0, 'rgba(60, 179, 113, 0.4)');
+            gradient.addColorStop(0.5, 'rgba(60, 179, 113, 0.2)');
+            gradient.addColorStop(1, 'rgba(60, 179, 113, 0)');
+            return gradient;
+          }
+        },
+        tension: 0.4,
+        pointRadius: 5,
+        pointBackgroundColor: '#3CB371',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 3,
+        cubicInterpolationMode: 'monotone'
+      },
+      {
+        type: 'line',
+        label: 'Minimum Investment',
+        data: data.monthlyInvestments.map(item => item.total * 0.5),
+        borderColor: '#90EE90',
+        borderWidth: 4,
+        fill: {
+          target: '-1',
+          above: (context) => {
+            const chart = context.chart;
+            const {ctx, chartArea} = chart;
+            if (!chartArea) return null;
+            
+            const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+            gradient.addColorStop(0, 'rgba(144, 238, 144, 0.3)');
+            gradient.addColorStop(0.5, 'rgba(144, 238, 144, 0.15)');
+            gradient.addColorStop(1, 'rgba(144, 238, 144, 0)');
+            return gradient;
+          }
+        },
+        tension: 0.4,
+        pointRadius: 5,
+        pointBackgroundColor: '#90EE90',
+        pointBorderColor: '#fff',
+        pointBorderWidth: 3,
+        cubicInterpolationMode: 'monotone'
+      }
+    ] : [
+      {
+        type: 'line',
+        label: 'Total Investment',
+        data: Array(12).fill(null),
+        borderColor: '#2E8B57',
+        borderWidth: 4,
+        fill: false,
+        pointRadius: 0,
+        pointHoverRadius: 0
+      },
+      {
+        type: 'line',
+        label: 'Average Investment',
+        data: Array(12).fill(null),
+        borderColor: '#3CB371',
+        borderWidth: 4,
+        fill: false,
+        pointRadius: 0,
+        pointHoverRadius: 0
+      },
+      {
+        type: 'line',
+        label: 'Minimum Investment',
+        data: Array(12).fill(null),
+        borderColor: '#90EE90',
+        borderWidth: 4,
+        fill: false,
+        pointRadius: 0,
+        pointHoverRadius: 0
+      }
+    ]
+  });
+
   if (loading) {
     return <LoadingPage />;
   }
@@ -787,228 +1017,8 @@ export default function VendorsAnalyticsPage() {
                             <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-white/20"></div>
                             <Chart
                               type="line"
-                              data={{
-                                labels: getMonthLabels(selectedYear),
-                                datasets: filteredAnalytics.hasData ? [
-                                  {
-                                    type: 'line',
-                                    label: 'Total Investment',
-                                    data: filteredAnalytics.monthlyInvestments.map(item => item.total),
-                                    borderColor: '#2E8B57',
-                                    borderWidth: 4,
-                                    fill: {
-                                      target: 'origin',
-                                      above: (context) => {
-                                        const chart = context.chart;
-                                        const {ctx, chartArea} = chart;
-                                        if (!chartArea) return null;
-                                        
-                                        const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-                                        gradient.addColorStop(0, 'rgba(46, 139, 87, 0.5)');
-                                        gradient.addColorStop(0.5, 'rgba(46, 139, 87, 0.3)');
-                                        gradient.addColorStop(1, 'rgba(46, 139, 87, 0)');
-                                        return gradient;
-                                      }
-                                    },
-                                    tension: 0.4,
-                                    pointRadius: 5,
-                                    pointBackgroundColor: '#2E8B57',
-                                    pointBorderColor: '#fff',
-                                    pointBorderWidth: 3,
-                                    cubicInterpolationMode: 'monotone',
-                                    animation: {
-                                      duration: 1000,
-                                      easing: 'easeInOutQuart'
-                                    }
-                                  },
-                                  {
-                                    type: 'line',
-                                    label: 'Average Investment',
-                                    data: filteredAnalytics.monthlyInvestments.map(item => item.total * 0.75),
-                                    borderColor: '#3CB371',
-                                    borderWidth: 4,
-                                    fill: {
-                                      target: '-1',
-                                      above: (context) => {
-                                        const chart = context.chart;
-                                        const {ctx, chartArea} = chart;
-                                        if (!chartArea) return null;
-                                        
-                                        const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-                                        gradient.addColorStop(0, 'rgba(60, 179, 113, 0.4)');
-                                        gradient.addColorStop(0.5, 'rgba(60, 179, 113, 0.2)');
-                                        gradient.addColorStop(1, 'rgba(60, 179, 113, 0)');
-                                        return gradient;
-                                      }
-                                    },
-                                    tension: 0.4,
-                                    pointRadius: 5,
-                                    pointBackgroundColor: '#3CB371',
-                                    pointBorderColor: '#fff',
-                                    pointBorderWidth: 3,
-                                    cubicInterpolationMode: 'monotone',
-                                    animation: {
-                                      duration: 1000,
-                                      easing: 'easeInOutQuart'
-                                    }
-                                  },
-                                  {
-                                    type: 'line',
-                                    label: 'Minimum Investment',
-                                    data: filteredAnalytics.monthlyInvestments.map(item => item.total * 0.5),
-                                    borderColor: '#90EE90',
-                                    borderWidth: 4,
-                                    fill: {
-                                      target: '-1',
-                                      above: (context) => {
-                                        const chart = context.chart;
-                                        const {ctx, chartArea} = chart;
-                                        if (!chartArea) return null;
-                                        
-                                        const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-                                        gradient.addColorStop(0, 'rgba(144, 238, 144, 0.3)');
-                                        gradient.addColorStop(0.5, 'rgba(144, 238, 144, 0.15)');
-                                        gradient.addColorStop(1, 'rgba(144, 238, 144, 0)');
-                                        return gradient;
-                                      }
-                                    },
-                                    tension: 0.4,
-                                    pointRadius: 5,
-                                    pointBackgroundColor: '#90EE90',
-                                    pointBorderColor: '#fff',
-                                    pointBorderWidth: 3,
-                                    cubicInterpolationMode: 'monotone',
-                                    animation: {
-                                      duration: 1000,
-                                      easing: 'easeInOutQuart'
-                                    }
-                                  }
-                                ] : [
-                                  {
-                                    type: 'line',
-                                    label: 'Total Investment',
-                                    data: Array(12).fill(null),
-                                    borderColor: '#2E8B57',
-                                    borderWidth: 4,
-                                    fill: false,
-                                    pointRadius: 0,
-                                    pointHoverRadius: 0,
-                                  },
-                                  {
-                                    type: 'line',
-                                    label: 'Average Investment',
-                                    data: Array(12).fill(null),
-                                    borderColor: '#3CB371',
-                                    borderWidth: 4,
-                                    fill: false,
-                                    pointRadius: 0,
-                                    pointHoverRadius: 0,
-                                  },
-                                  {
-                                    type: 'line',
-                                    label: 'Minimum Investment',
-                                    data: Array(12).fill(null),
-                                    borderColor: '#90EE90',
-                                    borderWidth: 4,
-                                    fill: false,
-                                    pointRadius: 0,
-                                    pointHoverRadius: 0,
-                                  }
-                                ]
-                              }}
-                              options={{
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                layout: {
-                                  padding: {
-                                    left: 20,
-                                    right: 20,
-                                    top: 40,
-                                    bottom: 20
-                                  }
-                                },
-                                animation: {
-                                  duration: 1000,
-                                  easing: 'easeInOutQuart'
-                                },
-                                transitions: {
-                                  active: {
-                                    animation: {
-                                      duration: 400
-                                    }
-                                  }
-                                },
-                                plugins: {
-                                  legend: {
-                                    position: 'top',
-                                    labels: {
-                                      usePointStyle: true,
-                                      pointStyle: 'circle',
-                                      padding: 20,
-                                      font: {
-                                        size: 12,
-                                        weight: 'bold'
-                                      }
-                                    }
-                                  },
-                                  tooltip: {
-                                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                                    padding: 12,
-                                    titleFont: {
-                                      size: 14,
-                                      weight: 'bold'
-                                    },
-                                    bodyFont: {
-                                      size: 13
-                                    },
-                                    callbacks: {
-                                      label: function(context) {
-                                        let label = context.dataset.label || '';
-                                        if (label) {
-                                          label += ': ';
-                                        }
-                                        if (context.parsed.y !== null) {
-                                          label += new Intl.NumberFormat('en-US', {
-                                            style: 'currency',
-                                            currency: 'PHP'
-                                          }).format(context.parsed.y);
-                                        }
-                                        return label;
-                                      }
-                                    }
-                                  }
-                                },
-                                scales: {
-                                  x: {
-                                    grid: {
-                                      display: false
-                                    },
-                                    ticks: {
-                                      font: {
-                                        size: 12
-                                      }
-                                    }
-                                  },
-                                  y: {
-                                    beginAtZero: true,
-                                    grid: {
-                                      color: 'rgba(0, 0, 0, 0.1)'
-                                    },
-                                    ticks: {
-                                      font: {
-                                        size: 12
-                                      },
-                                      callback: function(value) {
-                                        return new Intl.NumberFormat('en-US', {
-                                          style: 'currency',
-                                          currency: 'PHP',
-                                          maximumFractionDigits: 0
-                                        }).format(value);
-                                      }
-                                    }
-                                  }
-                                }
-                              }}
+                              data={getChartData(filteredAnalytics)}
+                              options={chartOptions}
                             />
                           </div>
                         </div>
@@ -1039,228 +1049,8 @@ export default function VendorsAnalyticsPage() {
                     <div className={`h-[400px] relative transition-opacity duration-300 ${isTransitioning ? 'opacity-50' : 'opacity-100'}`}>
                       <Chart
                         type="line"
-                        data={{
-                          labels: getMonthLabels(selectedYear),
-                          datasets: filteredAnalytics.hasData ? [
-                            {
-                              type: 'line',
-                              label: 'Total Investment',
-                              data: filteredAnalytics.monthlyInvestments.map(item => item.total),
-                              borderColor: '#2E8B57',
-                              borderWidth: 4,
-                              fill: {
-                                target: 'origin',
-                                above: (context) => {
-                                  const chart = context.chart;
-                                  const {ctx, chartArea} = chart;
-                                  if (!chartArea) return null;
-                                  
-                                  const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-                                  gradient.addColorStop(0, 'rgba(46, 139, 87, 0.5)');
-                                  gradient.addColorStop(0.5, 'rgba(46, 139, 87, 0.3)');
-                                  gradient.addColorStop(1, 'rgba(46, 139, 87, 0)');
-                                  return gradient;
-                                }
-                              },
-                              tension: 0.4,
-                              pointRadius: 5,
-                              pointBackgroundColor: '#2E8B57',
-                              pointBorderColor: '#fff',
-                              pointBorderWidth: 3,
-                              cubicInterpolationMode: 'monotone',
-                              animation: {
-                                duration: 1000,
-                                easing: 'easeInOutQuart'
-                              }
-                            },
-                            {
-                              type: 'line',
-                              label: 'Average Investment',
-                              data: filteredAnalytics.monthlyInvestments.map(item => item.total * 0.75),
-                              borderColor: '#3CB371',
-                              borderWidth: 4,
-                              fill: {
-                                target: '-1',
-                                above: (context) => {
-                                  const chart = context.chart;
-                                  const {ctx, chartArea} = chart;
-                                  if (!chartArea) return null;
-                                  
-                                  const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-                                  gradient.addColorStop(0, 'rgba(60, 179, 113, 0.4)');
-                                  gradient.addColorStop(0.5, 'rgba(60, 179, 113, 0.2)');
-                                  gradient.addColorStop(1, 'rgba(60, 179, 113, 0)');
-                                  return gradient;
-                                }
-                              },
-                              tension: 0.4,
-                              pointRadius: 5,
-                              pointBackgroundColor: '#3CB371',
-                              pointBorderColor: '#fff',
-                              pointBorderWidth: 3,
-                              cubicInterpolationMode: 'monotone',
-                              animation: {
-                                duration: 1000,
-                                easing: 'easeInOutQuart'
-                              }
-                            },
-                            {
-                              type: 'line',
-                              label: 'Minimum Investment',
-                              data: filteredAnalytics.monthlyInvestments.map(item => item.total * 0.5),
-                              borderColor: '#90EE90',
-                              borderWidth: 4,
-                              fill: {
-                                target: '-1',
-                                above: (context) => {
-                                  const chart = context.chart;
-                                  const {ctx, chartArea} = chart;
-                                  if (!chartArea) return null;
-                                  
-                                  const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
-                                  gradient.addColorStop(0, 'rgba(144, 238, 144, 0.3)');
-                                  gradient.addColorStop(0.5, 'rgba(144, 238, 144, 0.15)');
-                                  gradient.addColorStop(1, 'rgba(144, 238, 144, 0)');
-                                  return gradient;
-                                }
-                              },
-                              tension: 0.4,
-                              pointRadius: 5,
-                              pointBackgroundColor: '#90EE90',
-                              pointBorderColor: '#fff',
-                              pointBorderWidth: 3,
-                              cubicInterpolationMode: 'monotone',
-                              animation: {
-                                duration: 1000,
-                                easing: 'easeInOutQuart'
-                              }
-                            }
-                          ] : [
-                            {
-                              type: 'line',
-                              label: 'Total Investment',
-                              data: Array(12).fill(null),
-                              borderColor: '#2E8B57',
-                              borderWidth: 4,
-                              fill: false,
-                              pointRadius: 0,
-                              pointHoverRadius: 0,
-                            },
-                            {
-                              type: 'line',
-                              label: 'Average Investment',
-                              data: Array(12).fill(null),
-                              borderColor: '#3CB371',
-                              borderWidth: 4,
-                              fill: false,
-                              pointRadius: 0,
-                              pointHoverRadius: 0,
-                            },
-                            {
-                              type: 'line',
-                              label: 'Minimum Investment',
-                              data: Array(12).fill(null),
-                              borderColor: '#90EE90',
-                              borderWidth: 4,
-                              fill: false,
-                              pointRadius: 0,
-                              pointHoverRadius: 0,
-                            }
-                          ]
-                        }}
-                        options={{
-                          responsive: true,
-                          maintainAspectRatio: false,
-                          layout: {
-                            padding: {
-                              left: 20,
-                              right: 20,
-                              top: 40,
-                              bottom: 20
-                            }
-                          },
-                          animation: {
-                            duration: 1000,
-                            easing: 'easeInOutQuart'
-                          },
-                          transitions: {
-                            active: {
-                              animation: {
-                                duration: 400
-                              }
-                            }
-                          },
-                          scales: {
-                            x: {
-                              grid: {
-                                display: false
-                              },
-                              ticks: {
-                                font: {
-                                  size: 12
-                                }
-                              }
-                            },
-                            y: {
-                              beginAtZero: true,
-                              grid: {
-                                color: 'rgba(0, 0, 0, 0.1)'
-                              },
-                              ticks: {
-                                font: {
-                                  size: 12
-                                },
-                                callback: function(value) {
-                                  return new Intl.NumberFormat('en-US', {
-                                    style: 'currency',
-                                    currency: 'PHP',
-                                    maximumFractionDigits: 0
-                                  }).format(value);
-                                }
-                              }
-                            }
-                          },
-                          plugins: {
-                            legend: {
-                              position: 'top',
-                              labels: {
-                                usePointStyle: true,
-                                pointStyle: 'circle',
-                                padding: 20,
-                                font: {
-                                  size: 12,
-                                  weight: 'bold'
-                                }
-                              }
-                            },
-                            tooltip: {
-                              backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                              padding: 12,
-                              titleFont: {
-                                size: 14,
-                                weight: 'bold'
-                              },
-                              bodyFont: {
-                                size: 13
-                              },
-                              callbacks: {
-                                label: function(context) {
-                                  let label = context.dataset.label || '';
-                                  if (label) {
-                                    label += ': ';
-                                  }
-                                  if (context.parsed.y !== null) {
-                                    label += new Intl.NumberFormat('en-US', {
-                                      style: 'currency',
-                                      currency: 'PHP'
-                                    }).format(context.parsed.y);
-                                  }
-                                  return label;
-                                }
-                              }
-                            }
-                          }
-                        }}
+                        data={getChartData(filteredAnalytics)}
+                        options={chartOptions}
                       />
                     </div>
                   </CardContent>
