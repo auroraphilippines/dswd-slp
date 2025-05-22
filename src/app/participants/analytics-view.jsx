@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
 import { LayoutDashboard, Settings, Users, Menu, FolderOpen, Store, ArrowLeft, TrendingUp } from "lucide-react"
@@ -65,6 +65,9 @@ export function AnalyticsView() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [currentUser, setCurrentUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [selectedSegment, setSelectedSegment] = useState(null)
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 })
+  const chartRef = useRef(null)
   const [analytics, setAnalytics] = useState({
     total: 0,
     active: 0,
@@ -214,6 +217,20 @@ export function AnalyticsView() {
     fetchAnalytics()
   }, [])
 
+  // Add click outside handler
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (chartRef.current && !chartRef.current.contains(event.target)) {
+        setSelectedSegment(null);
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
+
   const getUserInitials = (name) => {
     if (!name) return "AD"
     if (name === "Admin DSWD") return "AD"
@@ -230,7 +247,7 @@ export function AnalyticsView() {
     { name: "Projects", href: "/vendors", icon: Store },
     { name: "Participants", href: "/participants", icon: Users },
     { name: "File Storage", href: "/programs", icon: FolderOpen },
-    { name: "Settings", href: "./settings", icon: Settings },
+    { name: "Settings", href: "/settings", icon: Settings },
   ]
 
   // Get all unique sector keys, in a fixed order
@@ -293,7 +310,7 @@ export function AnalyticsView() {
                       isActive
                         ? "bg-white/10 text-white"
                         : "text-white/70 hover:bg-white/10 hover:text-white"
-                    } group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ease-in-out`}
+                    } group flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 ease-in-out w-full`}
                   >
                     <item.icon
                       className={`${
@@ -446,17 +463,27 @@ export function AnalyticsView() {
 
       {/* Main content */}
       <div className="flex flex-col flex-1 overflow-hidden">
-        <div className="relative z-10 flex-shrink-0 flex h-10 bg-[#0B3D2E] w-full">
-          <div className="w-full px-4 flex items-center">
-            <Button
-              variant="ghost"
-              onClick={() => router.back()}
-              className="text-white hover:text-white/80 hover:bg-white/10"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Participants
-            </Button>
-          </div>
+        {/* Desktop back button (hidden on mobile) */}
+        <div className="hidden md:flex w-full items-center px-4 pt-8 pb-2">
+          <Button
+            variant="default"
+            className="flex items-center gap-2 bg-blue-700 text-white px-2 py-2 text-base font-medium"
+            onClick={() => router.back()}
+          >
+            <ArrowLeft className="h-5 w-5" />
+            Back to Participants
+          </Button>
+        </div>
+        {/* Mobile back button (unchanged) */}
+        <div className="md:hidden w-full fixed top-0 left-0 z-30 bg-[#0B3D2E] flex items-center px-2 py-1 shadow-lg">
+          <Button
+            variant="ghost"
+            className="flex items-center gap-2 text-white px-2 py-2 text-base font-medium"
+            onClick={() => router.back()}
+          >
+            <ArrowLeft className="h-5 w-5" />
+            Back to Participants
+          </Button>
         </div>
 
         <main className="flex-1 relative overflow-y-auto focus:outline-none">
@@ -592,8 +619,11 @@ export function AnalyticsView() {
                     </CardHeader>
                     <CardContent>
                       <div className="flex flex-col items-center justify-center w-full">
-                        {/* Pie Chart only, legend removed */}
-                        <div className="relative w-full flex items-center justify-center">
+                        {/* Pie Chart with tooltip */}
+                        <div 
+                          ref={chartRef}
+                          className="relative w-full flex items-center justify-center"
+                        >
                           <svg width="100%" height="100%" viewBox="-250 -200 500 400" className="max-w-[400px] md:max-w-[600px] w-full h-auto mx-auto">
                             {/* Bottom shadow ellipse */}
                             <ellipse
@@ -634,7 +664,7 @@ export function AnalyticsView() {
                                   const percentage = total > 0 ? (value / total) * 100 : 0;
                                   const angle = (percentage / 100) * Math.PI * 2;
                                   const radius = 200;
-                                  const depth = 65; // Slightly increased depth for better perspective
+                                  const depth = 65;
 
                                   const startAngle = currentAngle;
                                   const endAngle = currentAngle + angle;
@@ -644,7 +674,7 @@ export function AnalyticsView() {
                                   const endY = Math.sin(endAngle) * radius;
 
                                   const color = typeColors[type];
-                                  const darkerColor = adjustColor(color, -25); // Darker sides for better depth perception
+                                  const darkerColor = adjustColor(color, -25);
 
                                   const path = [
                                     `M ${startX} ${startY}`,
@@ -668,7 +698,7 @@ export function AnalyticsView() {
                                 });
                               })()}
 
-                              {/* Top face of pie */}
+                              {/* Top face of pie with tooltip */}
                               {(() => {
                                 const data = Object.entries(analytics.typeDistribution)
                                   .map(([type, value]) => ({
@@ -688,7 +718,7 @@ export function AnalyticsView() {
                                   "N/A": "#A6C060"
                                 };
 
-                                let currentAngle = -Math.PI / 2; // Start from top
+                                let currentAngle = -Math.PI / 2;
                                 return data.map(({ type, value }) => {
                                   const percentage = total > 0 ? (value / total) * 100 : 0;
                                   const angle = (percentage / 100) * Math.PI * 2;
@@ -717,7 +747,15 @@ export function AnalyticsView() {
                                       <path
                                         d={pathData}
                                         fill={typeColors[type]}
-                                        className="transition-all duration-300 hover:opacity-95"
+                                        className="transition-all duration-300 hover:opacity-95 cursor-pointer"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          const rect = e.currentTarget.getBoundingClientRect();
+                                          const x = rect.left + rect.width / 2;
+                                          const y = rect.top + rect.height / 2;
+                                          setTooltipPosition({ x, y });
+                                          setSelectedSegment({ type, value, percentage });
+                                        }}
                                       >
                                         <title>{`${type}: ${value} (${percentage.toFixed(1)}%)`}</title>
                                       </path>
@@ -770,6 +808,29 @@ export function AnalyticsView() {
                               })()}
                             </g>
                           </svg>
+                          
+                          {/* Tooltip */}
+                          {selectedSegment && (
+                            <div
+                              className="fixed bg-white/95 backdrop-blur-sm px-6 py-4 rounded-xl shadow-xl text-base font-medium z-50 border-2 border-[#496E22]/20"
+                              style={{
+                                left: '50%',
+                                top: '50%',
+                                transform: 'translate(-50%, -50%)',
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <div className="text-[#1B4D2E] text-xl font-bold mb-2">
+                                {selectedSegment.type}
+                              </div>
+                              <div className="text-[#496E22] text-lg mb-1">
+                                Count: {selectedSegment.value}
+                              </div>
+                              <div className="text-[#496E22] text-lg">
+                                Percentage: {selectedSegment.percentage.toFixed(1)}%
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </CardContent>

@@ -868,8 +868,8 @@ export default function VendorsAnalyticsPage() {
         {/* Desktop back button (hidden on mobile) */}
         <div className="hidden md:flex w-full items-center px-4 pt-8 pb-2">
           <Button
-            variant="ghost"
-            className="flex items-center gap-2 text-[#0B3D2E] px-2 py-2 text-base font-medium"
+            variant="default"
+            className="flex items-center gap-2 bg-blue-700 text-white px-2 py-2 text-base font-medium"
             onClick={() => router.push('/vendors')}
           >
             <ArrowLeft className="h-5 w-5" />
