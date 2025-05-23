@@ -68,6 +68,8 @@ export function AnalyticsView() {
   const [selectedSegment, setSelectedSegment] = useState(null)
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 })
   const chartRef = useRef(null)
+  const currentYear = new Date().getFullYear()
+  const [selectedYear, setSelectedYear] = useState(currentYear.toString())
   const [analytics, setAnalytics] = useState({
     total: 0,
     active: 0,
@@ -191,14 +193,17 @@ export function AnalyticsView() {
         const q = query(participantsRef, orderBy("createdAt", "desc"))
         const querySnapshot = await getDocs(q)
 
-        const participantsData = querySnapshot.docs.map((doc) => ({
+        const filteredParticipants = querySnapshot.docs.map((doc) => ({
           ...doc.data(),
           docId: doc.id,
           dateRegistered: doc.data().dateRegistered?.toDate().toLocaleDateString() || new Date().toLocaleDateString(),
-        }))
+        })).filter(participant => {
+          const date = new Date(participant.dateRegistered)
+          return date.getFullYear() === parseInt(selectedYear)
+        })
 
-        Logger.log(`Retrieved ${participantsData.length} participants`);
-        const analyticsData = calculateAnalytics(participantsData);
+        Logger.log(`Retrieved ${filteredParticipants.length} participants for year ${selectedYear}`);
+        const analyticsData = calculateAnalytics(filteredParticipants);
         Logger.log("Analytics calculation completed", {
           total: analyticsData.total,
           active: analyticsData.active,
@@ -215,7 +220,7 @@ export function AnalyticsView() {
     }
 
     fetchAnalytics()
-  }, [])
+  }, [selectedYear])
 
   // Add click outside handler
   useEffect(() => {
@@ -276,6 +281,17 @@ export function AnalyticsView() {
       label: "Participants",
       color: "#90BE6D",
     },
+  }
+
+  // Add getAvailableYears function
+  const getAvailableYears = () => {
+    const years = []
+    const startYear = 2024
+    const endYear = currentYear
+    for (let year = endYear; year >= startYear; year--) {
+      years.push(year)
+    }
+    return years
   }
 
   return (
@@ -490,9 +506,33 @@ export function AnalyticsView() {
           <div className="py-6">
             <div className="container mx-auto px-4 sm:px-6 lg:px-8">
               <div className="flex flex-col space-y-4">
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-[#496E22] to-[#6C9331] bg-clip-text text-transparent">
-                  Analytics Dashboard
-                </h1>
+                <div className="flex justify-between items-center">
+                  <h1 className="text-3xl font-bold bg-gradient-to-r from-[#496E22] to-[#6C9331] bg-clip-text text-transparent">
+                    Analytics Dashboard
+                  </h1>
+                  <Select 
+                    value={selectedYear}
+                    onValueChange={setSelectedYear}
+                    defaultValue={currentYear.toString()}
+                  >
+                    <SelectTrigger
+                      className="w-[120px] !bg-green-600 !text-white rounded-lg border-none shadow-none focus:ring-2 focus:ring-green-700"
+                    >
+                      <SelectValue placeholder="Select year" />
+                    </SelectTrigger>
+                    <SelectContent className="rounded-xl">
+                      {getAvailableYears().map((year) => (
+                        <SelectItem
+                          key={year}
+                          value={year.toString()}
+                          className="rounded-lg"
+                        >
+                          {year} {year === currentYear ? '(Current)' : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
                 {/* Analytics cards grid */}
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -842,7 +882,13 @@ export function AnalyticsView() {
                   </div>
 
                   {/* Monthly Registrations Card */}
-                  <MonthlyRegistrationsAreaChart participants={analytics._rawParticipants || []} className="md:col-span-4 w-full" />
+                  <MonthlyRegistrationsAreaChart 
+                    participants={analytics._rawParticipants || []} 
+                    className="md:col-span-4 w-full"
+                    getAvailableYears={getAvailableYears}
+                    selectedYear={selectedYear}
+                    setSelectedYear={setSelectedYear}
+                  />
 
                   {/* Sector Distribution Card */}
                   <Card className="md:col-span-4 bg-gradient-to-br from-[#e8f5e9] to-[#c8e6c9] border-0 rounded-3xl overflow-hidden p-6">
@@ -1610,11 +1656,16 @@ function GenderDistributionPieChart({ genderDistribution }) {
   );
 }
 
-function MonthlyRegistrationsAreaChart({ participants, className }) {
+function MonthlyRegistrationsAreaChart({ 
+  participants, 
+  className, 
+  getAvailableYears, 
+  selectedYear, 
+  setSelectedYear 
+}) {
   // Transform participants to daily registration counts
   const [timeRange, setTimeRange] = useState("all") // Changed default to "all"
   const currentYear = new Date().getFullYear()
-  const [selectedYear, setSelectedYear] = useState(currentYear)
 
   // Generate years array starting from 2024 to current year
   const generateYears = () => {
@@ -1729,18 +1780,20 @@ function MonthlyRegistrationsAreaChart({ participants, className }) {
         </div>
         <div className="flex gap-2">
           <Select 
-            value={selectedYear.toString()} 
-            onValueChange={(value) => setSelectedYear(parseInt(value))}
+            value={selectedYear}
+            onValueChange={setSelectedYear}
             defaultValue={currentYear.toString()}
           >
-            <SelectTrigger className="w-[120px] rounded-lg" aria-label="Select year">
+            <SelectTrigger
+              className="w-[120px] !bg-green-600 !text-white rounded-lg border-none shadow-none focus:ring-2 focus:ring-green-700"
+            >
               <SelectValue placeholder="Select year" />
             </SelectTrigger>
             <SelectContent className="rounded-xl">
-              {availableYears.map((year) => (
-                <SelectItem 
-                  key={year} 
-                  value={year.toString()} 
+              {getAvailableYears().map((year) => (
+                <SelectItem
+                  key={year}
+                  value={year.toString()}
                   className="rounded-lg"
                 >
                   {year} {year === currentYear ? '(Current)' : ''}
