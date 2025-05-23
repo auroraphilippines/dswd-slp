@@ -220,7 +220,7 @@ export function ActivityFeed() {
 
   const shareToFacebook = () => {
     if (!activityToShare) return;
-    const shareableLink = `${window.location.origin}/dashboard?activity=${activityToShare.id}`;
+    const shareableLink = `${window.location.origin}/shared-activity?activity=${activityToShare.id}`;
     const shareTitle = "Check out this DSWD SLP activity!";
     const facebookShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareableLink)}&quote=${encodeURIComponent(shareTitle)}`;
     window.open(facebookShareUrl, '_blank', 'width=600,height=400');
@@ -228,15 +228,37 @@ export function ActivityFeed() {
 
   const shareToMessenger = () => {
     if (!activityToShare) return;
-    const shareableLink = `${window.location.origin}/dashboard?activity=${activityToShare.id}`;
-    const messengerShareUrl = `https://www.facebook.com/dialog/send?link=${encodeURIComponent(shareableLink)}&app_id=YOUR_FACEBOOK_APP_ID&redirect_uri=${encodeURIComponent(window.location.origin)}`;
-    window.open(messengerShareUrl, '_blank', 'width=600,height=400');
+    const shareableLink = `${window.location.origin}/shared-activity?activity=${activityToShare.id}`;
+    
+    // Check if it's a mobile device
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    
+    if (isMobile) {
+      // Try to open Messenger app first
+      const messengerAppUrl = `fb-messenger://share/?link=${encodeURIComponent(shareableLink)}`;
+      const messengerWebUrl = `https://www.facebook.com/dialog/send?link=${encodeURIComponent(shareableLink)}&app_id=YOUR_FACEBOOK_APP_ID&redirect_uri=${encodeURIComponent(window.location.origin)}`;
+      
+      // Try to open the app, if it fails, fall back to web version
+      window.location.href = messengerAppUrl;
+      
+      // Set a timeout to check if the app opened
+      setTimeout(() => {
+        // If we're still on the same page after 2 seconds, open the web version
+        if (document.hidden === false) {
+          window.open(messengerWebUrl, '_blank', 'width=600,height=400');
+        }
+      }, 2000);
+    } else {
+      // For desktop, open the web version
+      const messengerWebUrl = `https://www.facebook.com/dialog/send?link=${encodeURIComponent(shareableLink)}&app_id=YOUR_FACEBOOK_APP_ID&redirect_uri=${encodeURIComponent(window.location.origin)}`;
+      window.open(messengerWebUrl, '_blank', 'width=600,height=400');
+    }
   };
 
   const copyLink = async () => {
     if (!activityToShare) return;
     try {
-      const shareableLink = `${window.location.origin}/dashboard?activity=${activityToShare.id}`;
+      const shareableLink = `${window.location.origin}/shared-activity?activity=${activityToShare.id}`;
       await navigator.clipboard.writeText(shareableLink);
       toast.success("Link copied to clipboard!");
     } catch (error) {
