@@ -12,7 +12,7 @@ import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { ImageModal } from "./image-modal";
 import { EditActivityModal } from "./edit-activity-modal";
-import { MoreVertical, Edit, Trash2, Loader2, MapPin, Filter, Calendar } from "lucide-react";
+import { MoreVertical, Edit, Trash2, Loader2, MapPin, Filter, Calendar, Share2, Facebook, MessageCircle, Link } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -92,6 +92,8 @@ export function ActivityFeed() {
   });
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [activityToDelete, setActivityToDelete] = useState(null);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [activityToShare, setActivityToShare] = useState(null);
 
   useEffect(() => {
     fetchActivities();
@@ -209,6 +211,38 @@ export function ActivityFeed() {
   const cancelDelete = () => {
     setShowDeleteModal(false);
     setActivityToDelete(null);
+  };
+
+  const handleShare = (activity) => {
+    setActivityToShare(activity);
+    setShowShareModal(true);
+  };
+
+  const shareToFacebook = () => {
+    if (!activityToShare) return;
+    const shareableLink = `${window.location.origin}/dashboard?activity=${activityToShare.id}`;
+    const shareTitle = "Check out this DSWD SLP activity!";
+    const facebookShareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareableLink)}&quote=${encodeURIComponent(shareTitle)}`;
+    window.open(facebookShareUrl, '_blank', 'width=600,height=400');
+  };
+
+  const shareToMessenger = () => {
+    if (!activityToShare) return;
+    const shareableLink = `${window.location.origin}/dashboard?activity=${activityToShare.id}`;
+    const messengerShareUrl = `https://www.facebook.com/dialog/send?link=${encodeURIComponent(shareableLink)}&app_id=YOUR_FACEBOOK_APP_ID&redirect_uri=${encodeURIComponent(window.location.origin)}`;
+    window.open(messengerShareUrl, '_blank', 'width=600,height=400');
+  };
+
+  const copyLink = async () => {
+    if (!activityToShare) return;
+    try {
+      const shareableLink = `${window.location.origin}/dashboard?activity=${activityToShare.id}`;
+      await navigator.clipboard.writeText(shareableLink);
+      toast.success("Link copied to clipboard!");
+    } catch (error) {
+      console.error("Error copying link:", error);
+      toast.error("Failed to copy link");
+    }
   };
 
   const fetchActivities = async (loadMore = false) => {
@@ -502,6 +536,10 @@ export function ActivityFeed() {
                       <Edit className="h-4 w-4 mr-2" />
                       Edit
                     </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleShare(activity)}>
+                      <Share2 className="h-4 w-4 mr-2" />
+                      Share
+                    </DropdownMenuItem>
                     <DropdownMenuItem 
                       onClick={() => handleDelete(activity.id)}
                       className="text-destructive focus:text-destructive"
@@ -619,6 +657,49 @@ export function ActivityFeed() {
                 className="px-4 py-2 rounded bg-red-600 text-white hover:bg-red-700"
               >
                 Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Share Modal */}
+      {showShareModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-sm mx-2">
+            <h2 className="text-lg font-semibold mb-4">Share Activity</h2>
+            <div className="space-y-3">
+              <button
+                onClick={shareToFacebook}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded bg-[#1877F2] text-white hover:bg-[#1877F2]/90 transition-colors"
+              >
+                <Facebook className="h-5 w-5" />
+                Share on Facebook
+              </button>
+              <button
+                onClick={shareToMessenger}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded bg-[#0084FF] text-white hover:bg-[#0084FF]/90 transition-colors"
+              >
+                <MessageCircle className="h-5 w-5" />
+                Share on Messenger
+              </button>
+              <button
+                onClick={copyLink}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 rounded border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                <Link className="h-5 w-5" />
+                Copy Link
+              </button>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={() => {
+                  setShowShareModal(false);
+                  setActivityToShare(null);
+                }}
+                className="px-4 py-2 rounded border border-gray-300 text-gray-700 hover:bg-gray-100"
+              >
+                Close
               </button>
             </div>
           </div>

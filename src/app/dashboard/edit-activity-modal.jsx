@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { X, Upload, Trash2, Replace } from "lucide-react";
+import { X, Upload, Trash2, Replace, Share2 } from "lucide-react";
 import Image from "next/image";
 import { db, auth } from "@/service/firebase";
 import { doc, updateDoc, collection, addDoc } from "firebase/firestore";
@@ -211,6 +211,21 @@ export function EditActivityModal({ isOpen, onClose, activity, onUpdate }) {
       toast.error(error.message || "Failed to update activity. Please try with fewer or smaller images.");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleShare = async () => {
+    try {
+      // Create a shareable link
+      const shareableLink = `${window.location.origin}/dashboard?activity=${activity.id}`;
+      
+      // Copy to clipboard
+      await navigator.clipboard.writeText(shareableLink);
+      
+      toast.success("Activity link copied to clipboard!");
+    } catch (error) {
+      console.error("Error sharing activity:", error);
+      toast.error("Failed to share activity");
     }
   };
 
