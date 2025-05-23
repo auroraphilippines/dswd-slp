@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { db } from "@/service/firebase";
 import { doc, getDoc } from "firebase/firestore";
@@ -23,7 +23,7 @@ const MUNICIPALITIES = [
   { id: 'san-luis', name: 'San Luis' }
 ];
 
-export default function SharedActivityPage() {
+function SharedActivityContent() {
   const [activity, setActivity] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -223,5 +223,21 @@ export default function SharedActivityPage() {
         imageUrl={selectedImage}
       />
     </div>
+  );
+}
+
+export default function SharedActivityPage() {
+  return (
+    <Suspense fallback={
+      <div className="container mx-auto px-4 py-8">
+        <div className="animate-pulse">
+          <div className="h-8 w-3/4 bg-gray-200 rounded mb-4"></div>
+          <div className="h-4 w-1/2 bg-gray-200 rounded mb-8"></div>
+          <div className="h-64 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    }>
+      <SharedActivityContent />
+    </Suspense>
   );
 } 
